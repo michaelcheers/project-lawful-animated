@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planecrash — Corrigibility · an animated reading</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Spectral:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0608; --ink:#f0e6d8; --muted:#9a8a84;
+  --accent:#d8a24a; --gold:#d8a24a; --blood:#c2152f; --ember:#ff8a3c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:radial-gradient(120% 90% at 50% 6%, #1a0c10 0%, var(--bg) 55%, #050304 100%);
+  color:var(--ink); font-family:"Spectral",Georgia,serif; overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+.paused .anim, .paused .scene *{animation-play-state:paused !important}
+
+/* ---------- cinematic stage ---------- */
+#stage{position:fixed; inset:0; display:flex; align-items:center; justify-content:center}
+.frame{
+  position:relative; width:min(100vw,177.7vh); height:min(100vh,56.25vw);
+  overflow:hidden; background:#06040a; box-shadow:0 0 140px rgba(0,0,0,.8) inset, 0 30px 90px rgba(0,0,0,.6);
+}
+#ash{position:absolute; inset:0; z-index:1; pointer-events:none}
+
+.scene{position:absolute; inset:0; z-index:2; opacity:0; transition:opacity 1.5s ease; pointer-events:none}
+.scene.active{opacity:1}
+.scene svg{position:absolute; inset:0; width:100%; height:100%}
+/* a soft vignette over scenes */
+#vignette{position:absolute; inset:0; z-index:4; pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 42%, transparent 52%, rgba(5,3,4,.55) 100%);}
+
+/* ---------- speaker / beat label ---------- */
+#label{position:absolute; left:4.4%; top:7.5%; z-index:6; opacity:0; transform:translateY(8px);
+  transition:opacity .8s ease, transform .8s ease; max-width:54%}
+#label.show{opacity:1; transform:none}
+#label .kicker{display:flex; align-items:center; gap:9px; margin-bottom:5px}
+#label .ksig{width:26px; height:26px; color:var(--accent); transition:color .6s ease; flex:0 0 auto}
+#label .ksig svg{width:100%;height:100%}
+#label .kname{font-family:"Cinzel",serif; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
+  font-size:clamp(9px,1.05vw,13px); color:var(--accent); transition:color .6s ease}
+#label .ttl{font-family:"Cinzel",serif; font-weight:700; line-height:1.04; letter-spacing:.005em;
+  font-size:clamp(20px,3.4vw,50px); color:#fff; text-shadow:0 2px 26px rgba(0,0,0,.7)}
+
+/* ---------- caption ---------- */
+#cap-wrap{position:absolute; left:0; right:0; bottom:8.5%; z-index:6; display:flex; justify-content:center;
+  padding:0 6%; pointer-events:none}
+#cap{position:relative; max-width:min(1080px,90%); text-align:center;
+  font-size:clamp(14px,1.85vw,25px); line-height:1.45; font-weight:400; letter-spacing:.004em; color:var(--ink);
+  text-shadow:0 2px 20px rgba(0,0,0,.95), 0 0 60px rgba(0,0,0,.85);
+  opacity:0; transform:translateY(10px); transition:opacity .5s ease, transform .5s ease}
+#cap.show{opacity:1; transform:none}
+#cap.dlg{font-style:italic}
+#cap::before{content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:135%; height:340%; z-index:-1; pointer-events:none;
+  background:radial-gradient(closest-side, rgba(6,4,6,.82), rgba(6,4,6,.4) 60%, transparent 100%)}
+
+/* ---------- intro ---------- */
+#intro{position:absolute; inset:0; z-index:20; overflow-y:auto;
+  background:radial-gradient(80% 80% at 50% 40%, rgba(26,12,16,.55), rgba(4,3,4,.95));
+  transition:opacity 1.1s ease}
+#intro.gone{opacity:0; pointer-events:none}
+.intro-in{min-height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; gap:2.2vh; padding:5vh 7vw 7vh}
+#intro .eyebrow{font-family:"Cinzel",serif; font-size:clamp(9px,1.05vw,13px); letter-spacing:.5em; text-transform:uppercase; color:var(--gold)}
+#intro h1{font-family:"Cinzel",serif; font-weight:700; letter-spacing:.02em; font-size:clamp(40px,9vw,118px); line-height:.92;
+  background:linear-gradient(180deg,#fff 0%, #e9c277 52%, #b3122b 132%); -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent; filter:drop-shadow(0 8px 50px rgba(179,18,43,.32))}
+#intro .sub{font-size:clamp(13px,1.55vw,19px); font-style:italic; color:#cbb9a9; max-width:44ch; line-height:1.55; font-weight:300}
+.cast{display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:11px 18px; width:100%; max-width:760px; margin-top:1vh}
+.cast .c{display:flex; align-items:center; gap:11px; text-align:left; padding:7px 10px; border:1px solid rgba(216,162,74,.13); border-radius:9px; background:rgba(255,255,255,.012)}
+.cast .ic{width:32px;height:32px;flex:0 0 auto} .cast .ic svg{width:100%;height:100%}
+.cast .nm{font-family:"Cinzel",serif; font-size:12px; letter-spacing:.02em; line-height:1.15}
+.cast .tg{font-style:italic; font-size:11px; color:var(--muted); margin-top:1px}
+#begin{margin-top:1vh; display:inline-flex; align-items:center; gap:.7em; font-family:"Cinzel",serif; font-weight:600;
+  font-size:clamp(14px,1.5vw,17px); letter-spacing:.06em; color:#1a0c0a; padding:.85em 2.1em; border:none; border-radius:100px;
+  cursor:pointer; background:linear-gradient(180deg,#f0cd86,#d8a24a);
+  box-shadow:0 12px 44px rgba(216,162,74,.34), inset 0 0 0 1px rgba(255,255,255,.25); transition:transform .25s, box-shadow .25s}
+#begin:hover{transform:translateY(-2px) scale(1.02); box-shadow:0 18px 56px rgba(216,162,74,.5)}
+#begin .tri{width:0;height:0;border-left:11px solid #1a0c0a;border-top:7px solid transparent;border-bottom:7px solid transparent}
+#intro .note{font-size:11px;color:#6a5a56;letter-spacing:.03em}
+#intro .src{font-size:11px;color:#5e4f4b;max-width:52ch;line-height:1.6}
+
+/* ---------- controls ---------- */
+#controls{position:absolute; left:0; right:0; bottom:0; z-index:30; display:flex; align-items:center; gap:13px;
+  padding:13px 4.4%; background:linear-gradient(0deg, rgba(5,3,5,.85), transparent);
+  opacity:0; transition:opacity .4s ease; pointer-events:none}
+.frame.playing #controls{opacity:1; pointer-events:auto}
+.btn{background:rgba(240,230,216,.05); border:1px solid rgba(216,162,74,.28); color:var(--ink); border-radius:50%;
+  cursor:pointer; flex:0 0 auto; display:grid; place-items:center; transition:background .2s,border-color .2s,transform .15s}
+.btn:hover{background:rgba(216,162,74,.16); border-color:var(--accent)} .btn:active{transform:scale(.94)}
+.btn svg{fill:var(--ink)}
+.btn.lg{width:46px;height:46px} .btn.lg svg{width:18px;height:18px}
+.btn.sm{width:38px;height:38px} .btn.sm svg{width:14px;height:14px}
+#speed{width:auto;min-width:46px;height:38px;border-radius:20px;padding:0 12px;font-family:"Spectral",serif;font-style:italic;font-size:13px}
+#prog{flex:1; height:3px; border-radius:3px; background:rgba(240,230,216,.13); position:relative; cursor:pointer}
+#bar{position:absolute; left:0;top:0;bottom:0; width:0; background:linear-gradient(90deg,var(--accent),var(--blood)); border-radius:3px; transition:width .5s ease, background .8s ease}
+#beat{font-family:"Cinzel",serif; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); min-width:120px; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:24%}
+
+/* ---------- shared animation helpers ---------- */
+.spin{transform-origin:center;animation:spin 60s linear infinite}
+.spin-s{transform-origin:center;animation:spin 120s linear infinite}
+.spin-r{transform-origin:center;animation:spin 80s linear infinite reverse}
+.spin-f{transform-origin:center;animation:spin 9s linear infinite}
+.spin-vf{transform-origin:center;animation:spin 2.4s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.breathe{transform-origin:center;animation:breathe 6s ease-in-out infinite}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.flick{transform-origin:bottom center;animation:flick 1.4s ease-in-out infinite}
+@keyframes flick{0%,100%{opacity:.9;transform:scaleY(1) scaleX(1)}40%{opacity:1;transform:scaleY(1.1) scaleX(.94)}70%{opacity:.85;transform:scaleY(.96) scaleX(1.04)}}
+.sway{transform-origin:top center;animation:sway 4s ease-in-out infinite}
+@keyframes sway{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+.tw{animation:tw 3s ease-in-out infinite}
+@keyframes tw{0%,100%{opacity:.2}50%{opacity:1}}
+.pulse{animation:pulse 3.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.25}50%{opacity:.95}}
+.pulse-f{animation:pulse 1.6s ease-in-out infinite}
+.drift{animation:drift 26s ease-in-out infinite}
+@keyframes drift{0%{transform:translate(0,0)}50%{transform:translate(2.4%,-2%)}100%{transform:translate(0,0)}}
+@keyframes floatUp{0%{transform:translateY(34px);opacity:0}16%{opacity:.9}100%{transform:translateY(-58px);opacity:0}}
+.flow{stroke-dasharray:8 16; animation:flow 2.2s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-48}}
+.draw{stroke-dasharray:600; stroke-dashoffset:600; animation:draw 5s ease-in-out infinite alternate}
+@keyframes draw{to{stroke-dashoffset:0}}
+.beam{animation:beam 1.7s ease-in-out infinite}
+@keyframes beam{0%,100%{opacity:.12}50%{opacity:.6}}
+
+/* one-shot scene-entry effects (fire when scene gets .go) */
+.flash{opacity:0}
+.scene.active.go .flash{animation:flashK 1.7s ease-out .3s forwards}
+@keyframes flashK{0%{opacity:0}12%{opacity:.85}100%{opacity:0}}
+.burst{opacity:0;transform-origin:center}
+.scene.active.go .burst{animation:burstK 3s cubic-bezier(.1,.7,.3,1) .3s forwards}
+@keyframes burstK{0%{opacity:0;transform:scale(.08)}14%{opacity:1}100%{opacity:0;transform:scale(4.2)}}
+.stamp{opacity:0;transform-origin:center}
+.scene.active.go .stamp{animation:stampK 1.2s cubic-bezier(.2,1.4,.4,1) .4s forwards}
+@keyframes stampK{0%{opacity:0;transform:scale(2.4) rotate(-12deg)}60%{opacity:1;transform:scale(1) rotate(0)}100%{opacity:1;transform:scale(1)}}
+.fall{opacity:0;transform-origin:center}
+.scene.active.go .fall{animation:fallK 3.4s ease-in 1s forwards}
+@keyframes fallK{0%{opacity:0;transform:translateY(-260px) scale(.6)}20%{opacity:1}82%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(10px) scale(2.2)}}
+.rise{transform-origin:center;animation:rise 7s ease-in-out infinite alternate}
+@keyframes rise{from{transform:translateY(8px)}to{transform:translateY(-8px)}}
+
+@media (max-width:640px){ #beat{display:none} #label{max-width:78%} }
+
+/* ---- audio upload UI ---- */
+#drop{margin:1.6vh auto .2vh;width:min(560px,90%);border:1.6px dashed rgba(216,162,74,.42);border-radius:14px;padding:24px 20px 20px;cursor:pointer;background:rgba(255,255,255,.015);transition:border-color .2s, background .2s, transform .2s}
+#drop:hover{border-color:var(--gold);background:rgba(216,162,74,.06)}
+#drop.drag{border-color:var(--gold);background:rgba(216,162,74,.14);transform:scale(1.012)}
+#drop.has{border-style:solid;border-color:rgba(79,230,205,.5);background:rgba(79,230,205,.05)}
+#drop .dz-ic{width:30px;height:30px;color:var(--gold);opacity:.9;margin-bottom:6px}
+#drop.has .dz-ic{color:#4fe6cd}
+#drop .dz-msg{font-family:"Spectral",serif;font-style:italic;font-size:15px;color:#e9dcc8;letter-spacing:.01em}
+#drop .dz-sub{font-size:11px;color:#7c6a64;margin-top:7px;letter-spacing:.02em}
+#loaded{display:none;align-items:center;justify-content:center;gap:9px;margin:11px auto 2px;font-size:12.5px;color:#cbb9a9}
+#loaded.show{display:flex}
+#loaded .ck{color:#4fe6cd;font-weight:700}
+#loaded .fn{font-family:"Cinzel",serif;letter-spacing:.02em;color:#f0e6d8;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#loaded #dur{color:#7c6a64}
+#begin[disabled]{opacity:.38;cursor:not-allowed;filter:grayscale(.45);box-shadow:none}
+#begin[disabled]:hover{transform:none}
+#intro.ended #drop, #intro.ended #loaded, #intro.ended .cast{display:none}
+audio{display:none}
+/* captions toggle */
+#cc{font-family:"Cinzel",serif;font-weight:600;letter-spacing:.06em;font-size:12px;position:relative}
+#cc.off{opacity:.5}
+#cc.off::after{content:"";position:absolute;left:18%;right:18%;top:50%;height:1.5px;background:currentColor;transform:rotate(-12deg);opacity:.85}
+</style>
+</head>
+<body>
+<div id="stage"><div class="frame" id="frame">
+  <canvas id="ash"></canvas>
+
+  <!-- ===================== SHARED DEFS ===================== -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <radialGradient id="gEmber" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff2cf"/><stop offset="34%" stop-color="#ff9a3c"/>
+      <stop offset="72%" stop-color="#c2152f" stop-opacity=".55"/><stop offset="100%" stop-color="#3a0810" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gGold" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff"/><stop offset="45%" stop-color="#f2cd7e"/><stop offset="100%" stop-color="#d8a24a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gBlood" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff6a72"/><stop offset="46%" stop-color="#b3122b" stop-opacity=".7"/><stop offset="100%" stop-color="#b3122b" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gWhite" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff"/><stop offset="55%" stop-color="#dfeaf2" stop-opacity=".9"/><stop offset="100%" stop-color="#a9c2d6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gCyan" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#eafcff"/><stop offset="48%" stop-color="#46c6ff" stop-opacity=".8"/><stop offset="100%" stop-color="#1d6fb0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gTeal" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#dffff6"/><stop offset="50%" stop-color="#3fd9c0" stop-opacity=".8"/><stop offset="100%" stop-color="#1f8f88" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gFloor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1c0e12"/><stop offset="100%" stop-color="#06040a"/>
+    </linearGradient>
+    <linearGradient id="gBeam" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#cfe fff" stop-opacity="0"/><stop offset="50%" stop-color="#aee6ff" stop-opacity=".5"/><stop offset="100%" stop-color="#aee6ff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="soft2"><feGaussianBlur stdDeviation="16"/></filter>
+
+    <!-- speaker sigils -->
+    <symbol id="sg-book" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M24 12c-5-4-12-4-16-2v26c4-2 11-2 16 2 5-4 12-4 16-2V10c-4-2-11-2-16 2z"/><path d="M24 12v28"/></symbol>
+    <symbol id="sg-mask" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M10 6c2 4 1 8-1 10M38 6c-2 4-1 8 1 10"/><path d="M9 16c3-3 9-4 15-4s12 1 15 4c1 9-4 22-15 26C13 38 8 25 9 16z"/><path d="M17 22l5 3M31 22l-5 3M21 33c2 1 4 1 6 0"/></symbol>
+    <symbol id="sg-flame" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M24 4c2 8-6 11-6 18 0 0-4-2-4-7-5 5-7 11-7 16a17 17 0 0034 0c0-9-6-16-11-20-1 4-4 5-6 3 3-4 6-9 6-13z"/></symbol>
+    <symbol id="sg-eye" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M4 24c6-9 13-13 20-13s14 4 20 13c-6 9-13 13-20 13S10 33 4 24z"/><circle cx="24" cy="24" r="6"/><path d="M40 30c4 2 5 6 4 9"/></symbol>
+    <symbol id="sg-penta" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><circle cx="24" cy="24" r="20"/><polygon points="24,7 33.5,38 8.4,18.8 39.6,18.8 14.5,38"/></symbol>
+    <symbol id="sg-broom" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M30 6L18 30"/><path d="M12 42c0-8 3-12 8-13 5-1 9 1 11 4-3 6-10 10-19 9z"/><path d="M22 28l6 4"/></symbol>
+    <symbol id="sg-hex" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><polygon points="24,5 40,14 40,34 24,43 8,34 8,14"/><circle cx="24" cy="24" r="3" fill="currentColor"/><path d="M24 8v8M40 16l-7 4M40 32l-7-4M24 40v-8M8 32l7-4M8 16l7 4"/></symbol>
+    <symbol id="sg-gem" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M14 8h20l8 11-18 21L6 19z"/><path d="M6 19h36M14 8l10 11 10-11M24 19v21"/></symbol>
+    <symbol id="sg-oracle" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><circle cx="24" cy="24" r="7"/><path d="M24 4v6M24 38v6M4 24h6M38 24h6M10 10l4 4M34 34l4 4M38 10l-4 4M10 38l4-4"/></symbol>
+
+    <!-- a reusable robed-figure -->
+    <symbol id="figure" viewBox="0 0 120 200"><path d="M60 18a20 20 0 0 1 20 20c0 9-4 13-4 20l14 120c1 8-9 14-30 14s-31-6-30-14L44 58c0-7-4-11-4-20a20 20 0 0 1 20-20z"/></symbol>
+    <symbol id="child" viewBox="0 0 80 120"><circle cx="40" cy="22" r="16"/><path d="M40 40c14 0 22 8 22 20l4 46c0 8-12 12-26 12s-26-4-26-12l4-46c0-12 8-20 22-20z"/></symbol>
+  </defs></svg>
+
+  <!-- ===================== SCENES ===================== -->
+
+  <!-- chamber : the Forbiddance -->
+    <!-- SCENES (episode 25) -->
+
+  <!-- temple : into the temple -->
+  <div class="scene" data-scene="temple">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0406"/>
+      <ellipse cx="800" cy="380" rx="420" ry="320" fill="url(#gBlood)" opacity=".3" filter="url(#soft2)" class="breathe" style="animation-duration:9s"/>
+      <!-- columns -->
+      <g fill="#140a0e"><rect x="180" y="120" width="80" height="640"/><rect x="360" y="120" width="80" height="640"/><rect x="1160" y="120" width="80" height="640"/><rect x="1340" y="120" width="80" height="640"/></g>
+      <g fill="#1c1014"><rect x="160" y="108" width="120" height="24"/><rect x="340" y="108" width="120" height="24"/><rect x="1140" y="108" width="120" height="24"/><rect x="1320" y="108" width="120" height="24"/></g>
+      <!-- floor + aisle -->
+      <rect y="760" width="1600" height="140" fill="url(#gFloor)" opacity=".6"/>
+      <polygon points="700,900 900,900 850,360 750,360" fill="#1a0a10" opacity=".7"/>
+      <!-- the great pentagram altar -->
+      <g transform="translate(800 320)">
+        <circle r="150" fill="url(#gEmber)" opacity=".4" class="breathe"/>
+        <g class="spin-s"><polygon points="0,-110 64.7,85 -104.6,-34 104.6,-34 -64.7,85" fill="none" stroke="#ffd27a" stroke-width="3"/></g>
+        <circle r="34" fill="url(#gEmber)"/><circle r="10" fill="#fff" class="pulse-f"/>
+      </g>
+      <!-- Carissa approaching -->
+      <use href="#figure" x="772" y="600" width="56" height="100" fill="#1a0d10"/>
+    </svg>
+  </div>
+
+  <!-- revelation : relayed by way of hell -->
+  <div class="scene" data-scene="revelation">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0406"/>
+      <!-- Asmodeus, above -->
+      <g transform="translate(800 130)"><circle r="90" fill="url(#gEmber)" opacity=".5" filter="url(#soft2)" class="breathe"/><use href="#sg-penta" x="-50" y="-50" width="100" height="100" color="#ffd27a" class="spin-s"/></g>
+      <!-- layers of Hell -->
+      <g fill="none" stroke="#c2152f" stroke-width="2" stroke-opacity=".5">
+        <path d="M300 360C500 320 1100 320 1300 360"/>
+        <path d="M340 480C540 444 1060 444 1260 480"/>
+        <path d="M380 600C560 568 1040 568 1220 600"/>
+      </g>
+      <g fill="url(#gBlood)" opacity=".12"><path d="M300 360C500 320 1100 320 1300 360L1260 480C1060 444 540 444 340 480z"/><path d="M340 480C540 444 1060 444 1260 480L1220 600C1040 568 560 568 380 600z"/></g>
+      <!-- the relay conduit -->
+      <line x1="800" y1="220" x2="800" y2="720" stroke="#ff8a3c" stroke-width="3" stroke-dasharray="8 12" class="flow"/>
+      <circle r="8" fill="#ffd27a"><animateMotion dur="3.2s" repeatCount="indefinite" path="M800 220L800 720"/></circle>
+      <!-- the cleric below -->
+      <use href="#figure" x="772" y="700" width="56" height="100" fill="#1a0d10"/>
+    </svg>
+  </div>
+
+  <!-- ferrer : ferrer maillol, fifth circle -->
+  <div class="scene" data-scene="ferrer">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0608"/>
+      <ellipse cx="800" cy="420" rx="340" ry="320" fill="url(#gGold)" opacity=".08" filter="url(#soft2)"/>
+      <!-- the cleric in magical cloth -->
+      <g transform="translate(800 240)">
+        <circle cx="0" cy="0" r="40" fill="#e9d6c4"/>
+        <path d="M-40 -6c0-22 16-34 40-34s40 12 40 34c-10-6-26-10-40-10s-30 4-40 10z" fill="#241018"/>
+        <path d="M-70 60C-46 36 46 36 70 60L130 560C130 600 -130 600 -130 560z" fill="#1a0a10" stroke="#3a1820" stroke-width="2"/>
+        <!-- gold trim -->
+        <g stroke="#d8a24a" stroke-width="3" fill="none"><path d="M-70 60L-100 540M70 60L100 540M-90 540h180"/></g>
+        <use href="#sg-penta" x="-40" y="180" width="80" height="80" color="#d8a24a" opacity=".7" class="pulse"/>
+        <!-- fifth-circle: five rubies -->
+        <g fill="#ff3a4a"><circle cx="-30" cy="120" r="6"/><circle cx="-15" cy="120" r="6"/><circle cx="0" cy="120" r="6"/><circle cx="15" cy="120" r="6"/><circle cx="30" cy="120" r="6"/></g>
+      </g>
+      <!-- a mace at his side -->
+      <g transform="translate(1060 520)"><line x1="0" y1="0" x2="0" y2="180" stroke="#6a5230" stroke-width="6"/><circle cx="0" cy="-10" r="26" fill="#2a2018" stroke="#caa86a" stroke-width="2"/><g stroke="#caa86a" stroke-width="3"><path d="M0 -36v-12M0 16v12M-26 -10h-12M26 -10h12"/></g></g>
+    </svg>
+  </div>
+
+  <!-- education : a better theological education -->
+  <div class="scene" data-scene="education">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0608"/>
+      <ellipse cx="800" cy="420" rx="460" ry="280" fill="url(#gGold)" opacity=".07" filter="url(#soft2)"/>
+      <!-- teacher (gold) + student (red) -->
+      <use href="#figure" x="380" y="440" width="116" height="200" fill="#1a0a10"/>
+      <use href="#figure" x="1104" y="450" width="112" height="190" fill="#1a0d10"/>
+      <!-- doctrine scrolls/runes floating between -->
+      <g transform="translate(800 420)">
+        <g class="spin-s" opacity=".5"><use href="#sg-penta" x="-70" y="-70" width="140" height="140" color="#d8a24a"/></g>
+        <g fill="none" stroke="#caa86a" stroke-width="2" stroke-opacity=".6"><circle r="160" class="spin-r"/></g>
+        <g fill="#ffd27a"><circle cx="0" cy="-160" r="5" class="tw"/><circle cx="138" cy="80" r="5" class="tw" style="animation-delay:-1s"/><circle cx="-138" cy="80" r="5" class="tw" style="animation-delay:-2s"/></g>
+      </g>
+      <!-- floating doctrine cards -->
+      <g fill="#1c1410" stroke="#7a6038" stroke-width="1.6"><rect x="600" y="300" width="60" height="80" rx="4" transform="rotate(-8 630 340)"/><rect x="940" y="320" width="60" height="80" rx="4" transform="rotate(8 970 360)"/></g>
+    </svg>
+  </div>
+
+  <!-- not_own_accord : not of your own accord -->
+  <div class="scene" data-scene="not_own_accord">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0608"/>
+      <!-- Ferrer, posing the question -->
+      <use href="#figure" x="380" y="440" width="116" height="200" fill="#1a0a10"/>
+      <!-- a large question mark -->
+      <g fill="#d8a24a" font-family="Cinzel,serif" opacity=".7"><text x="700" y="380" font-size="120" text-anchor="middle" class="breathe">?</text></g>
+      <!-- Carissa, ambivalent -->
+      <use href="#figure" x="1040" y="450" width="112" height="190" fill="#1a0d10"/>
+      <!-- the faint cyan thread of Keltham's influence tugging her here -->
+      <path d="M1096 520C1000 560 900 700 820 760" stroke="#5fd0ff" stroke-width="2" stroke-opacity=".45" stroke-dasharray="6 10" class="flow" fill="none"/>
+      <g transform="translate(800 780)" opacity=".4"><use href="#sg-hex" x="-30" y="-30" width="60" height="60" color="#5fd0ff" class="spin-s"/></g>
+    </svg>
+  </div>
+
+  <!-- lawful_evil : the lawful evil version -->
+  <div class="scene" data-scene="lawful_evil">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0708"/>
+      <!-- two paths from a fork -->
+      <rect x="0" width="800" height="900" fill="#0e1016" opacity=".5"/>
+      <rect x="800" width="800" height="900" fill="#1a0608" opacity=".55"/>
+      <!-- the fork -->
+      <g stroke-width="40" fill="none" stroke-linecap="round"><path d="M800 820L420 200" stroke="#2a3038" stroke-opacity=".6"/><path d="M800 820L1180 200" stroke="#3a1014" stroke-opacity=".7"/></g>
+      <!-- labels: LN (cool) vs LE (hot) -->
+      <g transform="translate(420 200)"><circle r="50" fill="#1a1e26" stroke="#6a7480" stroke-width="3"/><path d="M-22 0h44M0 -22v44" stroke="#6a7480" stroke-width="4" stroke-linecap="round" opacity=".5"/></g>
+      <g transform="translate(1180 200)"><circle r="56" fill="url(#gBlood)" opacity=".5"/><use href="#sg-penta" x="-38" y="-38" width="76" height="76" color="#ff6a72" class="spin-s"/></g>
+      <!-- a figure at the fork -->
+      <use href="#figure" x="772" y="720" width="56" height="100" fill="#1a0d10"/>
+    </svg>
+  </div>
+
+  <!-- chosen : one of asmodeus's own -->
+  <div class="scene" data-scene="chosen">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0406"/>
+      <ellipse cx="800" cy="200" rx="400" ry="200" fill="url(#gEmber)" opacity=".18" filter="url(#soft2)"/>
+      <!-- the coerced masses, dim, below -->
+      <g fill="#2a1418">
+        <circle cx="240" cy="720" r="12"/><circle cx="340" cy="720" r="12"/><circle cx="440" cy="720" r="12"/><circle cx="540" cy="720" r="12"/><circle cx="640" cy="720" r="12"/><circle cx="740" cy="720" r="12"/><circle cx="840" cy="720" r="12"/><circle cx="940" cy="720" r="12"/><circle cx="1040" cy="720" r="12"/><circle cx="1140" cy="720" r="12"/><circle cx="1240" cy="720" r="12"/><circle cx="1360" cy="720" r="12"/>
+        <circle cx="290" cy="780" r="12"/><circle cx="390" cy="780" r="12"/><circle cx="490" cy="780" r="12"/><circle cx="590" cy="780" r="12"/><circle cx="690" cy="780" r="12"/><circle cx="790" cy="780" r="12"/><circle cx="890" cy="780" r="12"/><circle cx="990" cy="780" r="12"/><circle cx="1090" cy="780" r="12"/><circle cx="1190" cy="780" r="12"/><circle cx="1310" cy="780" r="12"/>
+      </g>
+      <!-- the chosen few, bright, lifted up -->
+      <g fill="#ffd27a"><circle cx="560" cy="380" r="16" class="pulse-f"/><circle cx="800" cy="320" r="18" class="pulse-f" style="animation-delay:-.5s"/><circle cx="1040" cy="380" r="16" class="pulse-f" style="animation-delay:-1s"/></g>
+      <g stroke="#ff8a3c" stroke-width="1.6" stroke-opacity=".4" fill="none" class="flow"><path d="M560 700L560 396M800 700L800 338M1040 700L1040 396"/></g>
+      <g fill="#ffe6b0" opacity=".6"><circle cx="560" cy="340" r="3" style="animation:floatUp 5s ease-in infinite"/><circle cx="800" cy="280" r="3" style="animation:floatUp 5s ease-in infinite; animation-delay:-2s"/><circle cx="1040" cy="340" r="3" style="animation:floatUp 5s ease-in infinite; animation-delay:-3.5s"/></g>
+    </svg>
+  </div>
+
+  <!-- zon_kuthon : not like zon-kuthon -->
+  <div class="scene" data-scene="zon_kuthon">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#06060a"/>
+      <!-- left: Zon-Kuthon, pain & chains, cold -->
+      <rect x="0" width="800" height="900" fill="#0a0a12" opacity=".7"/>
+      <g transform="translate(400 420)">
+        <circle r="150" fill="#160a1e" stroke="#4a3a6a" stroke-width="2" opacity=".7"/>
+        <!-- chains -->
+        <g stroke="#5a5a72" stroke-width="4" fill="none" opacity=".7"><path d="M-120 -120l60 60M120 -120l-60 60M-120 120l60 -60M120 120l-60 -60"/></g>
+        <g fill="none" stroke="#6a6a82" stroke-width="3"><circle cx="-90" cy="-90" r="10"/><circle cx="90" cy="-90" r="10"/><circle cx="-90" cy="90" r="10"/><circle cx="90" cy="90" r="10"/></g>
+        <circle r="20" fill="#2a1a3a" stroke="#7a6a9a" stroke-width="2"/>
+      </g>
+      <!-- right: Asmodeus, purposeful tyranny, ember -->
+      <rect x="800" width="800" height="900" fill="#160806" opacity=".7"/>
+      <g transform="translate(1200 420)">
+        <circle r="160" fill="url(#gEmber)" opacity=".4" class="breathe"/>
+        <g class="spin-s"><use href="#sg-penta" x="-90" y="-90" width="180" height="180" color="#ffd27a"/></g>
+        <circle r="20" fill="url(#gEmber)"/>
+      </g>
+      <line x1="800" y1="0" x2="800" y2="900" stroke="#2a2030" stroke-width="2" stroke-opacity=".5"/>
+    </svg>
+  </div>
+
+  <!-- tyranny : tyranny requires tyrants -->
+  <div class="scene" data-scene="tyranny">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0608"/>
+      <ellipse cx="800" cy="300" rx="420" ry="280" fill="url(#gEmber)" opacity=".1" filter="url(#soft2)"/>
+      <!-- a hierarchy of deciders -->
+      <g fill="#ff8a3c">
+        <circle cx="800" cy="180" r="26" class="pulse-f"/>
+      </g>
+      <g fill="#d8a24a">
+        <circle cx="640" cy="340" r="20"/><circle cx="960" cy="340" r="20"/>
+      </g>
+      <g fill="#a8843a">
+        <circle cx="500" cy="500" r="16"/><circle cx="720" cy="500" r="16"/><circle cx="880" cy="500" r="16"/><circle cx="1100" cy="500" r="16"/>
+      </g>
+      <g fill="#6a5228">
+        <circle cx="400" cy="660" r="12"/><circle cx="560" cy="660" r="12"/><circle cx="680" cy="660" r="12"/><circle cx="780" cy="660" r="12"/><circle cx="820" cy="660" r="12"/><circle cx="920" cy="660" r="12"/><circle cx="1040" cy="660" r="12"/><circle cx="1200" cy="660" r="12"/>
+      </g>
+      <!-- command lines -->
+      <g stroke="#caa86a" stroke-width="1.6" stroke-opacity=".4" fill="none">
+        <path d="M800 200L640 320M800 200L960 320"/>
+        <path d="M640 360L500 484M640 360L720 484M960 360L880 484M960 360L1100 484"/>
+        <path d="M500 516L400 648M500 516L560 648M720 516L680 648M720 516L780 648M880 516L820 648M880 516L920 648M1100 516L1040 648M1100 516L1200 648"/>
+      </g>
+    </svg>
+  </div>
+
+  <!-- pharasma : because pharasma exists -->
+  <div class="scene" data-scene="pharasma">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#08060e"/>
+      <!-- the spiral of souls being sorted -->
+      <g transform="translate(800 440)">
+        <circle r="360" fill="url(#gWhite)" opacity=".05" filter="url(#soft2)"/>
+        <g class="spin-s" opacity=".6"><path d="M0 0 Q60 -40 40 -110 Q0 -220 -120 -200 Q-280 -160 -240 40 Q-180 280 120 260 Q420 220 380 -120" fill="none" stroke="#b98cff" stroke-width="2"/></g>
+        <!-- souls travelling the spiral -->
+        <g fill="#cbb0ff"><circle cx="40" cy="-110" r="5" class="tw"/><circle cx="-120" cy="-200" r="5" class="tw" style="animation-delay:-.8s"/><circle cx="-240" cy="40" r="5" class="tw" style="animation-delay:-1.6s"/><circle cx="120" cy="260" r="5" class="tw" style="animation-delay:-2.4s"/></g>
+        <circle r="40" fill="url(#gWhite)"/><circle r="12" fill="#fff" class="pulse-f"/>
+      </g>
+      <!-- a stream funneled off to Asmodeus's hell (ember, lower right) -->
+      <path d="M1000 560C1140 620 1260 680 1380 760" stroke="#ff8a3c" stroke-width="2" stroke-dasharray="6 10" class="flow" fill="none"/>
+      <g transform="translate(1400 780)"><use href="#sg-penta" x="-30" y="-30" width="60" height="60" color="#ff8a3c" class="spin-s" opacity=".7"/></g>
+    </svg>
+  </div>
+
+  <!-- inner_ring : part of the inner ring -->
+  <div class="scene" data-scene="inner_ring">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0406"/>
+      <!-- concentric rings of Hell -->
+      <g transform="translate(800 450)" fill="none">
+        <circle r="380" stroke="#5a1018" stroke-width="3" stroke-opacity=".6"/>
+        <circle r="300" stroke="#7a1420" stroke-width="3" stroke-opacity=".6"/>
+        <circle r="220" stroke="#a01828" stroke-width="3" stroke-opacity=".7"/>
+        <circle r="140" stroke="#ff8a3c" stroke-width="3" class="pulse"/>
+        <circle r="140" fill="url(#gEmber)" opacity=".3"/>
+        <g class="spin-s"><use href="#sg-penta" x="-60" y="-60" width="120" height="120" color="#ffd27a"/></g>
+        <circle r="12" fill="#fff" class="pulse-f"/>
+      </g>
+      <!-- a soul ascending from outer to inner -->
+      <circle r="9" fill="#ffd27a"><animateMotion dur="5s" repeatCount="indefinite" path="M800 830L800 590"/></circle>
+      <g stroke="#ff8a3c" stroke-width="1.4" stroke-opacity=".4" fill="none" class="flow"><path d="M800 830L800 590"/></g>
+    </svg>
+  </div>
+
+  <!-- perfect : hell's tortures perfect into pride -->
+  <div class="scene" data-scene="perfect">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0406"/>
+      <!-- the forge fire -->
+      <ellipse cx="800" cy="620" rx="320" ry="120" fill="url(#gEmber)" opacity=".4" filter="url(#soft2)" class="breathe"/>
+      <g><g transform="translate(680 600)"><path class="flick" d="M0 14c8-30-4-40 0-60 8 16 22 22 16 52 0 12-8 16-16 8z" fill="#ff8a3c"/></g><g transform="translate(800 600)"><path class="flick" style="animation-delay:-.5s" d="M0 18c10-36-4-48 0-72 10 18 26 26 18 62 0 14-10 20-18 10z" fill="#ffb04a"/></g><g transform="translate(920 600)"><path class="flick" style="animation-delay:-1s" d="M0 14c8-30-4-40 0-60 8 16 22 22 16 52 0 12-8 16-16 8z" fill="#ff8a3c"/></g></g>
+      <!-- the soul, refined from lump (left) to crystal (right) -->
+      <g transform="translate(440 380)"><circle r="44" fill="#3a2418" stroke="#6a4a2a" stroke-width="2"/></g>
+      <g stroke="#caa86a" stroke-width="2" stroke-dasharray="6 10" stroke-opacity=".5" fill="none" class="flow"><path d="M500 380L1080 380"/></g>
+      <g transform="translate(1140 380)"><polygon points="0,-60 44,-26 44,26 0,60 -44,26 -44,-26" fill="url(#gGold)" stroke="#ffe6b0" stroke-width="2"/><polygon points="0,-60 0,60 44,26 44,-26" fill="#ffb877" opacity=".5"/><circle r="10" fill="#fff" class="pulse-f"/></g>
+      <!-- hammer strikes (sparks) -->
+      <g fill="#ffd27a"><circle cx="780" cy="360" r="3" class="pulse-f"/><circle cx="820" cy="400" r="2.6" class="pulse-f" style="animation-delay:-.4s"/></g>
+    </svg>
+  </div>
+
+  <!-- mace : how would keltham answer -->
+  <div class="scene" data-scene="mace">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0608"/>
+      <!-- the red theology room -->
+      <ellipse cx="600" cy="440" rx="360" ry="300" fill="url(#gBlood)" opacity=".14" filter="url(#soft2)"/>
+      <use href="#figure" x="520" y="440" width="116" height="200" fill="#1a0d10"/>
+      <g transform="translate(440 360)" opacity=".5"><use href="#sg-penta" x="-40" y="-40" width="80" height="80" color="#ff6a72" class="spin-s"/></g>
+      <!-- the cyan Keltham-thought intruding from the edge -->
+      <g opacity=".55">
+        <circle cx="1180" cy="440" r="200" fill="url(#gCyan)" opacity=".18" filter="url(#soft2)"/>
+        <use href="#figure" x="1124" y="420" width="112" height="190" fill="#16283a"/>
+        <use href="#sg-hex" x="1150" y="300" width="60" height="60" color="#5fd0ff" class="spin-s"/>
+      </g>
+      <!-- thought-bridge between -->
+      <path d="M640 480C820 460 1000 460 1120 480" stroke="#7fb0d0" stroke-width="2" stroke-dasharray="5 10" stroke-opacity=".5" class="flow" fill="none"/>
+      <g fill="#bfeafa" opacity=".6"><circle cx="880" cy="468" r="3" class="tw"/></g>
+    </svg>
+  </div>
+
+  <!-- vocation : teach a new generation -->
+  <div class="scene" data-scene="vocation">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0708"/>
+      <ellipse cx="500" cy="420" rx="320" ry="280" fill="url(#gGold)" opacity=".1" filter="url(#soft2)"/>
+      <!-- the mentor with a spark -->
+      <use href="#figure" x="420" y="430" width="116" height="200" fill="#1a0a10"/>
+      <g transform="translate(560 440)"><circle r="22" fill="url(#gGold)" class="pulse-f"/><circle r="44" fill="url(#gGold)" opacity=".3" filter="url(#soft)"/></g>
+      <!-- new figures being lit -->
+      <g fill="#16202a"><use href="#child" x="900" y="500" width="60" height="90"/><use href="#child" x="1010" y="510" width="56" height="84"/><use href="#child" x="1120" y="500" width="60" height="90"/></g>
+      <!-- sparks passing to them -->
+      <g stroke="#ffd27a" stroke-width="2" stroke-opacity=".5" stroke-dasharray="5 8" class="flow" fill="none"><path d="M600 450L920 540M600 450L1030 548M600 450L1140 540"/></g>
+      <g fill="#ffd27a"><circle cx="930" cy="520" r="6" class="pulse-f"/><circle cx="1040" cy="530" r="6" class="pulse-f" style="animation-delay:-.5s"/><circle cx="1150" cy="520" r="6" class="pulse-f" style="animation-delay:-1s"/></g>
+    </svg>
+  </div>
+
+  <!-- cautionary : the man with no aptitude -->
+  <div class="scene" data-scene="cautionary">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#08060709"/>
+      <rect width="1600" height="900" fill="#090607"/>
+      <ellipse cx="800" cy="450" rx="360" ry="320" fill="url(#gBlood)" opacity=".18" filter="url(#soft2)"/>
+      <!-- a row of loyal figures, one being removed -->
+      <g fill="#1a1216"><use href="#figure" x="360" y="450" width="100" height="166"/><use href="#figure" x="560" y="450" width="100" height="166"/><use href="#figure" x="980" y="450" width="100" height="166"/><use href="#figure" x="1180" y="450" width="100" height="166"/></g>
+      <!-- the removed man (faded, swallowed by void) -->
+      <use href="#figure" x="760" y="450" width="100" height="166" fill="#160a0c" opacity=".4"/>
+      <circle cx="810" cy="530" r="120" fill="#04030a" opacity=".7"/>
+      <!-- the red X of removal -->
+      <g stroke="#c2152f" stroke-width="6" stroke-linecap="round" class="stamp"><path d="M740 460L880 600M880 460L740 600"/></g>
+      <g fill="#ff5560" opacity=".4" class="pulse-f"><circle cx="810" cy="450" r="4"/></g>
+    </svg>
+  </div>
+
+  <!-- notes : may i take notes -->
+  <div class="scene" data-scene="notes">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0708"/>
+      <ellipse cx="800" cy="440" rx="420" ry="300" fill="url(#gGold)" opacity=".08" filter="url(#soft2)"/>
+      <!-- parchment + poised quill -->
+      <g transform="translate(560 420)">
+        <rect width="320" height="400" rx="8" fill="#241c14" stroke="#6a5230" stroke-width="2"/>
+        <g stroke="#7a6038" stroke-width="3" stroke-opacity=".55"><path d="M40 70h240M40 120h200M40 170h240M40 220h180"/></g>
+      </g>
+      <g transform="translate(960 360)" class="sway" style="transform-origin:960px 520px"><path d="M0 160C36 80 84 30 130 0 112 44 80 84 28 116z" fill="#1c1410" stroke="#caa86a" stroke-width="1.8"/><circle cx="20" cy="124" r="5" fill="#ff3a4a"/></g>
+      <!-- rubies glinting (the cleric's robe-hem) -->
+      <g fill="#ff3a4a"><circle cx="300" cy="760" r="8" class="pulse-f"/><circle cx="360" cy="770" r="7" class="pulse-f" style="animation-delay:-.5s"/><circle cx="1240" cy="770" r="8" class="pulse-f" style="animation-delay:-1s"/></g>
+      <!-- a faint ascending higher-devil promise -->
+      <g transform="translate(1180 320)" opacity=".4"><use href="#sg-penta" x="-44" y="-44" width="88" height="88" color="#ff8a3c" class="spin-s"/></g>
+      <g fill="#ffd27a"><circle cx="800" cy="500" r="4" style="animation:floatUp 5s ease-in infinite"/><circle cx="840" cy="540" r="3" style="animation:floatUp 5s ease-in infinite; animation-delay:-2.5s"/></g>
+    </svg>
+  </div>
+
+  <!-- /SCENES -->
+
+  <div id="vignette"></div>
+
+  <div id="label">
+    <div class="kicker"><svg class="ksig"><use id="ksig-use" href="#sg-book"/></svg><span class="kname" id="kname">The Reading</span></div>
+    <div class="ttl" id="ttl">Corrigibility</div>
+  </div>
+
+  <div id="cap-wrap"><div id="cap"></div></div>
+
+  <!-- intro -->
+  <div id="intro">
+    <div class="intro-in">
+      <div class="eyebrow">an animated reading &middot; episode 25</div>
+      <h1>Planecrash</h1>
+      <div class="sub">Carissa enters the temple for &ldquo;correction,&rdquo; and the cleric <b>Ferrer Maillol</b> teaches her the inner-ring theology of Asmodeus &mdash; tyranny, Hell, and the souls He chooses for His own. This plays the <b>AskWhoCasts AI</b> reading &mdash; load the audio and the animation follows it, captioned with the original text.</div>
+      <div id="drop">
+        <svg class="dz-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L8 8m4-4 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <div class="dz-msg">Drop the episode 25 audio here, or click to choose</div>
+        <div class="dz-sub">mp3 &middot; m4a &middot; wav &middot; ogg &mdash; stays on your device, nothing is uploaded</div>
+        <input type="file" id="audiofile" accept="audio/*" hidden>
+      </div>
+      <div id="loaded"><span class="ck">&#10003;</span> <span class="fn" id="fname"></span> <span id="dur"></span></div>
+      <button id="begin" disabled><span class="tri"></span> Play</button>
+      <div class="cast" id="cast"></div>
+      <div class="note">Sound from your file &middot; seek, speed (1&times; / 1.25&times; / 1.5&times; / 0.75&times;), captions (CC / press &ldquo;c&rdquo;) and &larr; &rarr; arrows all work</div>
+      <div class="src">Reading &amp; audio by <b>AskWhoCasts AI</b> &mdash; support it at patreon.com/askwhocastsai. Episode 25 of &ldquo;mad investor chaos and the woman of asmodeus&rdquo; (Planecrash) by Iarwain &amp; lintamande.</div>
+    </div>
+  </div>
+  <audio id="player" preload="metadata"></audio>
+
+  <!-- controls -->
+  <div id="controls">
+    <button class="btn sm" id="prev" title="Previous passage" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M7 5h2v14H7zM20 5v14l-9-7z"/></svg></button>
+    <button class="btn lg" id="play" title="Play / Pause" aria-label="Play"><svg id="playicon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
+    <button class="btn sm" id="next" title="Next passage" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M15 5h2v14h-2zM4 5l9 7-9 7z"/></svg></button>
+    <button class="btn sm" id="restart" title="Restart" aria-label="Restart"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg></button>
+    <div id="prog"><div id="bar"></div></div>
+    <button class="btn" id="cc" title="Captions on/off (c)" aria-pressed="true">CC</button>
+    <button class="btn" id="speed" title="Reading speed">1.0×</button>
+    <div id="beat">The Forbiddance</div>
+  </div>
+
+</div></div>
+
+<script>
+
+/* ===================== CHARACTERS ===================== */
+const CHARS = {
+  narrator: {name:'Narrator',        tag:'the tale itself',       color:'#d8c39a', sigil:'sg-book'},
+  carissa:  {name:'Carissa Sevar',   tag:'to-let-you-in',         color:'#ff5d6c', sigil:'sg-flame'},
+  ferrer:   {name:'Ferrer Maillol',  tag:'cleric of asmodeus',    color:'#d8a24a', sigil:'sg-mask'},
+  keltham:  {name:'Keltham',         tag:'a mind from dath ilan', color:'#5fd0ff', sigil:'sg-hex'},
+  asmodeus: {name:'Asmodeus',        tag:'the most high',         color:'#ff8a3c', sigil:'sg-penta'},
+};
+const SCENE_TITLES = {
+  temple:'Into the Temple', revelation:'Relayed by Way of Hell', ferrer:'Ferrer Maillol, Fifth Circle',
+  education:'A Better Theological Education', not_own_accord:'Not of Your Own Accord', lawful_evil:'The Lawful Evil Version',
+  chosen:"One of Asmodeus's Own", zon_kuthon:'Not Like Zon-Kuthon', tyranny:'Tyranny Requires Tyrants',
+  pharasma:'Because Pharasma Exists', inner_ring:'Part of the Inner Ring', perfect:"Hell's Tortures Perfect Into Pride",
+  mace:'How Would Keltham Answer', vocation:'Teach a New Generation', cautionary:'The Man With No Aptitude', notes:'May I Take Notes'
+};
+
+/* ===================== CAPTIONS + SCENE/SPEAKER BEATS ===================== */
+/* CUES: the VERBATIM glowfic text, aligned to the audio's timeline {t: startSeconds, x: text}.
+   Empty x clears the caption (intro credits, and the tail the source doesn't cover).
+   BEATS: which scene + speaker is on screen at each time {t, s:scene, v:speaker}. */
+const CUES=[{t:0,x:""},{t:24.41,x:"She slows down from a run before she enters the temple because personally of interest"},{t:30.14,x:"to Asmodeus or not third-circle wizards do not go running into His temples like their"},{t:36.86,x:"time is the most important thing around."},{t:39.86,x:"Suddenly she is terrified but that's only because she's in line for some correction that"},{t:45.21,x:"is very sorely needed and will help her achieve her goals."},{t:48.75,x:"Cheliax, for all that it is less Lawful than some other very distant realms of"},{t:54.13,x:"existence, does not make a habit of missing ploys that are obvious even to Cheliax."},{t:60,x:"Compared to instructions relayed by way of Hell, a cleric who receives a direct divine"},{t:65.25,x:"revelation from Asmodeus will have received instruction that is more accurate,"},{t:69.1,x:"more precise, and much less able to be put into words for other mortals to"},{t:74.44,x:"hear. The project to extract extraplanar knowledge from 'Keltham' was established based in part upon"},{t:81.11,x:"a vision from Asmodeus. The priest who received the vision from Asmodeus reported his best"},{t:86.95,x:"guess that there was a sense that Asmodeus thought their visitor was potentially valuable and"},{t:92.43,x:"not just being given unexplained protections. What else was in the message from Asmodeus?"},{t:97.3,x:"Was there anything else important, not yet done?"},{t:100,x:"This tends to be very hard for recipients of visions to convey,"},{t:104,x:"if it is not blindingly obvious. The priest in question also headed up a Worldwound"},{t:109.52,x:"installation, was fifth-circle, and had proven himself on lesser commands."},{t:113.48,x:"Placing him in command of the villa project was another obvious bet."},{t:118.37,x:"Ferrer Maillol himself, fifth-circle cleric of Asmodeus, is not currently enjoying himself quite so much"},{t:125.22,x:"as when he was fighting an endless horde of demons at the Worldwound."},{t:129.48,x:"The Worldwound did not have alien teenagers being insane, direct orders from Hell that are"},{t:136.5,x:"incredibly inexplicable, random wizard students getting oracled by Nethys, and way too many complications he"},{t:143.07,x:"is not allowed to set on fire until they shape up."},{t:147.56,x:"Ferrer Maillol had not, until just today, appreciated the degree to which it is easier"},{t:153.13,x:"to fight an endless horde of demons compared to sending out a new top-priority message"},{t:158.8,x:"to Aspexia Rugatonn every hour. He had quietly resolved to himself that he was very"},{t:165.2,x:"seriously going to consider whether the next such message should be batched,"},{t:169.75,x:"in part to conserve his remaining supply of communication spells,"},{t:173.5,x:"and in part because he was worried about how Aspexia Rugatonn was going to take"},{t:177.93,x:"his hourly interruptions. Of course the next piece of news he got was about a"},{t:182.4,x:"fucking Otolmens event. When Ferrer Maillol is notified that Carissa Sevar wants to see the"},{t:187.67,x:"head priest, there is only one first thought which goes through his mind,"},{t:192.29,x:"which is not again."},{t:194.7,x:"Ferrer Maillol instructs that Carissa Sevar is to be shown to him at once,"},{t:202,x:"and fixes a very bland expression on his face."},{t:205.6,x:"\"What is it?\""},{t:206.8,x:"\"I - understand it to be the will of Asmodeus that I get a better theological"},{t:212.36,x:"education, as if I were the inheriting daughter of a Count."},{t:216,x:"I have just spent an evening with Keltham in which he kept asking questions that"},{t:221,x:"were extremely difficult to answer from within my present understanding of Asmodean theology,"},{t:225.8,x:"which I know to be deficient. He wants me to figure out my internal confusions"},{t:231.94,x:"promptly because he - might not want to have sex with internally confused people -"},{t:238.06,x:"and suggested I seek you out now.\""},{t:240.74,x:"Which is important because it means that this will all have to be very time-bounded,"},{t:246.3,x:"and Keltham's expecting her back, except he wouldn't be that surprised really if straightening herself"},{t:252.06,x:"out took longer than expected, but it still wouldn't be ideal -"},{t:256,x:"Carissa needs to be smarter and not for the first time in the last three"},{t:261,x:"hours is really terrified she will not live to acquire the headband that'll do it."},{t:265.72,x:"At least Sevar doesn't have any more brilliant ideas, such as her last one,"},{t:270.38,x:"which was that Ferrer Maillol's life wasn't going to be complicated enough unless he added"},{t:275.95,x:"an additional number of teenage girls to it."},{t:279,x:"\"Prioritized for theological instruction as if you were a fourth-circle cleric,\""},{t:284,x:"Maillol corrects sharply, and then pauses to reflect on whether he has violated Aspexia Rugatonn's"},{t:290.73,x:"instructions for the gentle handling of Carissa Sevar..."},{t:294.5,x:"no, she's seeking this of her own accord..."},{t:298.5,x:"actually he should check that, if she's having trouble remembering Hell's instructions."},{t:304.29,x:"\"Would you say you are not seeking this instruction of your own accord?"},{t:308,x:"Keltham is not a member of the Church, but him suggesting you into it is"},{t:312.61,x:"- ambiguous.\" Maillol is unsure what he should make of Hell's instructions in that case."},{t:318,x:"He really does not want to bother Aspexia Rugatonn about it already."},{t:323.05,x:"\"Keltham advised only that I - use dath ilani techniques for thinking about confusing things."},{t:328.95,x:"I realized that I needed someone who understands the - thing Asmodeus communicated to me that"},{t:335.45,x:"I don't understand - and I told him I should talk to a cleric.\""},{t:340.18,x:"That is good behavior. Ferrer Maillol gives her his least frightening smile,"},{t:344.67,x:"the smile that Asmodean priests give to the lesser people who do something Church-approved."},{t:350.42,x:"\"You may be unfortunately optimistic if you think that I will be able to entirely"},{t:356.74,x:"clarify Hell's message. Still, if you were given this affordance,"},{t:360.45,x:"it suggests that Asmodeus thinks some benefit may come of it."},{t:364.3,x:"Seek instruction, then, if it is of your own accord,"},{t:367.67,x:"and I will assist you as our Lord commanded us.\""},{t:370.83,x:"- nod. She is going to sound like an idiot."},{t:374.6,x:"She's just going to - ignore that and try anyway, if her idiocy is revealed then"},{t:380.6,x:"it can be corrected. \"I think dath ilani people - genuinely understand Law better than us."},{t:388,x:"I think they're - mostly Lawful Good, and Keltham is Lawful Neutral,"},{t:392.63,x:"but their understanding of Law is correct in important ways we weren't going to derive"},{t:398.23,x:"ourselves, and so there is a Lawful Evil version of it."},{t:401.73,x:"And in class, I was trying to come up with it."},{t:405.62,x:"And then I got the communication -\" she pulls out the scroll Aspexia Rugatonn gave her,"},{t:411.25,x:"reads it off so she can't be misremembering - ''Remember that you are not Irori."},{t:416.7,x:"Do not think yourself likely to succeed in perfecting yourself without divine aid.\""},{t:422.26,x:"\"Acknowledge the desires in yourself that have no place in Axis,"},{t:426.89,x:"and accept that your rightful place is in Hell.\""},{t:430.71,x:"And I think what was being - very generously - communicated by mentioning Irori,"},{t:435.93,x:"and Axis, was that I was - borrowing too much from Keltham,"},{t:441.07,x:"who is Lawful Neutral, and that I don't truly understand the nature of Evil,"},{t:445.82,x:"and so the thing I was building wouldn't have been of any value,"},{t:450.17,x:"it would've been - missing something Asmodeus wants."},{t:453.7,x:"But presumably I am capable of learning it or he'd just have let me get"},{t:459.52,x:"it wrong and accidentally make myself worthless."},{t:462.19,x:"Do you...have any idea what it might be.\""},{t:465.59,x:"Ferrer Maillol's first thought is the obvious one, that he hopes this new brilliant idea"},{t:470.26,x:"of Sevar's works out better for him than her one about providing Keltham with lots"},{t:475.18,x:"of girls one of whom gets oracled by Nethys - though,"},{t:479.18,x:"of course, that wasn't her decision, and the Church of Asmodeus is not confused about"},{t:485.21,x:"who bears the real responsibility. His second thought is about a distinction he was warned"},{t:491.21,x:"about, that they've been instructed to prioritize Sevar as if she were Asmodeus's own fourth-circle"},{t:497.6,x:"cleric, not to answer as if she were one."},{t:501.2,x:"It rules out the obvious answer he'd give to a fourth-circle Asmodean cleric standing nearby"},{t:507.6,x:"and asking what Sevar was missing. Still, Asmodeus's language to Sevar -"},{t:512.45,x:"if it wasn't just poorly translated by Hell - suggests that Sevar has the kind of"},{t:518.59,x:"soul that Asmodeus actually wants, if He can win it in this contest with Irori,"},{t:524.48,x:"or whatever is actually going on here."},{t:527.22,x:"(He is not to try to guess and be helpful in a way that pushes"},{t:531.77,x:"the edges of Hell's orders; the Grand High Priestess was quite clear on that.)"},{t:535.84,x:"He will, then, answer as he might answer somebody who was considered to have enough"},{t:540.93,x:"potential that Asmodeus might choose them to be a cleric,"},{t:544.86,x:"perhaps, though not yet chosen; or as he might answer a promising heiress of Chelish"},{t:550.52,x:"nobility. \"People in Cheliax register as Lawful and as Evil,"},{t:554.43,x:"and worship no Lawful Evil god other than Asmodeus or his subordinates."},{t:559.2,x:"This suffices for much of Asmodeus's purpose, as it brings those souls to Hell's standard"},{t:565.6,x:"gate, which Asmodeus has already conquered, and so into His ownership for further refinement."},{t:571.6,x:"We do not ask most people to understand what Lawful Evil really is,"},{t:576.42,x:"let alone what would distinguish Asmodeus from Zon-Kuthon within Lawful Evil."},{t:580.45,x:"Most people do not, in fact, need to understand this."},{t:584.09,x:"They do not possess the nature that marks them as potentially one of Asmodeus's own,"},{t:590,x:"instead of just the masses who must be coerced to Lawfulness out of fear and"},{t:595,x:"who end up registering as Evil because that is what the rules make of conducting"},{t:600.54,x:"yourself in ways not completely absurd.\" \"You, Sevar, might have the potential to become one"},{t:605.82,x:"of Asmodeus's own, not just Lawful and Evil."},{t:608.73,x:"Or so our Lord's instructions to you suggest."},{t:611.64,x:"You are, I think, being invited to join the inner circle."},{t:615.18,x:"And I am not expecting you to already understand what that truly means,"},{t:619.36,x:"because it is not something we bother trying to teach most third-circle wizards."},{t:624.45,x:"So the question I am about to ask is not a test of loyalty,"},{t:629.1,x:"but a test for whether you belong in the beginner classroom or the advanced one."},{t:634.47,x:"What have you already grasped, if anything, of the difference between Lawful Evil and Asmodeanism?"},{t:642.05,x:"What makes Cheliax an Asmodean country and not just a Lawful Evil one?\""},{t:647.9,x:"AAH - - which is completely unreasonable because this is about as gentle an introduction as she"},{t:653.96,x:"could possibly have hoped for. She has never considered the question before but she is"},{t:659.33,x:"a day of dath ilan better at thinking than anyone else in Cheliax and would"},{t:664.33,x:"like to show it, ideally. \"The part of that which sounds easiest is the difference"},{t:670.18,x:"between Asmodeus and Zon-Kuthon,\" she says. \"Zon Kuthon - intrinsically values suffering more,"},{t:676.12,x:"I think? If everyone in the universe were, uh, constantly being creatively tortured,"},{t:682.92,x:"Zon Kuthon would be entirely pleased by that."},{t:686.27,x:"And Hell ruled by Asmodeus isn't like that - there'd lots of torture,"},{t:691.59,x:"but there is - the opportunity to not be tortured, the opportunity to be such a"},{t:697.6,x:"high performer that you are satisfactory - the opportunity to be doing the torturing,"},{t:702.58,x:"the opportunity to be deciding who is tortured - Asmodeus wants...."},{t:706.63,x:"some features of Hell other than the suffering - I mean,"},{t:710.6,x:"in addition to the suffering, I know the suffering's important -"},{t:715,x:"these are guesses, maybe Asmodeus values people having the experience of -"},{t:720.06,x:"their suffering being related to qualities they have - knowing you are suffering because of your"},{t:726.7,x:"own conduct and choices, not just at unlucky random - maybe Asmodeus values people striving to"},{t:733.76,x:"avoid further torture, or some of the things they do while they're trying to avoid"},{t:739.48,x:"further torture, or, uh, them becoming more like him in becoming more the kind of"},{t:744.67,x:"entity who'd run Hell the way he runs it - maybe he values people being rewarded"},{t:750.31,x:"when they've earned it, maybe he values - earning it feels like a natural category,"},{t:756.4,x:"here, if I had to guess I would guess that Asmodeus values people earning features"},{t:762.8,x:"of their situation through their actions or their fundamental nature..."},{t:766.47,x:"uh, the strongest counterargument I can think of to that is that it's too Lawful"},{t:771.96,x:"Neutral again? 'to each their just rewards' is not right,"},{t:775.87,x:"as a description of Asmodeus. But there are other ways for there to be a"},{t:781.62,x:"relationship between your actions and what happens to you.\""},{t:785,x:"\"Satisfactory for someone who was never taught."},{t:787.62,x:"Beginner's classroom, but a thinking beginner.\" \"The primary domains of Asmodeus are tyranny,"},{t:794.75,x:"slavery, compacts, and pride. Tyranny is not just rulership."},{t:799.5,x:"Slavery is not just obedience. Compacts are not just deals."},{t:804.47,x:"Pride is not just having a high opinion of yourself.\""},{t:809.13,x:"\"For Zon Kuthon, the object of torture is torture."},{t:812.64,x:"For Asmodeus, the object of torture is not only the benefit Asmodeus gains when people"},{t:819.59,x:"obey. The object of torture is that Cheliax be a tyranny,"},{t:823.64,x:"not just a farm from which Asmodeus extracts a maximum yield of wheat."},{t:828.47,x:"Tyranny, as Asmodeus sees it, requires tyrants, not just a single decider at the top,"},{t:835.58,x:"but deciders all through the system who enforce obedience with whip and pain."},{t:840.48,x:"He is a Lawful Evil god, the tyrants are there to enforce rules and not"},{t:845.67,x:"just to do as they please, they are subject to rules themselves.\""},{t:849.67,x:"\"We are taught - we, Asmodeus's own clerics, not the common people -"},{t:854.09,x:"that Asmodeus holds the key of Rovagug's prison, fitting a lock that Abadar made so"},{t:859.91,x:"that Asmodeus alone could open it. Why Asmodeus?"},{t:863.22,x:"Because Asmodeus alone can be trusted by Pharasma that, even after He conquers every plane"},{t:870.14,x:"and every part of reality, Asmodeus will never seek to displace Pharasma Herself."},{t:875.48,x:"Pharasma is the one who made the rules that send people to the Hell that"},{t:881.95,x:"Asmodeus governs. Because Pharasma exists, Asmodeus is just enforcing the rules that She made,"},{t:887.8,x:"when He tortures a soul in Hell, He is being Lawful Evil and not just"},{t:893.2,x:"Evil, He is being tyrannical and not just sadistic."},{t:896.44,x:"Asmodeus is the one god who cannot exist as Himself without a Pharasma above Him"},{t:901.72,x:"to set Him in place and define the system He enforces,"},{t:905.74,x:"and that was why He alone is entrusted to hold Rovagug's key."},{t:910.43,x:"He, too, is only following His orders, each time He receives a new soul into"},{t:916.4,x:"Hell's embrace.\" \"The language we are speaking is ill-suited to such distinctions,"},{t:921.54,x:"because mortals are ill-suited to understanding them, and you should not read too much into"},{t:927.69,x:"how we mortals flail for one mortal concept or another."},{t:931.09,x:"To Asmodeus, to a greater devil, the shape of the meaning is precise."},{t:935.82,x:"There are many souls in Cheliax who would rather hold the whip themselves,"},{t:941,x:"than be the one whipped. That does not make them Asmodean,"},{t:945.71,x:"it makes them selfish. There are many souls in Cheliax who would enjoy holding the"},{t:951.57,x:"whip, because they are sadists, because they delight in causing others pain and crushing them"},{t:957.57,x:"below. That doesn't make them Asmodeus's rather than Zon-Kuthon's."},{t:961.36,x:"But some souls in Cheliax enjoy holding the whip more when they are doing it"},{t:966.82,x:"to enforce the rules, you might even say that they need there to be rules"},{t:971.67,x:"and need there to be some higher tyrant above them so that they are being"},{t:976.11,x:"more than just sadists. If those souls have enough potential to be worth empowering,"},{t:981.02,x:"Asmodeus chooses them for His own, to be His cleric,"},{t:984.64,x:"and grants to them His domain of tyranny.\""},{t:987.2,x:"\"To delight in tyranny is not mandatory to be one of Asmodeus's own."},{t:992.3,x:"The devil you met this day may have had no joy in tyranny,"},{t:996.15,x:"for all we know, he was not a devil who had other devils beneath him."},{t:1000.7,x:"But when he was mortal he must have already delighted in the compacts that Asmodeus"},{t:1005.95,x:"delights in, by which the wheels of Law turn to crush one party or another"},{t:1010.65,x:"to the contract beneath them. He was not just Lawful and Evil,"},{t:1014.37,x:"but delighted in Law turned to the purposes of Evil."},{t:1018.05,x:"And because of that, after his death and through his suffering he was elevated and"},{t:1023.17,x:"raised to the status of a greater devil, and kept that part of himself which"},{t:1027.83,x:"was pleasing to Asmodeus. As he was one of us in his mortal life,"},{t:1032.88,x:"so he is now part of the inner ring in Hell.\""},{t:1036.84,x:"\"Tyranny, not just rulership. Slavery, not just obedience."},{t:1040,x:"Compacts, not just deals. Pride, not just self-value."},{t:1044.5,x:"Maybe all of those will appeal to you, maybe only one,"},{t:1048.33,x:"but you must have great potential for at least one -"},{t:1051.25,x:"if I am not entirely mistaken about the meaning of Hell's translated will of Asmodeus,"},{t:1056.6,x:"conveyed to you.\""},{t:1057.8,x:"It feels so - far, from something she could translate for Keltham,"},{t:1062,x:"but all true things can be said in the same language,"},{t:1065.67,x:"so there is a way, there is a version of this written in dath ilan's"},{t:1071.14,x:"style of thought which she can understand and embody - \"Should it be obvious to me,"},{t:1077.57,x:"which one, just by thinking about it.\""},{t:1079.91,x:"\"Perhaps not. I doubt that Asmodeus would have bothered to instruct you to seek out"},{t:1085,x:"those elements of your own soul, or for us to assist you,"},{t:1089.17,x:"if it was a ten-minute job.\" \"Competent natural tyrants are the most useful members of"},{t:1094.33,x:"the inner circle, and we try to give every intelligent Chelish citizen a chance to"},{t:1099.33,x:"enforce some rules with a whip to let them discover that tendency if they have"},{t:1104.52,x:"it. If you rise high within this world, you will discover very rapidly that the"},{t:1109.75,x:"number of competent Asmodean managers you can find to help run your operations is an"},{t:1115,x:"extreme check on your ambitions. It is plausibly the limiting factor for the entire Chelish"},{t:1121.32,x:"state. Slavemasters and lawyers are not nearly so much in demand."},{t:1125.78,x:"Pride tends to be expensive in multiple ways, and not just financially,"},{t:1129.96,x:"so it is largely the domain of nobles or the very wealthy,"},{t:1135.09,x:"who by their own nature cannot be too numerous relative to the general population."},{t:1141.41,x:"Outside of tyranny, then, you may lack firsthand experience with other elements of Asmodeus's domain"},{t:1147.59,x:"as experienced by the insiders.\" \"Do you wish to hear my guess about your Asmodean"},{t:1152.45,x:"potentials? It seems to me that there is a tension between Asmodeus's instructions to me"},{t:1157.72,x:"that we are to assist you if you seek instruction,"},{t:1161.61,x:"and Asmodeus's instructions to you that you are to find that part of yourself."},{t:1166.73,x:"My own resolution of the tension would be that I should answer if you ask,"},{t:1172.43,x:"because I am to concern myself with Asmodeus's instructions to myself,"},{t:1176.61,x:"which say that I am to assist you, and not with weighing Asmodeus's instructions to"},{t:1181.83,x:"you.\""},{t:1182.17,x:"\"I do want to hear your guess."},{t:1184.61,x:"I think I would benefit from knowing where to look even if I am meant"},{t:1189.38,x:"to find it on my own.\""},{t:1191.23,x:"\"Pride and slavery. You asked to be prettier as the first element of your shopping"},{t:1195.8,x:"list. The part of Hell which your attention naturally focused upon was the slavery there,"},{t:1200.47,x:"the precise structures of pain and obedience.\""},{t:1203.73,x:"\"What is pride, if it's not just -\" what had he said -"},{t:1208.41,x:"\"not just a high opinion of yourself.\""},{t:1210.88,x:"Does she have a high opinion of hers - yes, yes,"},{t:1214.87,x:"she does."},{t:1215.8,x:"Pride is the aspect of Asmodeus that Ferrer Maillol understands the least well,"},{t:1221.33,x:"himself. Which is unfortunate for him, because the greater devils all seem to possess pride"},{t:1226.33,x:"in abundance; and it's a good guess that having that much feeling about yourself and"},{t:1231.56,x:"your place, for Hell's tortures to perfect into precisely Asmodean pride,"},{t:1235.08,x:"is part of what helps you stay yourself through Hell."},{t:1238.78,x:"The way in which hereditary nobles seem to end up as higher devils after their"},{t:1245.32,x:"death, despite what Ferrer Maillol would privately term some severe deficits of other competence,"},{t:1249.8,x:"would seem to bear this out; unless it's just the sort of unfairness in which"},{t:1255.33,x:"the Tyrant so delights. He answers, then, from textbook and catechism."},{t:1260.36,x:"\"It is, obviously, a god-concept, and not one which mortal concepts are very apt to"},{t:1266.18,x:"describe. It may help to remember that this is a Lawful Evil domain,"},{t:1271.05,x:"and many things that mortals think of with the usual word 'pride' are neither Lawful"},{t:1276.76,x:"nor Evil, to say nothing of Law-that-does-Evil or Evil-that-upholds-Law."},{t:1282.48,x:"The Lawful aspect of Asmodean pride is that it is bound up with having a"},{t:1287.67,x:"place within Asmodeus's tyranny and which that tyranny has assigned to you."},{t:1292,x:"The Evil aspect of it is that it is yours and you defend it and"},{t:1297,x:"you will crush others to defend it."},{t:1299.55,x:"By doing this, you enforce the structures of the tyranny and keep others in their"},{t:1305,x:"place below you, it is Evil turned to the purposes of Law."},{t:1309,x:"One seeks to climb the ranks of the tyranny, but within the tyranny,"},{t:1313.38,x:"and by this the strong rise and the tyranny itself is strengthened.\""},{t:1317.95,x:"\"Those with deep Asmodean senses of pride have a felt sense of the order of"},{t:1323.33,x:"the universe itself being disrupted, when somebody fails to give them their due,"},{t:1327.67,x:"or when people weaker than themselves seem to be raised above them."},{t:1332.05,x:"They are not simply defending themselves from insult, or seizing an opportunity to take somebody"},{t:1337.88,x:"else's position. They are restoring the order of the tyranny itself,"},{t:1342.36,x:"in face of the disorder that is a weak unworthy person occupying a position of"},{t:1347.82,x:"power or esteem.\" \"Do you just want to be prettier,"},{t:1351.24,x:"Carissa? Or do you have a sense that there is an order within the universe"},{t:1355.9,x:"that is offended if people weaker than you, less deserving than you,"},{t:1359.64,x:"get to be pretty and you don't?\""},{t:1361.88,x:"\"Thinking that people ought to - look at you and see how much you matter,"},{t:1366.36,x:"that you matter more than them? Is that - the right sort of thing -\""},{t:1370.96,x:"\"Yes. Though do not omit the idea of grandeur.\""},{t:1374.32,x:"Ferrer Maillol taps the robes he is wearing, of a fifth-circle cleric of Asmodeus;"},{t:1380.3,x:"magical cloth of the highest quality, with gold and with rubies."},{t:1384.61,x:"\"These vestments do not simply inform others of my place."},{t:1388.6,x:"They are grand, expensive, rare, enviable, difficult for others to obtain."},{t:1393,x:"They embody what it means for me to have risen high in Cheliax;"},{t:1397.48,x:"they do not simply inform others of the fact."},{t:1400.36,x:"Do you just want people to know the truth that you matter more than them?"},{t:1404.77,x:"Or do you want to walk into a ballroom full of higher nobility,"},{t:1408.55,x:"and watch the fearful ones slink away from you and the ambitious ones flock to"},{t:1413.04,x:"court you and the ignorant wonder who you are to matter so much more than"},{t:1417.64,x:"themselves? Do you just want others to know you're important,"},{t:1420.84,x:"or hammer the existence of Carissa Sevar into your lessers like striking them down with"},{t:1425.86,x:"a mace?\""},{t:1426.71,x:"Carissa really, really, really wants to know how Keltham would answer that question."},{t:1432.29,x:"\"I want that,\" she says, instead, dragging her thoughts away from Keltham and to imagining"},{t:1438.3,x:"it. \"I want people to be jealous of me, and to aspire to be me,"},{t:1443.84,x:"and to despair at how they're not good enough to be me.\""},{t:1447.2,x:"\"Not, of itself, sufficient for our inner circle."},{t:1449.44,x:"But I doubt, given Asmodeus's instructions, that He expected you to learn your place in"},{t:1454.9,x:"Hell and join His most treasured possessions with only a moment's thought and a word"},{t:1461,x:"of advice. My duty to Asmodeus also bids me warn you,"},{t:1465.64,x:"pride is the domain of Asmodeus where I hold the least expertise."},{t:1469.45,x:"If a fourth-circle cleric had questions I could not answer there,"},{t:1473.4,x:"while about Asmodeus's business, they might need to wait upon a visit from a higher-circle"},{t:1479,x:"cleric to answer in my place.\" That Ferrer is so quick to think of his"},{t:1485.14,x:"duty to Asmodeus there may reflect his own lack of pride,"},{t:1489.88,x:"though how that is a failure to enforce his own place within the tyranny or"},{t:1495.5,x:"its laws is lost on him. It doesn't seem exactly the thing that a devil"},{t:1500.67,x:"in his position would do, though the devils wouldn't ignore their duty to Asmodeus either."},{t:1505.76,x:"They would disclaim their own lack of expertise with more grandeur,"},{t:1509.95,x:"somehow; and Ferrer Maillol is aware that in reality most of his grandeur comes from"},{t:1515.86,x:"his vestments and his ability to kill people who annoy him."},{t:1520.36,x:"Does he...not want people to envy him?"},{t:1523.75,x:"Or just have enough of the thing that's not sufficient as -"},{t:1528.56,x:"\"Okay. I - think I can productively work on that one,"},{t:1532,x:"alone, though I would be grateful for advice if you have it.\""},{t:1536,x:"she's going to have to be so proactive about seeking out their help,"},{t:1540.18,x:"given the rule they can't just tell her when she obviously needs it."},{t:1544.35,x:"\"And maybe on slavery? What are the signs of having potential at that one?\""},{t:1549.22,x:"\"You are obviously interested in it, and I doubt you are interested in it for"},{t:1554.13,x:"purposes of stamping it out like a paladin of Iomedae."},{t:1557.17,x:"You skipped right over the question of how we raise mortal slaves in Cheliax and"},{t:1562.12,x:"went straight to the more interesting tortures in Hell, wondering exactly how they were designed"},{t:1567.31,x:"to suit which purposes of Asmodeus.\" Ferrer Maillol gives her,"},{t:1572.5,x:"now, the sort of conspiratorial smile that he'd give to an up-and-coming new member of"},{t:1580.05,x:"the Inner Ring (an entire aspect of Asmodean theology whose details Sevar has not yet"},{t:1585.94,x:"inquired into, and which she probably isn't ready for)."},{t:1590.18,x:"\"I haven't any trouble imagining you, a thousand years hence,"},{t:1594.24,x:"as a Baron of Hell overseeing the refinement of thousands of fresh mortals -"},{t:1598.28,x:"or maybe even a Duke of Hell set to raise the highest of future devils"},{t:1603,x:"from the most promising candidates.\" \"Though you will be more immediately useful to our Lord"},{t:1608,x:"if you can train valuable slaves for Him here - keeping in mind that we are"},{t:1612.85,x:"all our Lord's slaves. Don't only think of collared wretches dredging the streets,"},{t:1616.85,x:"if training them for sale doesn't seem grand enough to suit you."},{t:1621.14,x:"Do you find yourself inspired to teach a new generation of wizards,"},{t:1626.29,x:"perhaps? And if so - would you rather teach them in Lastwall,"},{t:1631.5,x:"under whatever absurd restrictions hold there? Or in Cheliax, where you are free to punish"},{t:1637.23,x:"and reward as you please, where mortals are your raw material to be freely crafted"},{t:1642,x:"so long as you deliver results?\""},{t:1644.09,x:"\"I want - I want to figure out what dath ilan but Asmodean is,"},{t:1648.61,x:"and I want to prove that it makes better wizards,"},{t:1652.21,x:"and better soldiers and better devils eventually.\""},{t:1654.79,x:"Ferrer Maillol chuckles in a way that is only 95% humorless,"},{t:1659,x:"for infinity percent more humor than he uses on most occasions."},{t:1663.53,x:"\"Sevar, there are certainly a thousand subtle refinements of the notion of Asmodean slavery beyond"},{t:1671.47,x:"that, but don't overlook that if you set out to produce better wizards,"},{t:1675.82,x:"soldiers, and devils, by any useful means and without a hundred mad restrictions preventing you"},{t:1680.96,x:"from doing it properly, paladins of Iomedae will call you a slaver and try to"},{t:1686.83,x:"stop you. If our Lord demanded that people comprehend the exact,"},{t:1690.48,x:"full meaning of His domains before He would choose a cleric of the first circle,"},{t:1695.14,x:"He would have no clerics in this world.\""},{t:1697.76,x:"\"I'm not tempted by Good,\" she says, which is more candid than she's ever even"},{t:1703.48,x:"contemplated being with a superior but if she needs correcting she needs correcting,"},{t:1708.86,x:"she's not trying to avoid that, at this point."},{t:1712.71,x:"\"Good is stupid and if you try to do anything ambitious it'll be Evil,"},{t:1717.35,x:"I know that, I acknowledge myself to being susceptible to ending up Neutral accidentally but"},{t:1722.41,x:"it's not - squeamishness, or thinking that it's important people have a nice time while they're"},{t:1729.47,x:"learning things, it's - modeling Keltham too closely, probably."},{t:1733.26,x:"My job right now is half trying to understand Keltham and half not to be"},{t:1739.67,x:"a heretic while I'm doing it. I am sure I'm pointed in the wrong direction"},{t:1744.67,x:"somewhere but I'm not pointed in - thinking children should decide whether they go to school"},{t:1749.81,x:"or spend all day lounging around eating sweets, and I know we're all children.\""},{t:1754.65,x:"\"If it seems stupidly obvious to you that slavery is the way to go,"},{t:1759.33,x:"Sevar, that is not unsuggestive of an aptitude for it."},{t:1763,x:"Hell's relayed instructions seem to me to suggest that you are in danger of heresy"},{t:1768.25,x:"primarily because you have not found within yourself the desires that would keep you out"},{t:1773.48,x:"of Axis.\" Ferrer Maillol taps his fingers on his thigh,"},{t:1776.61,x:"so that Sevar knows he's thinking and doesn't try to interrupt him."},{t:1781,x:"There were some interesting points in Sevar's file drawn from her mind being read."},{t:1786.25,x:"He wouldn't ordinarily say this part, it has been sometimes known to confuse even first-circle"},{t:1792.6,x:"clerics, but Sevar may need to know."},{t:1795.47,x:"\"There's a story not commonly told to Asmodean clerics before they reach second-circle,"},{t:1802.11,x:"except in special cases, but you may possibly be one of those cases."},{t:1806.33,x:"After I tell it to you, you are not to repeat it to anyone not"},{t:1810.22,x:"at least a second-circle cleric of Asmodeus, including high nobility of Cheliax."},{t:1815.71,x:"Security will know better than to repeat it if they read it from your thoughts,"},{t:1821.32,x:"and it is already the case that nobody is allowed to read your mind unless"},{t:1825.68,x:"they are at clearance levels far above the ones you used to have."},{t:1829.84,x:"Clear?\""},{t:1829.96,x:"\" - yes.\""},{t:1830.58,x:"\"There was once a well-hushed scandal, concerning a certain ordinary Baroness,"},{t:1835,x:"who was found to have been keeping, as a bed-slave,"},{t:1838.5,x:"a man who'd been chosen as a first-circle cleric of Asmodeus."},{t:1842.45,x:"She kept him after his choosing. Tell me, what do you suppose happened after that?\""},{t:1848.97,x:"\"- I assume if the answer were' she was punished because that's presumably illegal' then you"},{t:1855.28,x:"wouldn't be telling me this as an important story."},{t:1858.8,x:"Was she - promoted? So the arrangement wasn't a problem?\""},{t:1862.4,x:"\"Illegal doesn't begin to cover it. There was an immediate massive clampdown on the entire"},{t:1868.52,x:"event as fast as word could be passed upward, as people saw the potential for"},{t:1873.92,x:"conflict between Church and Queen over the details of how to handle it."},{t:1878.18,x:"The Baroness in question, who was in my own personal opinion something of an absolute"},{t:1882.93,x:"idiot, seemed to feel that she'd done nothing wrong, since the cleric himself had never"},{t:1887.59,x:"said that Asmodeus didn't want her to go on keeping him.\""},{t:1891.42,x:"\"An ensuing investigation turned up the puzzling fact that this new cleric had no visible"},{t:1897.74,x:"aptitude for tyrannizing others, nor for crafting slaves, nor for executing compacts,"},{t:1903.85,x:"and he definitely had no visible pride."},{t:1907.11,x:"This, of course, made our Lord's mysterious action all the more potentially important to understand,"},{t:1912.63,x:"if it was not done for any of the usual reasons.\""},{t:1915.92,x:"\"The answer, in the end, was that the man had no aptitude for tyrannizing others"},{t:1920.17,x:"- but that he felt on a truly deep level that it was right for him"},{t:1925.54,x:"to be tyrannized. He had no aptitude as a slavemaster -"},{t:1929.28,x:"but felt that it was very right and proper for him to be a slave."},{t:1933.48,x:"He had no aptitude for contracts - but felt that all was right with the world"},{t:1938.29,x:"when his Baroness was forcing him into grossly unfair bargains in her bed-games."},{t:1943.62,x:"He understood the order of society that underlies pride, and saw his own place was"},{t:1948.26,x:"at the bottom of it. This, we think, is why Asmodeus chose him,"},{t:1952.22,x:"though Asmodeus made no revelations on that subject.\""},{t:1954.65,x:"\"It is not just a lie told to the masses,"},{t:1957.7,x:"if you were ever wondering about that, that Asmodeus has been known to treasure some"},{t:1963.56,x:"of His possessions as things beautiful to Him in themselves,"},{t:1967.26,x:"and not just for the uses that we have to Him."},{t:1970.42,x:"So far as we know, the man was not being very useful to Asmodeus,"},{t:1974.19,x:"before or after he became His cleric."},{t:1976.64,x:"He had simply earned Asmodeus's favor by having a rare nature pleasing to His sight.\""},{t:1983.18,x:"\"The bed-slave cleric was purchased for a high price, resold to a more trustworthy noble"},{t:1989.33,x:"at a vastly higher price, and afterwards the Baroness in question seems to have been"},{t:1995.2,x:"assassinated by no known party. The entire matter stays swept firmly into the corners,"},{t:2000.67,x:"because if it became known, idiots would derive the wrong lesson about what nobles are"},{t:2005.67,x:"allowed to do to our Lord's clerics.\""},{t:2008,x:"\"I mention this in case any of your own desires lie in the opposite polarity"},{t:2013,x:"from the vantage point that nobles usually take."},{t:2015.8,x:"It also shows that Asmodeus's domains can be subtle things even in their largest directions."},{t:2021.8,x:"You would not know all about them from hearing the four concepts listed out."},{t:2026.41,x:"There should be desires in you that are pleasing to our Lord and will prevent"},{t:2031.07,x:"you from falling into heresy. You should not cast too narrow an eye when it"},{t:2035.82,x:"comes to looking for those desires, I suggest."},{t:2038.52,x:"Asmodeus would not have given such weighty instructions if the matter was going to be"},{t:2043,x:"simple.\" It is, in particular, obvious to him that Sevar may perhaps have the nature"},{t:2047.33,x:"of a slave rather than a slaver, given some of the thoughts recorded in her"},{t:2052.33,x:"file. Ferrer Maillol is not certain he should spell this out directly."},{t:2056.03,x:"\" - is it a problem, if I let Keltham hit me -"},{t:2059.31,x:"I haven't, but should it come up -\""},{t:2061.46,x:"\"Oh, there are quite a number of clerics and loyal nobles like that,"},{t:2065.67,x:"in the hidden behind-the-scenes of Cheliax. Though that nature is not,"},{t:2070.33,x:"by itself, sufficient for full admission.\""},{t:2072.37,x:"\"I would expect so because there's not that much of a gender discrepancy in the"},{t:2077.89,x:"hierarchy and there is, in liking - sorry, never mind."},{t:2082.6,x:"I'll keep that in mind? I - obviously everyone is supposed to be grateful to be"},{t:2089.55,x:"the possession of Asmodeus and I don't know how to tell if one is more"},{t:2093.42,x:"grateful than average.\""},{t:2094.19,x:"\"If you have even once in your life sincerely thought that you wished to burn"},{t:2098.78,x:"in the purifying flames of Hell and emerge perfected, I think you are a step"},{t:2104,x:"ahead of the general peasantry,\" Ferrer Maillol says dryly."},{t:2106.88,x:"\"I am not looking forwards to it, in fact, though I would not say as"},{t:2111.68,x:"much to anyone who didn't have a note in their file about having apparently sincerely"},{t:2116.94,x:"thought what you did.\" \"At our level, in our inner fellowship,"},{t:2121.29,x:"it is not demanded of us that we pretend that the fates Pharasma assigned us"},{t:2127.29,x:"are the fates we would have chosen for ourselves."},{t:2130.71,x:"We live inside an absolute and inescapable greater tyranny - all of us,"},{t:2135.57,x:"from Cheliax to Lastwall, from slaves to the gods of Good."},{t:2140.68,x:"Most people have no natural response to that except for endless whining and complaining,"},{t:2146.58,x:"and living in denial until Lawful Evil inevitably conquers everything that isn't Lawful Evil."},{t:2152.06,x:"Some of us are born with something that is native to the plane we live"},{t:2157.1,x:"in, that can push along the tyranny rather than being swept away struggling."},{t:2161.14,x:"That's why we get to wear pretty rubies on our robes,"},{t:2164.4,x:"and burn in Hell for a shorter time and come out of it as higher"},{t:2168.6,x:"devils.\" \"We're not just playing the game because we want a better score in it."},{t:2173.83,x:"It's our game. We'd play it even if Asmodeus wasn't there.\""},{t:2178,x:"\"It's that quality - not feeling grateful for Asmodeus having to force us into it -"},{t:2183.09,x:"that makes us the favored of Asmodeus and recognized as His own.\""},{t:2187.59,x:"Though that's all Inner Ring theology and part of his own favored concern of tyranny,"},{t:2192.36,x:"which he should maybe not emphasize as much if Sevar hasn't a visible aptitude for"},{t:2197.95,x:"it."},{t:2198.33,x:"She indeed is slightly confused by that."},{t:2200.75,x:"\" - may I take notes?\""},{t:2205.2,x:""}];
+const BEATS=[{t:0,s:'temple',v:'narrator'},{t:24,s:'temple',v:'carissa'},{t:60,s:'revelation',v:'narrator'},{t:107,s:'ferrer',v:'narrator'},{t:158,s:'ferrer',v:'narrator'},{t:208,s:'education',v:'carissa'},{t:254,s:'education',v:'ferrer'},{t:304,s:'not_own_accord',v:'ferrer'},{t:350,s:'not_own_accord',v:'ferrer'},{t:396,s:'lawful_evil',v:'carissa'},{t:442,s:'lawful_evil',v:'carissa'},{t:489,s:'chosen',v:'ferrer'},{t:537,s:'chosen',v:'ferrer'},{t:587,s:'chosen',v:'ferrer'},{t:634,s:'lawful_evil',v:'ferrer'},{t:683,s:'zon_kuthon',v:'ferrer'},{t:733,s:'zon_kuthon',v:'ferrer'},{t:779,s:'tyranny',v:'ferrer'},{t:828,s:'tyranny',v:'ferrer'},{t:877,s:'pharasma',v:'ferrer'},{t:930,s:'pharasma',v:'ferrer'},{t:977,s:'chosen',v:'ferrer'},{t:1030,s:'inner_ring',v:'ferrer'},{t:1078,s:'inner_ring',v:'ferrer'},{t:1131,s:'inner_ring',v:'ferrer'},{t:1178,s:'education',v:'ferrer'},{t:1229,s:'perfect',v:'ferrer'},{t:1276,s:'lawful_evil',v:'ferrer'},{t:1328,s:'perfect',v:'ferrer'},{t:1376,s:'ferrer',v:'carissa'},{t:1425,s:'mace',v:'keltham'},{t:1472,s:'mace',v:'carissa'},{t:1522,s:'perfect',v:'ferrer'},{t:1568,s:'vocation',v:'ferrer'},{t:1619,s:'vocation',v:'ferrer'},{t:1672,s:'vocation',v:'ferrer'},{t:1721,s:'vocation',v:'ferrer'},{t:1770,s:'not_own_accord',v:'ferrer'},{t:1819,s:'not_own_accord',v:'ferrer'},{t:1866,s:'cautionary',v:'ferrer'},{t:1913,s:'cautionary',v:'ferrer'},{t:1968,s:'cautionary',v:'ferrer'},{t:2015,s:'cautionary',v:'ferrer'},{t:2063,s:'cautionary',v:'ferrer'},{t:2112,s:'notes',v:'ferrer'},{t:2163,s:'notes',v:'ferrer'},{t:2201,s:'notes',v:'carissa'},{t:2210,s:'notes',v:'narrator'}];
+
+/* ===================== ASH / EMBERS ===================== */
+const cv=document.getElementById('ash'), ctx=cv.getContext('2d');
+let parts=[], W=0,H=0, accent={r:216,g:162,b:74};
+function size(){ const r=cv.getBoundingClientRect(); W=cv.width=r.width; H=cv.height=r.height; }
+addEventListener('resize',size); size();
+function spawn(){ return {x:Math.random()*W, y:H+10, vy:-(0.2+Math.random()*0.55), vx:(Math.random()-0.5)*0.2, r:Math.random()*1.7+0.4, life:0, max:H*(0.5+Math.random()*0.6), tw:Math.random()*6}; }
+for(let i=0;i<60;i++){ const p=spawn(); p.y=Math.random()*H; parts.push(p); }
+let ashPaused=false;
+function ash(t){
+  if(!ashPaused){
+    ctx.clearRect(0,0,W,H);
+    for(const p of parts){
+      p.y+=p.vy; p.x+=p.vx+Math.sin(t/1000+p.tw)*0.14; p.life++;
+      const k=1-p.life/p.max;
+      if(p.life>p.max||p.y<-10){ Object.assign(p,spawn()); continue; }
+      const a=Math.max(0,k)*0.8*(0.6+0.4*Math.sin(t/300+p.tw));
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7);
+      ctx.fillStyle=`rgba(${accent.r},${accent.g},${accent.b},${a})`; ctx.shadowBlur=8; ctx.shadowColor=ctx.fillStyle; ctx.fill();
+    }
+    ctx.shadowBlur=0;
+  }
+  requestAnimationFrame(ash);
+}
+requestAnimationFrame(ash);
+function hexRgb(h){const m=h.replace('#','');return {r:parseInt(m.slice(0,2),16),g:parseInt(m.slice(2,4),16),b:parseInt(m.slice(4,6),16)};}
+
+/* ===================== DOM ===================== */
+const SPEEDS=[1,1.25,1.5,0.75];
+let speed=1, curScene=null, curCue=-1, curBeat=-1, capsOn=true;
+const frame=document.getElementById('frame');
+const introEl=document.getElementById('intro');
+const capEl=document.getElementById('cap');
+const labelEl=document.getElementById('label');
+const knameEl=document.getElementById('kname');
+const ttlEl=document.getElementById('ttl');
+const ksigUse=document.getElementById('ksig-use');
+const barEl=document.getElementById('bar');
+const beatEl=document.getElementById('beat');
+const playIcon=document.getElementById('playicon');
+const ccBtn=document.getElementById('cc');
+const audio=document.getElementById('player');
+const dropZone=document.getElementById('drop');
+const audioInput=document.getElementById('audiofile');
+const loadedBox=document.getElementById('loaded');
+const fnameEl=document.getElementById('fname');
+const durEl=document.getElementById('dur');
+const beginBtn=document.getElementById('begin');
+
+/* scene crossfade (Stardust-style) — beatEl shows the clock, so setScene only writes the title */
+function setScene(name){
+  if(name===curScene) return;
+  curScene=name;
+  document.querySelectorAll('.scene').forEach(el=>el.classList.remove('active','go'));
+  const el=document.querySelector(`.scene[data-scene="${name}"]`);
+  if(el){ el.classList.add('active'); requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add('go'))); }
+  ttlEl.textContent=SCENE_TITLES[name]||'';
+}
+function setSpeaker(v){
+  const c=CHARS[v]; if(!c) return;
+  knameEl.textContent=c.name; ksigUse.setAttribute('href','#'+c.sigil);
+  document.documentElement.style.setProperty('--accent', c.color); accent=hexRgb(c.color);
+}
+/* caption: blank text hides it; honours the CC toggle */
+function setCaption(text){
+  if(!capsOn || !text){ capEl.classList.remove('show'); return; }
+  capEl.classList.remove('show');
+  setTimeout(()=>{ if(!capsOn) return; capEl.textContent=text; capEl.classList.add('show'); },170);
+}
+function applyCaps(){ const c=CUES[curCue]; setCaption(c?c.x:''); }
+function setIcon(p){ playIcon.innerHTML = p?'<path d="M6 5h4v14H6zM14 5h4v14h-4z"></path>':'<path d="M8 5v14l11-7z"></path>'; }
+
+/* ===================== CLOCK + SYNC ===================== */
+function fmt(s){ if(!isFinite(s)||s<0) s=0; s=Math.floor(s); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+function findIdx(arr,time){ let lo=0,hi=arr.length-1,res=0; while(lo<=hi){ const m=(lo+hi)>>1; if(arr[m].t<=time){res=m;lo=m+1;} else hi=m-1; } return res; }
+function sync(){
+  const ct=audio.currentTime||0, d=audio.duration;
+  const bi=findIdx(BEATS,ct);
+  if(bi!==curBeat){ curBeat=bi; setScene(BEATS[bi].s); setSpeaker(BEATS[bi].v); }
+  const ci=findIdx(CUES,ct);
+  if(ci!==curCue){ curCue=ci; setCaption(CUES[ci].x); }
+  if(d){ barEl.style.width=Math.min(100,(ct/d*100))+'%'; }
+  beatEl.textContent=fmt(ct)+(d?(' / '+fmt(d)):'');
+}
+let rafId=0;
+function loop(){ if(audio.paused) return; sync(); rafId=requestAnimationFrame(loop); }
+
+/* ===================== AUDIO EVENTS ===================== */
+audio.addEventListener('timeupdate', sync);
+audio.addEventListener('seeked', ()=>{ curCue=-1; sync(); });
+audio.addEventListener('loadedmetadata', ()=>{ durEl.textContent='· '+fmt(audio.duration); beatEl.textContent='0:00 / '+fmt(audio.duration); });
+audio.addEventListener('play', ()=>{ frame.classList.add('playing'); document.body.classList.remove('paused'); ashPaused=false; setIcon(true); labelEl.classList.add('show'); sync(); loop(); });
+audio.addEventListener('pause', ()=>{ setIcon(false); document.body.classList.add('paused'); ashPaused=true; });
+audio.addEventListener('ended', finish);
+
+/* ===================== UPLOAD ===================== */
+const AUDIO_EXT=/\.(mp3|m4a|wav|ogg|oga|aac|flac|opus|weba|mp4)$/i;
+function loadAudioFile(file){
+  if(!file) return false;
+  if(file.type && !file.type.startsWith('audio/') && !AUDIO_EXT.test(file.name)) return false;
+  try{ if(audio.src) URL.revokeObjectURL(audio.src); }catch(_){}
+  audio.src=URL.createObjectURL(file); audio.playbackRate=speed; audio.load();
+  fnameEl.textContent=file.name; durEl.textContent='';
+  loadedBox.classList.add('show'); dropZone.classList.add('has');
+  beginBtn.disabled=false;
+  return true;
+}
+audioInput.addEventListener('change', e=>{ loadAudioFile(e.target.files[0]); });
+dropZone.addEventListener('click', ()=>audioInput.click());
+['dragenter','dragover'].forEach(ev=>dropZone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); dropZone.classList.add('drag'); }));
+['dragleave','dragend','drop'].forEach(ev=>dropZone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); if(ev!=='dragover') dropZone.classList.remove('drag'); }));
+dropZone.addEventListener('drop', e=>{
+  const files=[...(e.dataTransfer?e.dataTransfer.files:[])];
+  const aud=files.find(f=>f.type.startsWith('audio/')||AUDIO_EXT.test(f.name));
+  if(aud) loadAudioFile(aud);
+});
+
+/* ===================== PLAYBACK CONTROL ===================== */
+function startPlayback(){
+  if(!audio.src){ dropZone.classList.add('drag'); setTimeout(()=>dropZone.classList.remove('drag'),650); return; }
+  introEl.classList.remove('ended'); introEl.classList.add('gone');
+  if(audio.ended || (audio.duration && audio.currentTime>=audio.duration-0.05)){ audio.currentTime=0; curCue=-1; curBeat=-1; }
+  const p=audio.play(); if(p&&p.catch) p.catch(()=>{});
+}
+function finish(){
+  frame.classList.remove('playing'); setIcon(false);
+  introEl.classList.add('ended'); introEl.classList.remove('gone');
+}
+function seekToBeat(idx){ idx=Math.max(0,Math.min(BEATS.length-1,idx)); audio.currentTime=Math.max(0,BEATS[idx].t)+0.02; curCue=-1; sync(); }
+function nextBeat(){ seekToBeat(findIdx(BEATS,audio.currentTime)+1); }
+function prevBeat(){ const ci=findIdx(BEATS,audio.currentTime); seekToBeat((audio.currentTime-BEATS[ci].t>1.4)?ci:ci-1); }
+function togglePlay(){ if(audio.paused) audio.play().catch(()=>{}); else audio.pause(); }
+function toggleCaps(){ capsOn=!capsOn; ccBtn.classList.toggle('off',!capsOn); ccBtn.setAttribute('aria-pressed',String(capsOn)); applyCaps(); }
+
+beginBtn.addEventListener('click', startPlayback);
+document.getElementById('play').addEventListener('click', ()=>{ if(!introEl.classList.contains('gone')){ startPlayback(); return; } togglePlay(); });
+document.getElementById('next').addEventListener('click', nextBeat);
+document.getElementById('prev').addEventListener('click', prevBeat);
+document.getElementById('restart').addEventListener('click', ()=>{ audio.currentTime=0; curCue=-1; curBeat=-1; sync(); if(audio.paused) audio.play().catch(()=>{}); });
+document.getElementById('speed').addEventListener('click', e=>{ speed=SPEEDS[(SPEEDS.indexOf(speed)+1)%SPEEDS.length]; audio.playbackRate=speed; e.currentTarget.textContent=String(speed)+'×'; });
+ccBtn.addEventListener('click', toggleCaps);
+document.getElementById('prog').addEventListener('click', e=>{ if(!audio.duration) return; const r=e.currentTarget.getBoundingClientRect(); const frac=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)); audio.currentTime=frac*audio.duration; curCue=-1; sync(); });
+addEventListener('keydown', e=>{ if(!introEl.classList.contains('gone')) return;
+  if(e.code==='Space'){ e.preventDefault(); togglePlay(); }
+  else if(e.code==='ArrowRight'){ e.preventDefault(); nextBeat(); }
+  else if(e.code==='ArrowLeft'){ e.preventDefault(); prevBeat(); }
+  else if(e.key==='c'||e.key==='C'){ e.preventDefault(); toggleCaps(); } });
+addEventListener('beforeunload', ()=>{ try{ if(audio.src) URL.revokeObjectURL(audio.src); }catch(_){} });
+
+/* cast list */
+(function(){ const cast=document.getElementById('cast'); if(!cast) return;
+  for(const key of ['narrator','carissa','ferrer','keltham','asmodeus']){
+    const c=CHARS[key], d=document.createElement('div'); d.className='c';
+    d.innerHTML=`<div class="ic" style="color:${c.color}"><svg><use href="#${c.sigil}"/></svg></div><div><div class="nm">${c.name.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div><div class="tg">${c.tag}</div></div>`;
+    cast.appendChild(d);
+  } })();
+
+/* initial backdrop + idle state */
+document.getElementById('speed').textContent='1×';
+setScene(BEATS[0].s); setSpeaker(BEATS[0].v); setIcon(false);
+beatEl.textContent='0:00';
+
+</script>
+</body>
+</html>
