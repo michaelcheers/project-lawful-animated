@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planecrash — Corrigibility · an animated reading</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Spectral:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0608; --ink:#f0e6d8; --muted:#9a8a84;
+  --accent:#d8a24a; --gold:#d8a24a; --blood:#c2152f; --ember:#ff8a3c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:radial-gradient(120% 90% at 50% 6%, #1a0c10 0%, var(--bg) 55%, #050304 100%);
+  color:var(--ink); font-family:"Spectral",Georgia,serif; overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+.paused .anim, .paused .scene *{animation-play-state:paused !important}
+
+/* ---------- cinematic stage ---------- */
+#stage{position:fixed; inset:0; display:flex; align-items:center; justify-content:center}
+.frame{
+  position:relative; width:min(100vw,177.7vh); height:min(100vh,56.25vw);
+  overflow:hidden; background:#06040a; box-shadow:0 0 140px rgba(0,0,0,.8) inset, 0 30px 90px rgba(0,0,0,.6);
+}
+#ash{position:absolute; inset:0; z-index:1; pointer-events:none}
+
+.scene{position:absolute; inset:0; z-index:2; opacity:0; transition:opacity 1.5s ease; pointer-events:none}
+.scene.active{opacity:1}
+.scene svg{position:absolute; inset:0; width:100%; height:100%}
+/* a soft vignette over scenes */
+#vignette{position:absolute; inset:0; z-index:4; pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 42%, transparent 52%, rgba(5,3,4,.55) 100%);}
+
+/* ---------- speaker / beat label ---------- */
+#label{position:absolute; left:4.4%; top:7.5%; z-index:6; opacity:0; transform:translateY(8px);
+  transition:opacity .8s ease, transform .8s ease; max-width:54%}
+#label.show{opacity:1; transform:none}
+#label .kicker{display:flex; align-items:center; gap:9px; margin-bottom:5px}
+#label .ksig{width:26px; height:26px; color:var(--accent); transition:color .6s ease; flex:0 0 auto}
+#label .ksig svg{width:100%;height:100%}
+#label .kname{font-family:"Cinzel",serif; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
+  font-size:clamp(9px,1.05vw,13px); color:var(--accent); transition:color .6s ease}
+#label .ttl{font-family:"Cinzel",serif; font-weight:700; line-height:1.04; letter-spacing:.005em;
+  font-size:clamp(20px,3.4vw,50px); color:#fff; text-shadow:0 2px 26px rgba(0,0,0,.7)}
+
+/* ---------- caption ---------- */
+#cap-wrap{position:absolute; left:0; right:0; bottom:8.5%; z-index:6; display:flex; justify-content:center;
+  padding:0 6%; pointer-events:none}
+#cap{position:relative; max-width:min(1080px,90%); text-align:center;
+  font-size:clamp(14px,1.85vw,25px); line-height:1.45; font-weight:400; letter-spacing:.004em; color:var(--ink);
+  text-shadow:0 2px 20px rgba(0,0,0,.95), 0 0 60px rgba(0,0,0,.85);
+  opacity:0; transform:translateY(10px); transition:opacity .5s ease, transform .5s ease}
+#cap.show{opacity:1; transform:none}
+#cap.dlg{font-style:italic}
+#cap::before{content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:135%; height:340%; z-index:-1; pointer-events:none;
+  background:radial-gradient(closest-side, rgba(6,4,6,.82), rgba(6,4,6,.4) 60%, transparent 100%)}
+
+/* ---------- intro ---------- */
+#intro{position:absolute; inset:0; z-index:20; overflow-y:auto;
+  background:radial-gradient(80% 80% at 50% 40%, rgba(26,12,16,.55), rgba(4,3,4,.95));
+  transition:opacity 1.1s ease}
+#intro.gone{opacity:0; pointer-events:none}
+.intro-in{min-height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; gap:2.2vh; padding:5vh 7vw 7vh}
+#intro .eyebrow{font-family:"Cinzel",serif; font-size:clamp(9px,1.05vw,13px); letter-spacing:.5em; text-transform:uppercase; color:var(--gold)}
+#intro h1{font-family:"Cinzel",serif; font-weight:700; letter-spacing:.02em; font-size:clamp(40px,9vw,118px); line-height:.92;
+  background:linear-gradient(180deg,#fff 0%, #e9c277 52%, #b3122b 132%); -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent; filter:drop-shadow(0 8px 50px rgba(179,18,43,.32))}
+#intro .sub{font-size:clamp(13px,1.55vw,19px); font-style:italic; color:#cbb9a9; max-width:44ch; line-height:1.55; font-weight:300}
+.cast{display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:11px 18px; width:100%; max-width:760px; margin-top:1vh}
+.cast .c{display:flex; align-items:center; gap:11px; text-align:left; padding:7px 10px; border:1px solid rgba(216,162,74,.13); border-radius:9px; background:rgba(255,255,255,.012)}
+.cast .ic{width:32px;height:32px;flex:0 0 auto} .cast .ic svg{width:100%;height:100%}
+.cast .nm{font-family:"Cinzel",serif; font-size:12px; letter-spacing:.02em; line-height:1.15}
+.cast .tg{font-style:italic; font-size:11px; color:var(--muted); margin-top:1px}
+#begin{margin-top:1vh; display:inline-flex; align-items:center; gap:.7em; font-family:"Cinzel",serif; font-weight:600;
+  font-size:clamp(14px,1.5vw,17px); letter-spacing:.06em; color:#1a0c0a; padding:.85em 2.1em; border:none; border-radius:100px;
+  cursor:pointer; background:linear-gradient(180deg,#f0cd86,#d8a24a);
+  box-shadow:0 12px 44px rgba(216,162,74,.34), inset 0 0 0 1px rgba(255,255,255,.25); transition:transform .25s, box-shadow .25s}
+#begin:hover{transform:translateY(-2px) scale(1.02); box-shadow:0 18px 56px rgba(216,162,74,.5)}
+#begin .tri{width:0;height:0;border-left:11px solid #1a0c0a;border-top:7px solid transparent;border-bottom:7px solid transparent}
+#intro .note{font-size:11px;color:#6a5a56;letter-spacing:.03em}
+#intro .src{font-size:11px;color:#5e4f4b;max-width:52ch;line-height:1.6}
+
+/* ---------- controls ---------- */
+#controls{position:absolute; left:0; right:0; bottom:0; z-index:30; display:flex; align-items:center; gap:13px;
+  padding:13px 4.4%; background:linear-gradient(0deg, rgba(5,3,5,.85), transparent);
+  opacity:0; transition:opacity .4s ease; pointer-events:none}
+.frame.playing #controls{opacity:1; pointer-events:auto}
+.btn{background:rgba(240,230,216,.05); border:1px solid rgba(216,162,74,.28); color:var(--ink); border-radius:50%;
+  cursor:pointer; flex:0 0 auto; display:grid; place-items:center; transition:background .2s,border-color .2s,transform .15s}
+.btn:hover{background:rgba(216,162,74,.16); border-color:var(--accent)} .btn:active{transform:scale(.94)}
+.btn svg{fill:var(--ink)}
+.btn.lg{width:46px;height:46px} .btn.lg svg{width:18px;height:18px}
+.btn.sm{width:38px;height:38px} .btn.sm svg{width:14px;height:14px}
+#speed{width:auto;min-width:46px;height:38px;border-radius:20px;padding:0 12px;font-family:"Spectral",serif;font-style:italic;font-size:13px}
+#prog{flex:1; height:3px; border-radius:3px; background:rgba(240,230,216,.13); position:relative; cursor:pointer}
+#bar{position:absolute; left:0;top:0;bottom:0; width:0; background:linear-gradient(90deg,var(--accent),var(--blood)); border-radius:3px; transition:width .5s ease, background .8s ease}
+#beat{font-family:"Cinzel",serif; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); min-width:120px; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:24%}
+
+/* ---------- shared animation helpers ---------- */
+.spin{transform-origin:center;animation:spin 60s linear infinite}
+.spin-s{transform-origin:center;animation:spin 120s linear infinite}
+.spin-r{transform-origin:center;animation:spin 80s linear infinite reverse}
+.spin-f{transform-origin:center;animation:spin 9s linear infinite}
+.spin-vf{transform-origin:center;animation:spin 2.4s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.breathe{transform-origin:center;animation:breathe 6s ease-in-out infinite}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.flick{transform-origin:bottom center;animation:flick 1.4s ease-in-out infinite}
+@keyframes flick{0%,100%{opacity:.9;transform:scaleY(1) scaleX(1)}40%{opacity:1;transform:scaleY(1.1) scaleX(.94)}70%{opacity:.85;transform:scaleY(.96) scaleX(1.04)}}
+.sway{transform-origin:top center;animation:sway 4s ease-in-out infinite}
+@keyframes sway{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+.tw{animation:tw 3s ease-in-out infinite}
+@keyframes tw{0%,100%{opacity:.2}50%{opacity:1}}
+.pulse{animation:pulse 3.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.25}50%{opacity:.95}}
+.pulse-f{animation:pulse 1.6s ease-in-out infinite}
+.drift{animation:drift 26s ease-in-out infinite}
+@keyframes drift{0%{transform:translate(0,0)}50%{transform:translate(2.4%,-2%)}100%{transform:translate(0,0)}}
+@keyframes floatUp{0%{transform:translateY(34px);opacity:0}16%{opacity:.9}100%{transform:translateY(-58px);opacity:0}}
+.flow{stroke-dasharray:8 16; animation:flow 2.2s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-48}}
+.draw{stroke-dasharray:600; stroke-dashoffset:600; animation:draw 5s ease-in-out infinite alternate}
+@keyframes draw{to{stroke-dashoffset:0}}
+.beam{animation:beam 1.7s ease-in-out infinite}
+@keyframes beam{0%,100%{opacity:.12}50%{opacity:.6}}
+
+/* one-shot scene-entry effects (fire when scene gets .go) */
+.flash{opacity:0}
+.scene.active.go .flash{animation:flashK 1.7s ease-out .3s forwards}
+@keyframes flashK{0%{opacity:0}12%{opacity:.85}100%{opacity:0}}
+.burst{opacity:0;transform-origin:center}
+.scene.active.go .burst{animation:burstK 3s cubic-bezier(.1,.7,.3,1) .3s forwards}
+@keyframes burstK{0%{opacity:0;transform:scale(.08)}14%{opacity:1}100%{opacity:0;transform:scale(4.2)}}
+.stamp{opacity:0;transform-origin:center}
+.scene.active.go .stamp{animation:stampK 1.2s cubic-bezier(.2,1.4,.4,1) .4s forwards}
+@keyframes stampK{0%{opacity:0;transform:scale(2.4) rotate(-12deg)}60%{opacity:1;transform:scale(1) rotate(0)}100%{opacity:1;transform:scale(1)}}
+.fall{opacity:0;transform-origin:center}
+.scene.active.go .fall{animation:fallK 3.4s ease-in 1s forwards}
+@keyframes fallK{0%{opacity:0;transform:translateY(-260px) scale(.6)}20%{opacity:1}82%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(10px) scale(2.2)}}
+.rise{transform-origin:center;animation:rise 7s ease-in-out infinite alternate}
+@keyframes rise{from{transform:translateY(8px)}to{transform:translateY(-8px)}}
+
+@media (max-width:640px){ #beat{display:none} #label{max-width:78%} }
+
+/* ---- audio upload UI ---- */
+#drop{margin:1.6vh auto .2vh;width:min(560px,90%);border:1.6px dashed rgba(216,162,74,.42);border-radius:14px;padding:24px 20px 20px;cursor:pointer;background:rgba(255,255,255,.015);transition:border-color .2s, background .2s, transform .2s}
+#drop:hover{border-color:var(--gold);background:rgba(216,162,74,.06)}
+#drop.drag{border-color:var(--gold);background:rgba(216,162,74,.14);transform:scale(1.012)}
+#drop.has{border-style:solid;border-color:rgba(79,230,205,.5);background:rgba(79,230,205,.05)}
+#drop .dz-ic{width:30px;height:30px;color:var(--gold);opacity:.9;margin-bottom:6px}
+#drop.has .dz-ic{color:#4fe6cd}
+#drop .dz-msg{font-family:"Spectral",serif;font-style:italic;font-size:15px;color:#e9dcc8;letter-spacing:.01em}
+#drop .dz-sub{font-size:11px;color:#7c6a64;margin-top:7px;letter-spacing:.02em}
+#loaded{display:none;align-items:center;justify-content:center;gap:9px;margin:11px auto 2px;font-size:12.5px;color:#cbb9a9}
+#loaded.show{display:flex}
+#loaded .ck{color:#4fe6cd;font-weight:700}
+#loaded .fn{font-family:"Cinzel",serif;letter-spacing:.02em;color:#f0e6d8;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#loaded #dur{color:#7c6a64}
+#begin[disabled]{opacity:.38;cursor:not-allowed;filter:grayscale(.45);box-shadow:none}
+#begin[disabled]:hover{transform:none}
+#intro.ended #drop, #intro.ended #loaded, #intro.ended .cast{display:none}
+audio{display:none}
+/* captions toggle */
+#cc{font-family:"Cinzel",serif;font-weight:600;letter-spacing:.06em;font-size:12px;position:relative}
+#cc.off{opacity:.5}
+#cc.off::after{content:"";position:absolute;left:18%;right:18%;top:50%;height:1.5px;background:currentColor;transform:rotate(-12deg);opacity:.85}
+</style>
+</head>
+<body>
+<div id="stage"><div class="frame" id="frame">
+  <canvas id="ash"></canvas>
+
+  <!-- ===================== SHARED DEFS ===================== -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <radialGradient id="gEmber" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff2cf"/><stop offset="34%" stop-color="#ff9a3c"/>
+      <stop offset="72%" stop-color="#c2152f" stop-opacity=".55"/><stop offset="100%" stop-color="#3a0810" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gGold" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff"/><stop offset="45%" stop-color="#f2cd7e"/><stop offset="100%" stop-color="#d8a24a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gBlood" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff6a72"/><stop offset="46%" stop-color="#b3122b" stop-opacity=".7"/><stop offset="100%" stop-color="#b3122b" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gWhite" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff"/><stop offset="55%" stop-color="#dfeaf2" stop-opacity=".9"/><stop offset="100%" stop-color="#a9c2d6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gCyan" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#eafcff"/><stop offset="48%" stop-color="#46c6ff" stop-opacity=".8"/><stop offset="100%" stop-color="#1d6fb0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gTeal" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#dffff6"/><stop offset="50%" stop-color="#3fd9c0" stop-opacity=".8"/><stop offset="100%" stop-color="#1f8f88" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gFloor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1c0e12"/><stop offset="100%" stop-color="#06040a"/>
+    </linearGradient>
+    <linearGradient id="gBeam" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#cfe fff" stop-opacity="0"/><stop offset="50%" stop-color="#aee6ff" stop-opacity=".5"/><stop offset="100%" stop-color="#aee6ff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="soft2"><feGaussianBlur stdDeviation="16"/></filter>
+
+    <!-- speaker sigils -->
+    <symbol id="sg-book" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M24 12c-5-4-12-4-16-2v26c4-2 11-2 16 2 5-4 12-4 16-2V10c-4-2-11-2-16 2z"/><path d="M24 12v28"/></symbol>
+    <symbol id="sg-mask" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M10 6c2 4 1 8-1 10M38 6c-2 4-1 8 1 10"/><path d="M9 16c3-3 9-4 15-4s12 1 15 4c1 9-4 22-15 26C13 38 8 25 9 16z"/><path d="M17 22l5 3M31 22l-5 3M21 33c2 1 4 1 6 0"/></symbol>
+    <symbol id="sg-flame" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M24 4c2 8-6 11-6 18 0 0-4-2-4-7-5 5-7 11-7 16a17 17 0 0034 0c0-9-6-16-11-20-1 4-4 5-6 3 3-4 6-9 6-13z"/></symbol>
+    <symbol id="sg-eye" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M4 24c6-9 13-13 20-13s14 4 20 13c-6 9-13 13-20 13S10 33 4 24z"/><circle cx="24" cy="24" r="6"/><path d="M40 30c4 2 5 6 4 9"/></symbol>
+    <symbol id="sg-penta" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><circle cx="24" cy="24" r="20"/><polygon points="24,7 33.5,38 8.4,18.8 39.6,18.8 14.5,38"/></symbol>
+    <symbol id="sg-broom" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M30 6L18 30"/><path d="M12 42c0-8 3-12 8-13 5-1 9 1 11 4-3 6-10 10-19 9z"/><path d="M22 28l6 4"/></symbol>
+    <symbol id="sg-hex" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><polygon points="24,5 40,14 40,34 24,43 8,34 8,14"/><circle cx="24" cy="24" r="3" fill="currentColor"/><path d="M24 8v8M40 16l-7 4M40 32l-7-4M24 40v-8M8 32l7-4M8 16l7 4"/></symbol>
+    <symbol id="sg-gem" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M14 8h20l8 11-18 21L6 19z"/><path d="M6 19h36M14 8l10 11 10-11M24 19v21"/></symbol>
+    <symbol id="sg-oracle" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><circle cx="24" cy="24" r="7"/><path d="M24 4v6M24 38v6M4 24h6M38 24h6M10 10l4 4M34 34l4 4M38 10l-4 4M10 38l4-4"/></symbol>
+
+    <!-- a reusable robed-figure -->
+    <symbol id="figure" viewBox="0 0 120 200"><path d="M60 18a20 20 0 0 1 20 20c0 9-4 13-4 20l14 120c1 8-9 14-30 14s-31-6-30-14L44 58c0-7-4-11-4-20a20 20 0 0 1 20-20z"/></symbol>
+    <symbol id="child" viewBox="0 0 80 120"><circle cx="40" cy="22" r="16"/><path d="M40 40c14 0 22 8 22 20l4 46c0 8-12 12-26 12s-26-4-26-12l4-46c0-12 8-20 22-20z"/></symbol>
+      <symbol id="sg-eyes" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"><path d="M24 6c-7 0-12 5-15 9 3 4 8 9 15 9s12-5 15-9c-3-4-8-9-15-9z"/><circle cx="24" cy="15" r="3.4" fill="currentColor"/><path d="M14 30c-4 0-7 3-9 6 2 3 5 6 9 6s7-3 9-6c-2-3-5-6-9-6z"/><circle cx="14" cy="36" r="2.8" fill="currentColor"/><path d="M34 30c-4 0-7 3-9 6 2 3 5 6 9 6s7-3 9-6c-2-3-5-6-9-6z"/><circle cx="34" cy="36" r="2.8" fill="currentColor"/></symbol>
+  </defs></svg>
+
+  <!-- ===================== SCENES ===================== -->
+
+  <!-- chamber : the Forbiddance -->
+    <!-- SCENES (episode 22) -->
+
+  <!-- glare : the girls glare -->
+  <div class="scene" data-scene="glare">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a070c"/>
+      <!-- the doorway Keltham just left through -->
+      <rect x="120" y="170" width="180" height="500" rx="8" fill="#0e0c14" stroke="#2a2438" stroke-width="3"/>
+      <rect x="150" y="200" width="120" height="440" rx="6" fill="url(#gCyan)" opacity=".08" class="breathe"/>
+      <!-- the Chelish girls, heads turned toward Ione -->
+      <use href="#figure" x="440" y="470" width="100" height="166" fill="#1c1226"/>
+      <use href="#figure" x="600" y="460" width="104" height="172" fill="#221020"/>
+      <use href="#figure" x="760" y="465" width="102" height="170" fill="#1c1226"/>
+      <use href="#figure" x="920" y="460" width="104" height="172" fill="#221020"/>
+      <!-- Ione, alone, facing them -->
+      <use href="#figure" x="1280" y="440" width="112" height="186" fill="#12302c"/>
+      <!-- glares converging on Ione -->
+      <g stroke="#ff5560" stroke-width="2" stroke-opacity=".55" fill="none" class="pulse-f">
+        <path d="M540 500L1290 500M700 495L1290 502M860 498L1290 504M1020 495L1290 506"/>
+      </g>
+      <g fill="#ff8a8f" opacity=".7"><circle cx="1296" cy="503" r="5" class="pulse-f"/></g>
+    </svg>
+  </div>
+
+  <!-- thinkfast : trying to think very fast -->
+  <div class="scene" data-scene="thinkfast">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#08090e"/>
+      <circle cx="800" cy="440" r="360" fill="url(#gTeal)" opacity=".08" filter="url(#soft2)"/>
+      <!-- a fast-branching decision tree -->
+      <g transform="translate(800 440)" stroke="#4fe6cd" stroke-width="2" fill="none" stroke-opacity=".6">
+        <path class="draw" d="M0 120L0 20M0 20L-120 -60M0 20L120 -60M-120 -60L-200 -140M-120 -60L-60 -150M120 -60L60 -150M120 -60L200 -140"/>
+      </g>
+      <g fill="#bdfff2" opacity=".8"><circle cx="600" cy="300" r="4" class="tw"/><circle cx="740" cy="290" r="4" class="tw" style="animation-delay:-.5s"/><circle cx="860" cy="290" r="4" class="tw" style="animation-delay:-1s"/><circle cx="1000" cy="300" r="4" class="tw" style="animation-delay:-1.5s"/></g>
+      <!-- racing motes -->
+      <circle r="5" fill="#dff6ff"><animateMotion dur="1.6s" repeatCount="indefinite" path="M800 560L800 460L680 380L600 300"/></circle>
+      <circle r="5" fill="#dff6ff"><animateMotion dur="1.6s" repeatCount="indefinite" begin="-0.8s" path="M800 560L800 460L920 380L1000 300"/></circle>
+      <!-- violet nethys influence -->
+      <g class="spin-s" opacity=".15" transform="translate(800 440)"><use href="#sg-eyes" x="-150" y="-150" width="300" height="300" color="#b98cff"/></g>
+      <circle cx="800" cy="460" r="14" fill="#4fe6cd" class="pulse-f"/>
+    </svg>
+  </div>
+
+  <!-- smile : real power to fuel a smile -->
+  <div class="scene" data-scene="smile">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0810"/>
+      <circle cx="800" cy="500" r="320" fill="url(#gTeal)" opacity=".14" filter="url(#soft2)" class="breathe"/>
+      <use href="#figure" x="740" y="420" width="120" height="200" fill="#12302c"/>
+      <!-- inner power core in the chest -->
+      <circle cx="800" cy="520" r="64" fill="url(#gTeal)" opacity=".4" filter="url(#soft)"/>
+      <circle cx="800" cy="520" r="22" fill="url(#gWhite)" class="pulse-f"/>
+      <!-- radiating power -->
+      <g class="spin-s" opacity=".4" transform="translate(800 520)"><g stroke="#4fe6cd" stroke-width="2"><line x1="0" y1="-90" x2="0" y2="-140"/><line x1="64" y1="-64" x2="99" y2="-99"/><line x1="90" y1="0" x2="140" y2="0"/><line x1="64" y1="64" x2="99" y2="99"/><line x1="0" y1="90" x2="0" y2="140"/><line x1="-64" y1="64" x2="-99" y2="99"/><line x1="-90" y1="0" x2="-140" y2="0"/><line x1="-64" y1="-64" x2="-99" y2="-99"/></g></g>
+      <!-- the composed smile-curve -->
+      <path d="M736 392Q800 436 864 392" stroke="#bdfff2" stroke-width="3" fill="none" stroke-opacity=".7" class="breathe"/>
+      <g fill="#bdfff2" opacity=".6"><circle cx="760" cy="440" r="3" style="animation:floatUp 6s ease-in infinite"/><circle cx="840" cy="440" r="2.6" style="animation:floatUp 6s ease-in infinite; animation-delay:-3s"/></g>
+    </svg>
+  </div>
+
+  <!-- boundary : walk to the forbidden boundary -->
+  <div class="scene" data-scene="boundary">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0608"/>
+      <!-- the forbidden boundary line -->
+      <rect x="1040" y="0" width="120" height="900" fill="url(#gBlood)" opacity=".16" filter="url(#soft2)"/>
+      <rect x="1094" y="0" width="8" height="900" fill="#c2152f"/>
+      <line x1="1098" y1="0" x2="1098" y2="900" stroke="#ff5560" stroke-width="2" stroke-dasharray="14 18" class="flow"/>
+      <!-- warning runes along it -->
+      <g fill="#ff8a8f" opacity=".6"><circle cx="1098" cy="220" r="6" class="pulse-f"/><circle cx="1098" cy="450" r="6" class="pulse-f" style="animation-delay:-.6s"/><circle cx="1098" cy="680" r="6" class="pulse-f" style="animation-delay:-1.2s"/></g>
+      <!-- Ione walking toward it -->
+      <use href="#figure" x="700" y="450" width="112" height="186" fill="#12302c"/>
+      <!-- her soul-tether straining back -->
+      <path d="M756 500C520 500 320 500 160 500" stroke="#4fe6cd" stroke-width="2" stroke-opacity=".5" fill="none" class="flow"/>
+      <circle r="6" fill="#bdfff2"><animateMotion dur="3.5s" repeatCount="indefinite" path="M756 500L160 500L756 500"/></circle>
+    </svg>
+  </div>
+
+  <!-- bargain : something to offer security -->
+  <div class="scene" data-scene="bargain">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0608"/>
+      <ellipse cx="800" cy="540" rx="420" ry="140" fill="url(#gGold)" opacity=".06" filter="url(#soft2)"/>
+      <!-- the negotiating table -->
+      <rect x="540" y="520" width="520" height="36" rx="6" fill="#1a1016"/>
+      <ellipse cx="800" cy="520" rx="260" ry="30" fill="#241a20" opacity=".6"/>
+      <!-- bargaining chips -->
+      <g><circle cx="700" cy="516" r="16" fill="url(#gGold)" class="pulse" opacity=".8"/><circle cx="750" cy="520" r="14" fill="#3a3442"/><circle cx="860" cy="516" r="16" fill="url(#gTeal)" class="pulse" opacity=".7" style="animation-delay:-.6s"/><circle cx="900" cy="520" r="14" fill="#3a3442"/></g>
+      <!-- Ione (teal) vs Elias (blood) -->
+      <use href="#figure" x="360" y="400" width="116" height="194" fill="#12302c"/>
+      <use href="#figure" x="1100" y="400" width="116" height="194" fill="#1a0a0c"/>
+      <!-- faint scale of leverage above -->
+      <g transform="translate(800 250)" stroke="#caa86a" stroke-width="2" opacity=".5"><line x1="-120" y1="0" x2="120" y2="0"/><line x1="0" y1="-40" x2="0" y2="0"/><circle cx="-120" cy="16" r="14" fill="none"/><circle cx="120" cy="16" r="14" fill="none"/></g>
+    </svg>
+  </div>
+
+  <!-- threat : never hit third circle -->
+  <div class="scene" data-scene="threat">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0406"/>
+      <circle cx="900" cy="420" r="420" fill="url(#gBlood)" opacity=".35" filter="url(#soft2)" class="breathe" style="animation-duration:8s"/>
+      <!-- three ascending rungs, the third barred -->
+      <g transform="translate(1180 0)">
+        <g fill="none" stroke="#caa86a" stroke-width="3" stroke-opacity=".6">
+          <circle cx="0" cy="640" r="44"/><circle cx="0" cy="500" r="44"/><circle cx="0" cy="360" r="44"/>
+        </g>
+        <line x1="-60" y1="300" x2="60" y2="420" stroke="#c2152f" stroke-width="8" stroke-linecap="round" class="stamp"/>
+      </g>
+      <!-- Elias, looming -->
+      <use href="#figure" x="840" y="320" width="150" height="250" fill="#1a0a0c"/>
+      <!-- Ione, small, cowering -->
+      <g fill="#12302c" transform="translate(440 540)">
+        <ellipse cx="0" cy="120" rx="64" ry="24"/>
+        <path d="M-30 118c0-48 7-84 30-96 23 12 30 48 30 96z"/>
+        <circle cx="6" cy="36" r="22"/>
+      </g>
+    </svg>
+  </div>
+
+  <!-- balance : pretty power-balanced so far -->
+  <div class="scene" data-scene="balance">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#08070c"/>
+      <g transform="translate(800 250)">
+        <line x1="0" y1="-70" x2="0" y2="0" stroke="#caa86a" stroke-width="6"/>
+        <circle cx="0" cy="-74" r="9" fill="#caa86a"/>
+        <line x1="-240" y1="0" x2="240" y2="0" stroke="#caa86a" stroke-width="6"/>
+        <!-- left pan: Nethys (teal) -->
+        <g transform="translate(-240 0)"><path d="M-60 30a60 26 0 0 0 120 0z" fill="none" stroke="#4fe6cd" stroke-width="3"/><line x1="-40" y1="2" x2="-40" y2="0"/><line x1="40" y1="2" x2="40" y2="0"/><circle cx="0" cy="30" r="40" fill="url(#gTeal)" opacity=".4" filter="url(#soft)"/></g>
+        <!-- right pan: Asmodeus (ember) -->
+        <g transform="translate(240 0)"><path d="M-60 30a60 26 0 0 0 120 0z" fill="none" stroke="#ff8a3c" stroke-width="3"/><circle cx="0" cy="30" r="40" fill="url(#gEmber)" opacity=".4" filter="url(#soft)"/></g>
+        <!-- hanging strings -->
+        <g stroke="#caa86a" stroke-width="1.4" stroke-opacity=".6"><line x1="-240" y1="0" x2="-280" y2="30"/><line x1="-240" y1="0" x2="-200" y2="30"/><line x1="240" y1="0" x2="200" y2="30"/><line x1="240" y1="0" x2="280" y2="30"/></g>
+      </g>
+      <g fill="#9fe6da" opacity=".5"><circle cx="560" cy="420" r="3" class="tw"/></g>
+      <g fill="#ffb877" opacity=".5"><circle cx="1040" cy="420" r="3" class="tw" style="animation-delay:-1.2s"/></g>
+    </svg>
+  </div>
+
+  <!-- nethys_afterlife : a good nethysian afterlife -->
+  <div class="scene" data-scene="nethys_afterlife">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#07060e"/>
+      <!-- left: Nethys's serene otherworld -->
+      <rect x="0" width="800" height="900" fill="#0c0a1a" opacity=".7"/>
+      <g fill="#cbb0ff"><circle cx="160" cy="200" r="2.6" class="tw"/><circle cx="320" cy="320" r="2.2" class="tw" style="animation-delay:-1s"/><circle cx="120" cy="460" r="2.8" class="tw" style="animation-delay:-1.8s"/><circle cx="420" cy="180" r="2.4" class="tw" style="animation-delay:-2.4s"/><circle cx="260" cy="600" r="2.6" class="tw" style="animation-delay:-3s"/></g>
+      <g transform="translate(340 440)" opacity=".55"><use href="#sg-eyes" x="-110" y="-110" width="220" height="220" color="#b98cff" class="breathe"/></g>
+      <!-- right: Hell's pit -->
+      <rect x="800" width="800" height="900" fill="#180806" opacity=".7"/>
+      <ellipse cx="1200" cy="720" rx="360" ry="180" fill="url(#gBlood)" opacity=".4" filter="url(#soft2)" class="breathe"/>
+      <g><g transform="translate(1120 640)"><path class="flick" d="M0 12c7-26-3-34 0-52 7 14 20 20 14 46 0 10-7 14-14 6z" fill="#ff8a3c"/></g><g transform="translate(1280 660)"><path class="flick" style="animation-delay:-.7s" d="M0 12c7-26-3-34 0-52 7 14 20 20 14 46 0 10-7 14-14 6z" fill="#ff8a3c"/></g></g>
+      <!-- divider -->
+      <line x1="800" y1="0" x2="800" y2="900" stroke="#3a2a3a" stroke-width="2" stroke-opacity=".5"/>
+      <!-- Ione, on the serene side -->
+      <use href="#figure" x="540" y="470" width="108" height="180" fill="#161030"/>
+    </svg>
+  </div>
+
+  <!-- healing : he fixes the burns -->
+  <div class="scene" data-scene="healing">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#080b0e"/>
+      <ellipse cx="940" cy="500" rx="300" ry="240" fill="url(#gCyan)" opacity=".12" filter="url(#soft2)"/>
+      <!-- the burned girl, scorch fading -->
+      <use href="#child" x="900" y="490" width="72" height="108" fill="#1a1410"/>
+      <g fill="#ff6a3c" opacity=".5" class="pulse"><circle cx="922" cy="540" r="10"/><circle cx="950" cy="560" r="7"/><circle cx="936" cy="580" r="5"/></g>
+      <!-- Keltham casting a gentle healing spell -->
+      <use href="#figure" x="600" y="440" width="118" height="196" fill="#16203a"/>
+      <path d="M716 500C780 500 840 510 900 520" stroke="#16203a" stroke-width="26" stroke-linecap="round" fill="none"/>
+      <!-- the healing glow over her -->
+      <circle cx="936" cy="544" r="90" fill="url(#gCyan)" opacity=".4" class="pulse-f"/>
+      <circle cx="936" cy="544" r="40" fill="url(#gWhite)" opacity=".4" class="pulse-f"/>
+      <g fill="#bfeafa" opacity=".7"><circle cx="900" cy="500" r="3.4" style="animation:floatUp 4.5s ease-in infinite"/><circle cx="970" cy="510" r="3" style="animation:floatUp 4.5s ease-in infinite; animation-delay:-2s"/></g>
+    </svg>
+  </div>
+
+  <!-- mess : giant messes -->
+  <div class="scene" data-scene="mess">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0708"/>
+      <!-- the ghost of dath-ilan order, faint -->
+      <g stroke="#2a3a44" stroke-width="1" stroke-opacity=".2"><path d="M0 300h1600M0 450h1600M0 600h1600M300 200v600M600 200v600M900 200v600M1200 200v600"/></g>
+      <!-- the chelish mess: scorch + spill -->
+      <g filter="url(#soft2)" opacity=".4"><ellipse cx="700" cy="560" rx="260" ry="120" fill="url(#gBlood)"/><ellipse cx="980" cy="600" rx="180" ry="90" fill="url(#gEmber)"/></g>
+      <g fill="#1a0a0c"><path d="M560 560c40-30 120-40 180-10 40 20 30 60-20 70-60 12-180 0-160-60z"/><path d="M900 600c30-20 90-24 130-6 30 14 22 44-16 50-46 8-130 0-114-44z"/></g>
+      <!-- idle figures who don't clean it up -->
+      <g fill="#161018" opacity=".7"><use href="#figure" x="380" y="470" width="92" height="154"/><use href="#figure" x="1180" y="480" width="92" height="154"/></g>
+      <!-- lingering smoke -->
+      <g style="mix-blend-mode:screen"><ellipse class="drift" cx="780" cy="420" rx="140" ry="80" fill="#4a3c34" opacity=".2"/><ellipse class="drift" cx="840" cy="320" rx="180" ry="90" fill="#3a2e28" opacity=".15" style="animation-delay:-9s"/></g>
+    </svg>
+  </div>
+
+  <!-- model : the little keltham in her head -->
+  <div class="scene" data-scene="model">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a070a"/>
+      <!-- Carissa, modeling -->
+      <use href="#figure" x="320" y="450" width="112" height="186" fill="#1a0d10"/>
+      <!-- the constructed model-Keltham, in a thought space -->
+      <g transform="translate(720 380)">
+        <ellipse rx="150" ry="180" fill="url(#gCyan)" opacity=".08"/>
+        <use href="#figure" x="-50" y="-90" width="100" height="166" fill="#16203a" opacity=".55"/>
+        <rect x="-70" y="-110" width="140" height="220" rx="8" fill="none" stroke="#5fd0ff" stroke-width="1.6" stroke-dasharray="8 10" class="spin-vf" style="animation:none"/>
+        <g stroke="#5fd0ff" stroke-width="1.4" stroke-opacity=".5" fill="none" class="draw"><path d="M-70 -60h140M-70 20h140"/></g>
+      </g>
+      <!-- checking lines to the real Keltham -->
+      <use href="#figure" x="1100" y="450" width="112" height="186" fill="#16203a"/>
+      <g stroke="#bfeafa" stroke-width="1.5" stroke-dasharray="6 12" stroke-opacity=".5" fill="none" class="flow"><path d="M820 460L1100 500M820 520L1100 540"/></g>
+    </svg>
+  </div>
+
+  <!-- dath_ilan : no pleasantries in dath ilan -->
+  <div class="scene" data-scene="dath_ilan">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#070d12"/>
+      <ellipse cx="800" cy="360" rx="600" ry="300" fill="url(#gCyan)" opacity=".09" filter="url(#soft2)"/>
+      <!-- clean geometric cityscape -->
+      <g fill="none" stroke="#5fd0ff" stroke-width="1.6" stroke-opacity=".5">
+        <rect x="200" y="320" width="120" height="320"/><rect x="360" y="240" width="100" height="400"/><rect x="500" y="380" width="90" height="260"/>
+        <rect x="1010" y="280" width="100" height="360"/><rect x="1150" y="360" width="90" height="280"/><rect x="1290" y="220" width="110" height="420"/>
+        <path d="M200 640h1200" stroke-opacity=".4"/>
+      </g>
+      <g stroke="#bfeafa" stroke-width="1" stroke-opacity=".25"><path d="M0 500h1600M0 560h1600M0 620h1600"/></g>
+      <!-- figures standing tall, clarified, free -->
+      <g fill="#16283a"><use href="#figure" x="700" y="440" width="100" height="200"/><use href="#figure" x="820" y="440" width="100" height="200"/></g>
+      <g fill="#bfeafa" opacity=".6"><circle cx="640" cy="320" r="3" class="tw"/><circle cx="960" cy="340" r="2.6" class="tw" style="animation-delay:-1.4s"/></g>
+    </svg>
+  </div>
+
+  <!-- godhood : a little more like a god -->
+  <div class="scene" data-scene="godhood">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#080a0e"/>
+      <ellipse cx="800" cy="300" rx="300" ry="260" fill="url(#gGold)" opacity=".1" filter="url(#soft2)"/>
+      <!-- ascending rings -->
+      <g transform="translate(800 460)" fill="none">
+        <circle r="240" stroke="#5fd0ff" stroke-width="1.5" stroke-opacity=".22" class="breathe" style="animation-duration:6s"/>
+        <circle r="170" stroke="#9fc4ff" stroke-width="1.5" stroke-opacity=".3" class="breathe" style="animation-duration:6s; animation-delay:-2s"/>
+        <circle r="100" stroke="#bfeafa" stroke-width="2" stroke-opacity=".5" class="breathe" style="animation-duration:6s; animation-delay:-4s"/>
+      </g>
+      <!-- the rising luminous figure -->
+      <use href="#figure" x="744" y="420" width="112" height="200" fill="#1a2c44"/>
+      <!-- golden apex above -->
+      <g transform="translate(800 180)"><circle r="40" fill="url(#gGold)" opacity=".6" class="pulse-f"/><g class="spin-f" style="animation-duration:14s"><polygon points="0,-40 24,13 -24,13" fill="none" stroke="#ffd27a" stroke-width="2"/></g></g>
+      <g fill="#dff6ff"><circle cx="800" cy="420" r="4" style="animation:floatUp 5s ease-in infinite"/><circle cx="770" cy="460" r="3" style="animation:floatUp 5s ease-in infinite; animation-delay:-2.5s"/></g>
+    </svg>
+  </div>
+
+  <!-- identity : what kind of person i can be -->
+  <div class="scene" data-scene="identity">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#08080e"/>
+      <circle cx="800" cy="460" r="320" fill="url(#gCyan)" opacity=".08" filter="url(#soft2)"/>
+      <!-- ghosted possible selves -->
+      <use href="#figure" x="660" y="400" width="120" height="200" fill="#16203a" opacity=".22"/>
+      <use href="#figure" x="820" y="400" width="120" height="200" fill="#3a1c1c" opacity=".22"/>
+      <use href="#figure" x="700" y="400" width="120" height="200" fill="#16203a" opacity=".3"/>
+      <!-- the central, present self -->
+      <use href="#figure" x="740" y="400" width="120" height="200" fill="#1a2c44"/>
+      <!-- the eye that can't unsee -->
+      <g transform="translate(800 250)"><ellipse rx="70" ry="38" fill="#140a08"/><ellipse rx="70" ry="38" fill="none" stroke="#ff8a3c" stroke-width="2.5" class="pulse"/><circle r="16" fill="url(#gEmber)"/><circle r="5" fill="#ffd27a" class="pulse-f"/></g>
+      <!-- uncertainty motes -->
+      <g fill="#9fb4cf" opacity=".5"><circle cx="620" cy="520" r="3" class="tw"/><circle cx="980" cy="500" r="2.6" class="tw" style="animation-delay:-1.4s"/><circle cx="800" cy="640" r="2.4" class="tw" style="animation-delay:-2.2s"/></g>
+    </svg>
+  </div>
+
+  <!-- date : milestones and prices -->
+  <div class="scene" data-scene="date">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0a08"/>
+      <ellipse cx="800" cy="420" rx="460" ry="240" fill="url(#gGold)" opacity=".07" filter="url(#soft2)"/>
+      <!-- two parties -->
+      <use href="#figure" x="420" y="420" width="116" height="200" fill="#1a0d10"/>
+      <use href="#figure" x="1060" y="420" width="116" height="200" fill="#16203a"/>
+      <!-- the connecting handshake / deal line -->
+      <path d="M536 500C680 500 920 500 1060 500" stroke="#caa86a" stroke-width="2" stroke-opacity=".6" class="flow" fill="none"/>
+      <!-- milestone timeline with markers + price tags -->
+      <g transform="translate(800 660)">
+        <line x1="-360" y1="0" x2="360" y2="0" stroke="#caa86a" stroke-width="2"/>
+        <g fill="#ffd27a"><circle cx="-280" cy="0" r="9" class="pulse-f"/><circle cx="-100" cy="0" r="9" class="pulse-f" style="animation-delay:-.5s"/><circle cx="100" cy="0" r="9" class="pulse-f" style="animation-delay:-1s"/><circle cx="280" cy="0" r="9" class="pulse-f" style="animation-delay:-1.5s"/></g>
+        <g fill="none" stroke="#caa86a" stroke-width="1.6" stroke-opacity=".6"><rect x="-310" y="-54" width="60" height="34" rx="4"/><rect x="-130" y="-54" width="60" height="34" rx="4"/><rect x="70" y="-54" width="60" height="34" rx="4"/><rect x="250" y="-54" width="60" height="34" rx="4"/></g>
+      </g>
+    </svg>
+  </div>
+
+  <!-- wander : wander around dath ilan -->
+  <div class="scene" data-scene="wander">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#081016"/>
+      <!-- open dath-ilan sky -->
+      <rect width="1600" height="560" fill="url(#gCyan)" opacity=".1"/>
+      <ellipse cx="800" cy="220" rx="520" ry="220" fill="url(#gCyan)" opacity=".1" filter="url(#soft2)"/>
+      <!-- clean orderly distant skyline -->
+      <g fill="#0d1922" opacity=".9"><rect x="120" y="420" width="80" height="140"/><rect x="220" y="380" width="64" height="180"/><rect x="300" y="440" width="56" height="120"/><rect x="1180" y="400" width="70" height="160"/><rect x="1270" y="360" width="60" height="200"/><rect x="1350" y="430" width="64" height="130"/></g>
+      <g fill="none" stroke="#5fd0ff" stroke-width="1" stroke-opacity=".3"><path d="M120 470h236M1180 450h234"/></g>
+      <!-- ground + a path leading inward -->
+      <rect y="560" width="1600" height="340" fill="#0a141a"/>
+      <path d="M740 900L790 600 810 600 860 900z" fill="#10202a"/>
+      <path d="M800 600L800 900" stroke="#2a4a52" stroke-width="2" stroke-dasharray="12 16" class="flow"/>
+      <!-- Keltham, walking freely in -->
+      <use href="#figure" x="756" y="500" width="92" height="154" fill="#16283a"/>
+      <!-- wistful motes -->
+      <g fill="#bfeafa" opacity=".55"><circle cx="600" cy="300" r="3" class="tw"/><circle cx="980" cy="280" r="2.6" class="tw" style="animation-delay:-1.6s"/><circle cx="800" cy="240" r="2.4" class="tw" style="animation-delay:-2.6s"/></g>
+    </svg>
+  </div>
+
+  <!-- /SCENES -->
+
+  <div id="vignette"></div>
+
+  <div id="label">
+    <div class="kicker"><svg class="ksig"><use id="ksig-use" href="#sg-book"/></svg><span class="kname" id="kname">The Reading</span></div>
+    <div class="ttl" id="ttl">Corrigibility</div>
+  </div>
+
+  <div id="cap-wrap"><div id="cap"></div></div>
+
+  <!-- intro -->
+  <div id="intro">
+    <div class="intro-in">
+      <div class="eyebrow">an animated reading · episode 22</div>
+      <h1>Planecrash</h1>
+      <div class="sub">Ione faces the girls and bargains with security over the fate of her soul; then Keltham and Carissa talk <i>dath ilan</i>, godhood, and who he can still be. This plays the <b>AskWhoCasts AI</b> reading — load the audio and the animation follows it, captioned with the original text.</div>
+      <div id="drop">
+        <svg class="dz-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L8 8m4-4 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <div class="dz-msg">Drop the episode 22 audio here, or click to choose</div>
+        <div class="dz-sub">mp3 · m4a · wav · ogg — stays on your device, nothing is uploaded</div>
+        <input type="file" id="audiofile" accept="audio/*" hidden>
+      </div>
+      <div id="loaded"><span class="ck">✓</span> <span class="fn" id="fname"></span> <span id="dur"></span></div>
+      <button id="begin" disabled><span class="tri"></span> Play</button>
+      <div class="cast" id="cast"></div>
+      <div class="note">Sound from your file · seek, speed (1× / 1.25× / 1.5× / 0.75×), captions (CC / press “c”) and ← → arrows all work</div>
+      <div class="src">Reading &amp; audio by <b>AskWhoCasts AI</b> — support it at patreon.com/askwhocastsai. Episode 22 of “mad investor chaos and the woman of asmodeus” (Planecrash) by Iarwain &amp; lintamande.</div>
+    </div>
+  </div>
+  <audio id="player" preload="metadata"></audio>
+
+  <!-- controls -->
+  <div id="controls">
+    <button class="btn sm" id="prev" title="Previous passage" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M7 5h2v14H7zM20 5v14l-9-7z"/></svg></button>
+    <button class="btn lg" id="play" title="Play / Pause" aria-label="Play"><svg id="playicon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
+    <button class="btn sm" id="next" title="Next passage" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M15 5h2v14h-2zM4 5l9 7-9 7z"/></svg></button>
+    <button class="btn sm" id="restart" title="Restart" aria-label="Restart"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg></button>
+    <div id="prog"><div id="bar"></div></div>
+    <button class="btn" id="cc" title="Captions on/off (c)" aria-pressed="true">CC</button>
+    <button class="btn" id="speed" title="Reading speed">1.0×</button>
+    <div id="beat">The Forbiddance</div>
+  </div>
+
+</div></div>
+
+<script>
+
+/* ===================== CHARACTERS ===================== */
+const CHARS = {
+  narrator:  {name:'Narrator',      tag:'the tale itself',        color:'#d8c39a', sigil:'sg-book'},
+  ione:      {name:'Ione Sala',     tag:'oracle of nethys',       color:'#4fe6cd', sigil:'sg-oracle'},
+  keltham:   {name:'Keltham',       tag:'a mind from dath ilan',  color:'#5fd0ff', sigil:'sg-hex'},
+  carissa:   {name:'Carissa Sevar', tag:'to-let-you-in',          color:'#ff5d6c', sigil:'sg-flame'},
+  elias:     {name:'Elias Abarco',  tag:'chelish security',       color:'#c2152f', sigil:'sg-eye'},
+  meritxell: {name:'Meritxell',     tag:'and the chelish girls',  color:'#c2a0ff', sigil:'sg-gem'},
+  nethys:    {name:'Nethys',        tag:'the all-seeing',         color:'#b98cff', sigil:'sg-eyes'},
+  asmodeus:  {name:'Asmodeus',      tag:'the most high',          color:'#ff8a3c', sigil:'sg-penta'},
+};
+const SCENE_TITLES = {
+  glare:'The Girls Glare', thinkfast:'Trying to Think Very Fast', smile:'Real Power to Fuel a Smile',
+  boundary:'Walk to the Forbidden Boundary', bargain:'Something to Offer Security', threat:'Never Hit Third Circle',
+  balance:'Pretty Power-Balanced So Far', nethys_afterlife:'A Good Nethysian Afterlife', healing:'He Fixes the Burns',
+  mess:'Giant Messes', model:'The Little Keltham in Her Head', dath_ilan:'No Pleasantries in Dath Ilan',
+  godhood:'A Little More Like a God', identity:'What Kind of Person I Can Be', date:'Milestones and Prices',
+  wander:'Wander Around Dath Ilan'
+};
+
+/* ===================== CAPTIONS + SCENE/SPEAKER BEATS ===================== */
+/* CUES: the VERBATIM glowfic text, aligned to the audio's timeline {t: startSeconds, x: text}.
+   Empty x clears the caption (intro credits, and the tail the source doesn't cover).
+   BEATS: which scene + speaker is on screen at each time {t, s:scene, v:speaker}. */
+const CUES=[{t:0,x:""},{t:24.39,x:"The girls glare expectantly at Ione the instant Keltham leaves the room."},{t:29.67,x:"Ione is now trying to think very fast."},{t:33,x:"So. They obviously haven't been told. Which, earlier, Ione thought in the back of her"},{t:38.82,x:"mind would happen as soon as the security wizard walked out after gouging her eye,"},{t:44.12,x:"because they'd tell her former classmates about the new security risk,"},{t:47.92,x:"because all of Cheliax would unite against her in hating her and hurting her as"},{t:52.86,x:"much as they could short of killing her."},{t:55.41,x:"Apparently the part where, by default, security doesn't tell anyone anything,"},{t:60.73,x:"takes higher precedence. Also she is now visibly useful to the project and that casts"},{t:67.13,x:"a different shade on the whole thing where - she knows how she wishes this would"},{t:71.7,x:"go, but to make security go along with it, she needs to have something to"},{t:77.04,x:"offer security, something to bargain with security, something that Nethys wouldn't require her to just"},{t:82.39,x:"hand over anyways - She also has to choose how to answer the expectant looks,"},{t:87.26,x:"now, even if it's silence she has to make it clearly deliberate -"},{t:91.79,x:"Ione thinks of something she can offer security, and picks her strategy to try with"},{t:96.45,x:"the other girls, because she doesn't want to spend the rest of her life with"},{t:101,x:"Keltham's other women being as cruel to her as won't kill her,"},{t:104.6,x:"whenever Keltham isn't looking. \"So I'm not really sure,\" Ione says,"},{t:108.23,x:"using the glorious feeling of realizing her curse's real power to fuel a smile,"},{t:114.36,x:"\"but I think Asmodeus cut a deal with Nethys, to go in on Keltham's project"},{t:119.64,x:"together, and I was the person here who was best suited to get the power"},{t:123.93,x:"from Nethys to summon temporary copies of books from other libraries plus whatever else it"},{t:128.59,x:"is I can do now. Didn't do it on purpose,"},{t:131.69,x:"just happened to me.\" lintamande: There is an astonished silence."},{t:135.43,x:"But she's - not dead, which says that they're not supposed to kill her,"},{t:141,x:"which is something. \"Security,\" says Paxti after a few seconds,"},{t:145.44,x:"\"I'm obliged to report evidence of forbidden primary worship even if I think you have"},{t:151.45,x:"it already.\" This makes everyone else tense nervously, because they didn't say that,"},{t:156,x:"but now obviously it's too late. Security is most visibly at the window,"},{t:160.52,x:"making sure the dead bird is just a dead bird."},{t:164,x:"\"You should walk to the Forbiddance boundary and back,\" Meritxell says."},{t:168.05,x:"\"To prove you're still loyal to Hell."},{t:170.63,x:"The Forbiddance won't hurt you if you are.\""},{t:173.62,x:"\"Or they could just tell me to fail a Will save and read my mind."},{t:179.25,x:"Also Forbiddance goes by alignment, not loyalty to Asmodeus, and I wouldn't be here if"},{t:185.06,x:"they weren't sure about Lawful Evil.\" \"But, sure, if an expert says that getting touched"},{t:191,x:"by Nethys didn't change my alignment for Forbiddance purposes, I'll walk out and walk back"},{t:196.59,x:"if the actual security here tells me I should.\""},{t:199.61,x:"Ione thinks, loudly, about her offer to security, if they don't shoot her down on"},{t:204.67,x:"this. Keltham's going to want a book on cleric spells at some point,"},{t:209.33,x:"she's guessing, and if they make up their own version of a book or remove"},{t:213.37,x:"a few pages, and hide it in this library, Ione can summon a copy of"},{t:217.7,x:"that to give to Keltham. Nethys, she thinks, wouldn't want her to withhold help from"},{t:222.91,x:"Keltham's project, so she knows she doesn't have her help to bargain with,"},{t:227.43,x:"she knows she has to give it anyways."},{t:230.22,x:"But the version of this where she's actively cooperating with security,"},{t:234.24,x:"giving them helpful suggestions like that, and going along with Cheliax's masquerades -"},{t:239.59,x:"if she's doing all that, she wants to be treated more like Nethys's oracle that"},{t:244.34,x:"got sent here by pact with Asmodeus to help with Cheliax's project,"},{t:248.38,x:"which is probably what she really is - and not be treated like a heretic and"},{t:253.52,x:"traitor she never asked to become or wanted to be."},{t:257,x:"Elias Abarco pulls off his invisibility, looking greatly annoyed."},{t:260.38,x:"He's mostly annoyed because Ione doesn't seem to care about anybody;"},{t:264.5,x:"they spent the last couple hours checking up on familial and nonfamilial relations they could"},{t:269.03,x:"murder or nearly murder to make a point, and her parents sold her to the"},{t:273.17,x:"school and she has an older brother who by all accounts hates her and she"},{t:278.17,x:"hates him back. This is healthy and encouraged in young wizards but it's damn inconvenient"},{t:283.29,x:"when one is irritated with Ione Sala and really wants to rip something she cares"},{t:288.11,x:"about to pieces before her eyes. He nods to Paxti,"},{t:291.35,x:"because she was right and should know it."},{t:294.13,x:"\"She's still Lawful Evil,\" he says curtly."},{t:296.57,x:"\"Paxti, you should hit the rest of them, for being slow in reporting."},{t:301.33,x:"Do you know the spell -\" \"Yes.\" And he looks at Ione."},{t:305.33,x:"Raises his eyebrows, slightly, nods even more slightly than that."},{t:308.17,x:"And heads off to see why the damned bird is taking them so long,"},{t:311.43,x:"because it turns out that supervising a bunch of god-touched teenagers is the worst."},{t:315.84,x:"Ione does not think thank you, obviously, there are so few occasions in Cheliax where"},{t:322.18,x:"it's ever appropriate to say that, she's surprised sometimes the word hasn't died out."},{t:327.57,x:"Deal, is what she thinks back, along with her very Lawful and Asmodean intention to"},{t:333.4,x:"keep her deals fully if the other party keeps theirs."},{t:337.4,x:"Paxti is not actually delighted by this assignment at all,"},{t:340.91,x:"not that this shows on her face; they're very much playing an iterated game here,"},{t:345.68,x:"and that means that hitting people too hard is risky,"},{t:349,x:"and hitting people too lightly is risky, and while no one's outright glaring at her"},{t:354.09,x:"several of them look a bit contemptuous, even though she got this right and they"},{t:359.55,x:"got this wrong. The contemptuousness is a sign she should err on the side of"},{t:364.35,x:"'too hard'."},{t:364.96,x:"Carissa would kind of like for less of her mental energy to be caught up"},{t:369.88,x:"in imagining there is an invisible halfling from Otolmens here ready to kill someone."},{t:375.5,x:"It's really cramping her style. But there is a halfling,"},{t:379.29,x:"or at least there might be, unless Asmodeus told Aspexia Rugatonn to do something different,"},{t:385.4,x:"which is not less terrifying, and so she doesn't want to particularly confront Ione,"},{t:391,x:"even though she has some good material for it, or even ask Ione for a"},{t:395.8,x:"book, which is what she'd do if there were slightly less at stake here,"},{t:399.72,x:"because it seems likely that Nethys's intervention here is part of what Otolmens is objecting"},{t:406,x:"to... Paxti's spell slaps her, harder than people usually bother with."},{t:410.33,x:"Carissa wishes there were a way for Paxti to know that she's not just affecting"},{t:415.33,x:"being so absorbed in more important matters that she barely noticed,"},{t:419.43,x:"she actually is so absorbed in more important matters than she barely noticed,"},{t:424.47,x:"but there's not."},{t:425.89,x:"\"I never worshipped Nethys,\" Ione says while this is going on."},{t:431.11,x:"\"I never deliberately read anything about any gods that weren't Asmodeus."},{t:436.2,x:"I passed my loyalty checks. You report it because it's evidence,"},{t:440.6,x:"but while you're doing that, have your own sense about what must have actually happened."},{t:445.67,x:"Nethys has an obvious interest in working with Asmodeus on this,"},{t:449.33,x:"and I doubt there are any actual Nethys worshippers on site or who'd be allowed"},{t:454.33,x:"in. I was just the one there who liked books.\""},{t:457.67,x:"Then Ione realizes what she has to say, and it also works for her own"},{t:462.86,x:"benefit that she says it - \"Note, though."},{t:465.09,x:"Keltham thinks I'm a secret Nethys worshipper, and I've told him that probably most of"},{t:470.5,x:"you and most Chelish government officials wouldn't care, but that I wasn't sure."},{t:475.45,x:"Security thinks that, once Keltham learns the spells to verify that I'm Nethys-touched,"},{t:480.55,x:"I can be a secret worshipper of Nethys here who confirms our stories to him."},{t:486.05,x:"So don't treat me as anything except somebody with a weird book-fetching power,"},{t:491.1,x:"anywhere Keltham might see that. You are not supposed to know anything about me other"},{t:496.37,x:"than that, and even if you did, Keltham doesn't think that worshipping Nethys is something"},{t:502.11,x:"that'd get most people after me.\" It's a security advisory,"},{t:506,x:"it's clearly a correct security advisory, and if Ione gives it before anybody else does,"},{t:511.71,x:"it means Ione is somebody who sometimes says what the security advisories are."},{t:517.5,x:"Which, obviously she absolutely will never abuse for anything Chelish security would not in fact"},{t:524.29,x:"like, she is a very good and cooperative oracle of Nethys,"},{t:528.48,x:"she is only securing her own safety among the lesser mortals who aren't security."},{t:533,x:"The lesser mortals who aren't security take the meaning and look variously impressed or annoyed"},{t:539.33,x:"or unreadable. \"Can you get destroyed books?\""},{t:544,x:"says Meritxell after a moment. \"Can you get books out of Abadar's vault?\""},{t:549.69,x:"\"No, it seems pretty power-balanced so far,\" Ione says, hardly even thinking about the learned"},{t:555.55,x:"reflex that halts her instinct to start spilling the exact details of what she can"},{t:561.13,x:"do. \"At least at the current circle-equivalent of whatever it is.\""},{t:565.83,x:"\"Huh. Well, if you go mad I'll try to put you down while there's still"},{t:570.43,x:"something for Hell to salvage.\" And she heads off to dinner."},{t:573.57,x:"Carissa wonders absently what Meritxell would do if instructed by Asmodeus Himself to learn to"},{t:578.21,x:"be more Evil."},{t:579.23,x:"Ione will go back to her usual quiet self unless people ask her more questions"},{t:583.91,x:"or actively talk to her, while she goes on trying to rethink her life."},{t:588.36,x:"She clearly can't continue playing her game of being the quiet one and never attracting"},{t:593.73,x:"attention, but that was just a game, so it shouldn't be too hard for her"},{t:598.56,x:"to figure out a different one. She could have levered her higher grades into a"},{t:602.44,x:"position of more dominance in the classroom, she could have played riskier games and ended"},{t:607.15,x:"up closer to the top; she just deliberately decided it wasn't worth the risk,"},{t:612.09,x:"before, and now she doesn't have that option anymore."},{t:615.36,x:"(Being the quiet one was just a game move, right?)"},{t:619,x:"Elias shoos the other kids out to dinner, after a few more minutes of them"},{t:623.5,x:"playing stupid teenager social games, so he can have another word with Ione."},{t:627.7,x:"\"You should strip,\" he says, once they've left."},{t:630.25,x:"\"I am considering lighting you on fire and it'd be inconvenient to replace your clothes.\""},{t:635.07,x:"Ione Sala takes off her clothes immediately, without protest, old reflexes of fear overwhelming her"},{t:640.79,x:"and making it hard to think much further."},{t:644.16,x:"She manages not to tremble too much about it."},{t:646.93,x:"\"I am noticing a pattern,\" Elias says."},{t:648.86,x:"\"The pattern is, you decide that actually fucking submitting to the will of Asmodeus and"},{t:653.69,x:"promptly doing whatever He wants would be inconvenient for you personally,"},{t:657.5,x:"maybe get you killed, so instead you try to sell your obedience,"},{t:662,x:"to which we are already entitled, in bits and chunks,"},{t:664.81,x:"for things you want. Do you see how I might have observed this pattern.\""},{t:668.75,x:"\"Nethys has a grip on my soul now, I can feel it,"},{t:672.27,x:"and it doesn't matter whether or not I object to Asmodeus making that deal,"},{t:676.73,x:"but you wouldn't let Nethys keep up His end of whatever this is unless I"},{t:680.85,x:"made it hard for you to sweep me out of the way,"},{t:683.96,x:"which I know I have to do because otherwise Nethys will break me,"},{t:687.86,x:"and I wouldn't be surprised if Asmodeus predicted that when He gave me to Nethys"},{t:692.6,x:"because He also knew that security would try to -\""},{t:695.3,x:"Elias does light her on fire, at that point, just because the sentence runs on"},{t:699.8,x:"so long. He doesn't maintain the spell for longer than its natural one round,"},{t:704.21,x:"though; he regrettably actually should not kill her."},{t:706.79,x:"\"I'm not a theologian,\" he says, \"but I'm slightly less stupid than you,"},{t:710.83,x:"and my read is, Asmodeus gave you to Nethys because Keltham's going to demand corroboration"},{t:715.52,x:"from other churches, which you can provide."},{t:717.45,x:"And had security reached that conclusion, when you turned yourself in promptly like you should"},{t:722.31,x:"have, then we wouldn't have killed you - or would have raised you,"},{t:726,x:"if we didn't think of it in time."},{t:727.88,x:"If it serves Asmodeus for you to live, then you don't have to fight like"},{t:731.65,x:"a rabid seagull to give us reason to keep you breathing,"},{t:734.41,x:"because the incentives were already there. If it serves Asmodeus for you to die,"},{t:740.55,x:"then none of these games will work."},{t:743.28,x:"And if you're unpredictable enough, then at some point it will serve us for you"},{t:747.41,x:"to die, simply because corpses don't make sudden moves that wreck half a dozen plans"},{t:751.78,x:"they don't know about. Stop it. No more games, no more deals.\""},{t:756.48,x:"This is about as painful as the most painful punishment she's been through."},{t:761.45,x:"\"Don't care if I die,\" she coughs out, when she can speak."},{t:765.82,x:"She doesn't try to stop the trembles, the sobs that interrupt her,"},{t:770.45,x:"but she knows that this is probably the most important negotiation of her life,"},{t:776.18,x:"so she should spend everything she has on continuing it."},{t:780.69,x:"\"Belong to - Nethys - have to work - for Him - I served Asmodeus from fear -"},{t:786.5,x:"because He would get my soul - and you know that's good enough -"},{t:791.6,x:"for Lord Asmodeus - but it's not true - anymore - don't tell me what Asmodeus wants -"},{t:798.44,x:"that's your side - mine is - what Nethys wants - so I want to make a deal"},{t:805,x:"- Asmodean - and then I'll be - predictable.\""},{t:807.41,x:"\"Sure. Here's your deal. Stop fucking with me."},{t:810.22,x:"You live, you stay in your library, you get the books we tell you to"},{t:814.44,x:"get, you study magic very diligently and impress Nethys, he likes high-circle casters,"},{t:818.43,x:"and you never again screw us over for the sake of your bargaining position,"},{t:822.5,x:"or I'll see to it you never hit third circle,"},{t:825.5,x:"and I don't think Nethys cares at all about people who have barely started studying"},{t:830,x:"magic. Lots of people don't hit third."},{t:831.96,x:"Keltham won't be suspicious. If you don't give me an easier way to do it,"},{t:836.16,x:"I will do it by making you stupider, and I know how Nethys would feel"},{t:840.69,x:"about you then. Got it?\""},{t:842.23,x:"There's a flare of hate in her then, now that she won't go to Hell"},{t:847.29,x:"for hating Asmodeus's servants. And with that hate, flashes of contempt,"},{t:851.86,x:"starting to arrange themselves around her sudden new identity."},{t:855,x:"She is too scared, too shaking from being on fire for a minute,"},{t:859.33,x:"and too angry, not to think the thoughts that she is thinking now."},{t:863.83,x:"You can make Asmodeans into high-level wizards, if you give them enough intelligence boosts,"},{t:869.47,x:"but you can't make them think. She's not particularly happy about having thought that,"},{t:874.63,x:"she doesn't actually want to insult the person in front of her if he's reading"},{t:879.67,x:"her mind, but the thought came to her anyways."},{t:882.67,x:"The security wizard hasn't realized that this entire conversation has been predicted out by Nethys"},{t:887.96,x:"and Asmodeus, he isn't curious about the divine, he isn't keeping his eyes open and"},{t:893.4,x:"because of that he doesn't see. He's posturing about serving Asmodeus,"},{t:898.2,x:"and not realizing how this whole interaction they're having right now is something that Asmodeus"},{t:903.43,x:"no doubt had to work around and pay Nethys extra for in order to get"},{t:908,x:"a library oracle on His project. She hopes somebody in Hell has a very very"},{t:912.57,x:"long talk with him about that after he dies."},{t:915.38,x:"Nethys has really gone to some lengths, in ways very visible to her,"},{t:920.33,x:"to make sure that Nethys can seriously threaten her and Chelish security can't."},{t:925,x:"She can't be maledicted, she can't be tortured for very long,"},{t:929,x:"if she's killed in the course of sincerely doing her duties that thought doesn't actually"},{t:933.43,x:"bother her at all if she gets to go to Nethys's afterlife and study magic"},{t:937.71,x:"forever instead of burning, and maybe Cheliax wouldn't dare kill her anyways because if she"},{t:943.89,x:"can't be maledicted somebody else might raise her and she'd talk all about Keltham."},{t:949.33,x:"Ione Sala doesn't know what Nethys has set up against somebody cursing her stupider,"},{t:953.96,x:"but maybe it'll be too obvious to Keltham by then,"},{t:957.16,x:"or she can pray to Nethys for divine aid, or she could simply go to"},{t:961.88,x:"Keltham and tell him it's time to find a university who can Heal her better."},{t:966.25,x:"Or maybe the higher-ups here are aware that cursing Nethys's oracle with stupidity would in"},{t:971.18,x:"fact constitute a serious slap in the face of a god,"},{t:974.68,x:"one who's very hard to keep out of things, on a site already subjected to"},{t:979.67,x:"extensive divine intervention. And she is too scared, too shaking,"},{t:983.14,x:"and too angry, not to think what she thinks then."},{t:986.95,x:"That's not how compacts work, Asmodean. They're negotiated, not dictated."},{t:991.2,x:"Nethys made very sure you wouldn't be able to escalate your threats against me to"},{t:997.2,x:"worse than what Nethys could do. Maybe you should call in a more experienced security"},{t:1002.55,x:"officer who knows how to negotiate with non-Asmodeans you can't just maledict."},{t:1006.8,x:"Someone who understands what happens if you leave people scared of being set on fire"},{t:1012.2,x:"and stupidified and your negotiating position does not, in fact,"},{t:1016.7,x:"let you just keep escalating further until you send them to Hell."},{t:1022.33,x:"Non-Asmodeans stay on the lookout for ways to improve their bargaining positions,"},{t:1026.54,x:"if they're scared and you haven't made a real deal with them,"},{t:1030.39,x:"that's what happens. I wasn't ambitious and I'm still not ambitious and I don't want"},{t:1035.1,x:"really very much at all, if you negotiated terms with me I'd be very predictable"},{t:1039.76,x:"and wouldn't even ask for very much, but if Asmodeus's representative wants Nethys's representative to"},{t:1045,x:"be predictable, he needs to bargain for that and not just dictate."},{t:1049.44,x:"\"I understand,\" Ione whispers out loud, meekly."},{t:1053,x:"He's either reading her thoughts like a halfway intelligent person or he's not;"},{t:1058.64,x:"she'll see."},{t:1059.45,x:"\"You got your deal. And I don't notice you being reasonable and predictable at all.\""},{t:1065.59,x:"\"I - didn't understand that -\" She genuinely didn't."},{t:1068,x:"Is he saying he read her thoughts or does he think they've already done a"},{t:1073,x:"deal or - she doesn't get it."},{t:1074.74,x:"Sure, he'll speak more slowly. \"When Nethys chose you, you could have come to us."},{t:1079.39,x:"You went to Keltham instead, to try to position yourself better for a deal."},{t:1083.54,x:"We granted you that you would continue attending class with your little friends."},{t:1087.54,x:"When you realized you had book-summoning powers, you could have come to us."},{t:1091.83,x:"You showed them to Keltham instead, to try to make it more inconvenient to replace"},{t:1096.39,x:"you. Then, you proposed your deal: that we don't set the other students against you,"},{t:1101.03,x:"that despite all your behavior in the past two days we treat you like an"},{t:1105.69,x:"Asmodean student and encourage them in the same."},{t:1108.24,x:"I agreed to that too. And then I told you:"},{t:1111.44,x:"don't do that again. You want to stay here, falsely admired by your peers,"},{t:1115.74,x:"trusted by Keltham? Great. That has been agreed to."},{t:1118.35,x:"You have that. But if you push us any farther,"},{t:1121.26,x:"we will take you out of the picture."},{t:1123.61,x:"The deal is that there will not be further deals."},{t:1126.65,x:"I don't know why you think Asmodeus bargained for Nethys's intervention here."},{t:1130.52,x:"The Grand High Priestess said nothing of that, when she came to read your mind,"},{t:1134.39,x:"and she pays a great deal of attention to the question of how we accidentally"},{t:1138.64,x:"make ourselves more costly for Asmodeus to steer."},{t:1141.5,x:"I think Nethys paid Asmodeus for whatever He's doing, and if it costs Nethys more,"},{t:1147,x:"that serves my god; that's what I think."},{t:1149.67,x:"If you are a small obedient little girl who only wants a few small things,"},{t:1154.48,x:"then, having attained those small things, I don't see why you'd hesitate to agree that"},{t:1158.93,x:"you'll stop withholding things from us, stop presenting them to Keltham first to try to"},{t:1164.08,x:"force a concession from us afterwards, and stop trying to condition your obedience on our"},{t:1169.85,x:"further concessions. The game you have played twice today, you will not be able to"},{t:1173.9,x:"play a third time, have I said it enough ways you comprehend it now?\""},{t:1177.28,x:"The Grand High Priestess was - (don't think things that make your bargaining position look worse"},{t:1183,x:"think things that make your bargaining position look better) The Grand High Priestess was here"},{t:1189,x:"and didn't do anything to her. That says a lot,"},{t:1192.33,x:"really. Nethys probably prepared in ways she can't even see."},{t:1196.33,x:"Ione draws a shaky breath, and sits up straighter."},{t:1200.33,x:"\"Are we negotiating a deal? Or is Asmodeus's representative telling Nethys's representative how it's going"},{t:1205.88,x:"to be?\""},{t:1206.52,x:"\"Let's hear what the small obedient girl who only wants a few small things still"},{t:1211.32,x:"wants.\""},{t:1211.8,x:"Ione crawls over to where she left her clothes, and puts them back on,"},{t:1216.44,x:"which is helpful for her to get some of her sudden seething hatred under control."},{t:1222.11,x:"Whatever else comes, she's never passing a Chelish loyalty screen again,"},{t:1227,x:"and she may as well think what she fucking wants now,"},{t:1230.55,x:"which really leaves quite a lot of thoughts backed up,"},{t:1233.27,x:"and this is not the time for them."},{t:1235.45,x:"\"Oracle of Nethys, Ione Sala, of the library's curse,\" she says,"},{t:1239.52,x:"when her clothes are back on and she's sitting on the ground."},{t:1244.22,x:"\"My god has either joined with your god, or been paid by Him to assist,"},{t:1249.14,x:"on a project to bring another plane's knowledge to Cheliax."},{t:1252.38,x:"I require a bed either in the library, or in a room immediately adjacent to"},{t:1258,x:"it. Aside from this, I am content with ordinary student-level sustenance and living conditions,"},{t:1263.72,x:"which you will not worsen or withhold."},{t:1266.44,x:"You may either leave the other students here ignorant about my true nature,"},{t:1271,x:"or tell them but then instruct them further not to mistreat me in any way"},{t:1276.2,x:"whatsoever whether or not Keltham is watching."},{t:1279,x:"I understand there may be some restrictions on me."},{t:1282.6,x:"These restrictions need to mostly not prevent me from providing the services that Nethys intended"},{t:1287.85,x:"me to offer this project. Whatever pay or equity is negotiated by Keltham for the"},{t:1292.86,x:"participants in his project, will be allowed to actually accrue to me if it actually"},{t:1297.14,x:"accrues to any single one of the other girls, and Cheliax can't take it from"},{t:1301.9,x:"me including by unexpected fees or cost increases."},{t:1304.95,x:"You don't do anything clever to work around all that and make my life worse.\""},{t:1310.8,x:"\"In exchange, I will cooperate with Chelish security, on the understanding that they treat me"},{t:1316.64,x:"as a friendly representative of the allied god Nethys and not an Asmodean traitor who"},{t:1321.41,x:"gets set on fire at somebody's whim."},{t:1323.67,x:"If we have disagreements, we work them out by negotiating as equals,"},{t:1327.67,x:"not by a wizard who works for Cheliax showing up and gouging out my eye."},{t:1332.43,x:"If at some point you come up with something extra that you want from me,"},{t:1337,x:"don't threaten me into it, offer me an interesting book."},{t:1340.33,x:"Or a magic item. Or if you want me to do almost anything,"},{t:1344.67,x:"you can offer me my brother as my slave."},{t:1347.91,x:"Apart from that, I don't think I have any long-term goals besides pleasing Nethys enough"},{t:1353.41,x:"to get a good Nethysian afterlife. I'm not impatient to reach ninth circle here instead"},{t:1359.55,x:"of there.\" \"If you manage to come up with a brilliant way to screw me"},{t:1364.42,x:"on this deal, it's off, because I'm not an Asmodean and you're not a devil"},{t:1368.46,x:"and this isn't a contract between two Asmodeans, it's a Nethysian-Asmodean deal."},{t:1373.19,x:"I'm Lawful and I'll keep my deals that are actually sensible deals for sensible people"},{t:1378.9,x:"being sensible about them. I'm not an Asmodean any more,"},{t:1382.33,x:"and I won't keep a contract that an Asmodean twisted around.\""},{t:1386.56,x:"\"What makes Ione Sala predictable is when she thinks she can be safe if she"},{t:1392.4,x:"stays predictable, which mostly means that she needs to be safe from Nethys's displeasure."},{t:1398,x:"The main thing that causes me to start looking for ways to improve my bargaining"},{t:1402.67,x:"position with Cheliax, is if it looks to me like Cheliax might suddenly decide to"},{t:1406.93,x:"do anything it wants to me at any time, especially things that might hinder my"},{t:1411.83,x:"service to my god, unless my bargaining position is better."},{t:1415.3,x:"I will remember your claim that security would have worked with me if I'd come"},{t:1419.77,x:"directly to them, and if you keep your side of things,"},{t:1422.97,x:"I will try coming straight to you at least the next time I think I"},{t:1427.32,x:"see something Nethys would want me to do."},{t:1429.65,x:"I hear your claim that my doing anything else unpredictable makes me too much of"},{t:1434,x:"a liability and I will be killed no matter what after that,"},{t:1437,x:"which I understand would make it hard to continue doing what Nethys wants me to"},{t:1441,x:"do, and I understand Nethys would see that as a betrayal if I let it"},{t:1446,x:"happen on purpose.\" \"Our gods have an obvious common interest."},{t:1449.35,x:"We don't have to fight. I respect what Asmodeus has to offer this project."},{t:1454.25,x:"I hope Cheliax respects what Nethys has to offer.\""},{t:1457.76,x:"Ione finishes talking. She's trying to tense her entire body so it will stop fucking"},{t:1464.61,x:"trembling and she knows she can't do this for much longer."},{t:1467.5,x:"\"Oh, do you want your brother after all,\" says Elias with some satisfaction."},{t:1470.5,x:"\"I spent a while trying to see if there was anyone in the world you"},{t:1474.35,x:"liked. All right. Next time you have a bright idea,"},{t:1477.04,x:"come to us; next time we have a demand, I'll bribe you.\""},{t:1480.48,x:"Ione found a wounded bird, when she was very young."},{t:1483.84,x:"She hid it from her parents, and tried to nurse it back to health."},{t:1488.32,x:"She hadn't even had it a full day before her brother found it,"},{t:1492.48,x:"and killed it in front of her, slowly, by tearing off bits of it at"},{t:1497.39,x:"a time. It's the last instance Ione can recall of still having a heart to"},{t:1502.61,x:"break, because afterwards it was very clear to her that anything she ever cared for"},{t:1507.35,x:"would just become a weapon that somebody else could use to hurt her."},{t:1511.36,x:"\"Is it too late to pretend that I love my brother dearly?\""},{t:1515.73,x:"Ione says, not quite believing that she's joking with him."},{t:1519.36,x:"\"And deal.\""},{t:1520.08,x:"He pulls together an arcane healing spell."},{t:1522.6,x:"Fixes the burns, when he shakes her hand."},{t:1525.48,x:"\"If you loved that asshole I really would have to conclude Nethys had driven you"},{t:1530.61,x:"mad. Stay out of trouble.\""},{t:1531.91,x:"\"Yes, sir,\" Ione says without thinking at all, and then sighs at herself,"},{t:1538,x:"but only internally. Halfling slave #958245 \"Broom\": Halfling slave #958245 \"Broom\" has just seen a"},{t:1544.4,x:"trembling human girl strip naked and then be set screaming on fire,"},{t:1549.2,x:"which challenged his understanding of reality not in the slightest."},{t:1553.11,x:"After that, other things were said which challenged his understanding of reality significantly more."},{t:1558.45,x:"Did the girl just win? That is frankly not where he was expecting this to"},{t:1563.91,x:"go. He wouldn't set somebody on fire, if they were implicated in the possible end"},{t:1569.2,x:"of the world. They might explode. Broom thought about trying to do something,"},{t:1573.67,x:"but before he was done hesitating, the girl wasn't on fire any more,"},{t:1577.67,x:"and then she was still talking disrespectfully to the powerful wizard who had just set"},{t:1582.55,x:"her on fire. That does seem like the sort of person who might destroy the"},{t:1587.21,x:"world, either by accident or on purpose?"},{t:1589.69,x:"The conversation afterwards didn't make it seem like Ione Sala was planning to do that"},{t:1594.31,x:"right away, but Broom is still feeling somewhat worried."},{t:1597.08,x:"He can imagine somebody carrying the sort of grudge, from being set on fire,"},{t:1601.54,x:"where they decide to destroy the world about it."},{t:1604.43,x:"Especially if it's been happening to them regularly."},{t:1607,x:"He doesn't like being whipped and healed and whipped again."},{t:1609.9,x:"He hated that one time of his life where it was happening to him a"},{t:1614.26,x:"lot. He just didn't have any options for doing anything about that,"},{t:1618.1,x:"such as, for example, destroying the world."},{t:1620.55,x:"It is not entirely clear to Broom that Chelish security quite understands how to avoid"},{t:1626.05,x:"making giant messes or how to clean them up, which,"},{t:1629.86,x:"he supposes, makes sense of why some god named \"Otolmens\" would randomly grab Broom in"},{t:1634.5,x:"the hallway and tell him to do it."},{t:1636.6,x:"Halfling slave #958245 \"Broom\": ...and yet despite that, Broom finds himself smiling."},{t:1639.89,x:"Well, he thinks he knows why he's doing that."},{t:1644.16,x:"She did win, after all. Broom wipes the smile from his face once he realizes"},{t:1649.74,x:"why it's there. He watches Ione pull a book out of air,"},{t:1653.7,x:"visibly trembling, and sit down to read the book, while she continues trembling,"},{t:1657.56,x:"looking very much like she's trying to avoid having a breakdown in front of any"},{t:1662,x:"invisible watchers. He keeps watching until he's pretty sure she's not about to grab her"},{t:1666.62,x:"wizard stuff and start destroying the world, and then leaves the library to check on"},{t:1671.2,x:"his other person of interest."},{t:1672.7,x:"Carissa ducks out from the crowd headed to dinner and goes to her room."},{t:1676.9,x:"She's pretty sure she can fake her way through a date with Keltham,"},{t:1681,x:"but she doesn't want to? She can come up with several justifications and she's not"},{t:1686,x:"sure she buys any of them but one is that -"},{t:1689.18,x:"when they tell him more, which they're going to have to,"},{t:1692.68,x:"eventually, she'd like to tell him that she wasn't lying about this."},{t:1696.83,x:"Another one is that - she is trying to become bigger,"},{t:1700.3,x:"more capable, more Evil, in the sense of wanting Evil things for her own reasons"},{t:1705.33,x:"rather than the sense of being willing to do what it takes to survive,"},{t:1710,x:"and so it seems like practice in the wrong direction,"},{t:1713.33,x:"to go on a date while not wanting to."},{t:1716.33,x:"Another one is that at lunchtime she was so happy,"},{t:1720.2,x:"full of ideas and satisfaction and cleverness and the conviction that there was something big"},{t:1726.14,x:"and beautiful and perfect out there and Keltham was leading her towards it,"},{t:1731.1,x:"and she wants that back. She doesn't, objectively speaking, have any reason to have lost"},{t:1737.38,x:"it. She has basically earned confirmation that she was right,"},{t:1741.33,x:"that there is something big and beautiful and perfect out there and that Keltham is"},{t:1746.33,x:"leading her towards it, her and not anybody else, or at least her first."},{t:1751.17,x:"She didn't have the details nailed down but if you'd asked her to bet at"},{t:1756.38,x:"lunchtime she wouldn't have bet she had the details right already."},{t:1760.17,x:"The main reason she now feels sick and small and scared isn't that she was"},{t:1765.4,x:"wrong at lunchtime, it's that she realized since then that the path to big and"},{t:1771.4,x:"beautiful and perfect requires skills she doesn't have and doesn't have long to acquire -"},{t:1776.22,x:"- not a useful line of thought - - why does she want to go on a date"},{t:1781.31,x:"with Keltham? Other than because there's a competition with that as a win condition and"},{t:1785.92,x:"she's very competitive. Other than because if they have children they'll be very smart and"},{t:1790.82,x:"Cheliax will objectively owe her lots of money for them whether or not it pays"},{t:1796.27,x:"up. Other than because he's attractive, when he's trying to be that instead of trying"},{t:1800.85,x:"to be a hundred other things. Well, because there's something he is getting right."},{t:1805,x:"There is something no one in Cheliax is getting right except maybe Aspexia Rugatonn,"},{t:1810.09,x:"and Aspexia Rugatonn can't teach it, even if she knows it,"},{t:1813.92,x:"because if she could then everything would be different."},{t:1816.69,x:"There's a kind of way of living in the world that Keltham has,"},{t:1820.69,x:"and they don't, and he saw immediately what a tragedy that was and wanted to"},{t:1826.33,x:"teach it to literally everyone because - not because he's Good,"},{t:1830,x:"he's not, he's a lot more Good than people here because his surroundings were but"},{t:1835,x:"she can actually tell the difference and he's not - But you don't have to be"},{t:1840.15,x:"Good to see a - mess, a Lawless mess if you'd like,"},{t:1843.96,x:"and to wish that the beings in it stood taller,"},{t:1847.43,x:"smarter, clarified and free, not as good as when they had no free will maybe"},{t:1852.65,x:"but at least out of the local equilibrium where they have it but are not"},{t:1857.06,x:"competent to use it - He's also a teenager in way over his head and missing"},{t:1861.42,x:"half the information he needs and depending which skills he grows in which order he's"},{t:1866.55,x:"very possibly going to demand, when Cheliax comes clean with him,"},{t:1870.48,x:"that everyone involved in the decision to deceive him be tortured to death,"},{t:1875.3,x:"which would be reasonable, but - - she wants to sleep with Keltham because she wants everything"},{t:1880.88,x:"he has, and she wants to see more pieces of him,"},{t:1885,x:"and she wants it very, very badly."},{t:1887.62,x:"And she sits with that, and lets it fill her up,"},{t:1891.08,x:"the longing to see the end of the path, the longing to tell him things"},{t:1895.69,x:"and watch him think about them - to check the little Keltham she is building in"},{t:1900.08,x:"her head against the real thing and see if she gets it yet -"},{t:1904.4,x:"There. That's better. She goes to dinner."},{t:1907.67,x:"Keltham heads to dinner, still feeling shaky."},{t:1910.7,x:"It does not occur to him to hide this; he is distracted,"},{t:1914.87,x:"and by default he is not an actor posing."},{t:1918,x:"He grabs his food and sits down next to Carissa,"},{t:1921.12,x:"who seems to have gotten there before him, not sure what he wants to say"},{t:1925.81,x:"to her. Cancel the date? There's a presumption there about Carissa wanting to date him"},{t:1930.82,x:"only under narrow conditions that have not actually been specified."},{t:1934.5,x:"\"Hey,\" says Keltham."},{t:1936,x:"\"Hey.\" Noticing that something is troubling Keltham is well within Carissa's baseline perceptiveness about things"},{t:1943.31,x:"that might determine whether she lives or dies even when she is extremely distracted."},{t:1949.13,x:"\" - you okay?\""},{t:1950.17,x:"\"Nope,\" Keltham says, because in dath ilan there are no pleasantries that you are meant"},{t:1955.61,x:"to respond to with lies, and if there were, the people there would revolt against"},{t:1960.67,x:"their language and start over. \"What does your own model of reality say that Owl's"},{t:1965.8,x:"Wisdom is predicted to do to somebody?\""},{t:1968.25,x:"\"...some adventurers use it pretty much daily so it can't have,"},{t:1972.47,x:"like, particularly noticeable long-term effects from regular use."},{t:1975.76,x:"Clerics tend to get its equivalent in a headband, like wizards get headbands for cunning,"},{t:1981.57,x:"and it makes them better servants of their god."},{t:1985,x:"I have ...heard of people saying it gave them a profound religious experience?\""},{t:1989.95,x:"From the look on Keltham's face that's not quite it,"},{t:1993.75,x:"but closer. \"It sort of is a religious experience, in a way,"},{t:1998.25,x:"touching the state of being - a little more like a god...\""},{t:2002.32,x:"\"Yes. Being a little more like a god."},{t:2004.86,x:"You know somebody asked in class, what makes someone have the potential to become a"},{t:2009.74,x:"Keeper? It's that. It's the thing Owl's Wisdom boosts.\""},{t:2013.05,x:"Taldane doesn't actually have a word that means cognitive reflectivity."},{t:2016.76,x:"\"If you don't have people screaming about that and giant warning labels on the spell,"},{t:2022.48,x:"then maybe my first angry thought afterwards was right and,"},{t:2026.29,x:"yes, in fact, almost nobody here has much inside them that actually draws on the"},{t:2032,x:"thing that Owl's Wisdom boosts, so nothing much happens to y'all when you use it.\""},{t:2037.21,x:"\" - oh. Gods, I'm sorry. No, I've never heard of anything that'd make people -"},{t:2042.03,x:"warn - there are people with 22 Wisdom and they're not even close to Keepers,"},{t:2046.1,x:"they don't have the rest - but I guess if you stuck a headband on you"},{t:2050.76,x:"would be.\""},{t:2051.47,x:"\"It's - not your fault. But I realized - how I was put together -"},{t:2055.75,x:"in a way that probably, no, let's be frank, in a way that can't possibly"},{t:2061.38,x:"make sense, and then it wore off and now I'm not smart enough to fix"},{t:2066.46,x:"what I remember seeing, and I'm not even sure that's what I want to do.\""},{t:2071.08,x:"\"Ha. My brain's totally thinking that this may not be a bad thing in the"},{t:2075.2,x:"long run, and it sure wouldn't have been thinking that an hour ago.\""},{t:2078.67,x:"She thinks she understands, though, and it sounds like a very bad thing,"},{t:2082.88,x:"if you don't have time to put yourself back together afterwards."},{t:2086.84,x:"\"Not a bad thing?\" she murmurs rather than think of something she can actually say."},{t:2091.86,x:"\"That which can be destroyed by the truth should be."},{t:2095.05,x:"It's a proverb that's - remembered as much for how it's false,"},{t:2098.55,x:"as for how it's true, because among the things that truths can destroy is people."},{t:2103.3,x:"There's a whole philosophy around that saying."},{t:2105.4,x:"One of the key points is that maybe sometimes it makes sense to not push"},{t:2109.9,x:"a truth on others, if you think it'll hurt them,"},{t:2112.72,x:"it can make sense to not walk up to Keepers and ask them to tell"},{t:2116.32,x:"you everything you're not seeing. But if you saw it yourself,"},{t:2119.28,x:"it's too late, you can't unsee it, and there's no way out but forwards.\""},{t:2123.76,x:"\"So, plus side, the way I was put together was not-too-bad for dath ilan and"},{t:2128.67,x:"almost certainly all-wrong for Golarion, and being stuck like that while refusing to look at"},{t:2132.93,x:"exactly what I was doing wrong probably wouldn't have turned out great for me."},{t:2137.21,x:"On the minus side, before the Owl's Wisdom wore off,"},{t:2140.43,x:"my brain went and fully admitted to itself that I had no hope of ever"},{t:2144.96,x:"succeeding in my life goals back in dath ilan, and I did not really need"},{t:2148.88,x:"that much personality update being shoved at me all at the same time,"},{t:2152.31,x:"you know, it would have been nicer to spread it out over a few more"},{t:2156.17,x:"weeks.\" \"So that's what my day was like."},{t:2158.23,x:"How was your day?\""},{t:2159.42,x:"What a question. \"I had an existential crisis but it was much more minor than"},{t:2165.74,x:"that. Then I met a person even more important than Contessa Lrilatha,"},{t:2170,x:"who was already lots more important than anyone I intended to ever meet,"},{t:2174.35,x:"and she was perfectly nice but I still feel vaguely like a toddler wandering around"},{t:2179.6,x:"a live-fire military training exercise going \"wow, such bright lights!!\""},{t:2185.31,x:"Then -\" Shrug. \"The duck's tasty.\""},{t:2188.38,x:"\"Your food technology is maybe something like three hundred years behind ours,"},{t:2192.1,x:"I don't even know, but I admit it's surprisingly good duck given that.\""},{t:2196.14,x:"\"My brain is still trying to question all of its life choices and that includes"},{t:2200.88,x:"the degree to which I'm prioritizing certain forms of personal happiness while working on my"},{t:2205.68,x:"very important project. I don't - I'm not sure if I can be the Keltham I"},{t:2211.89,x:"was at lunchtime, tonight. The Keltham who's just running straight ahead and doing the thing,"},{t:2217.17,x:"because that has different results in dath ilan than in Golarion and I saw that"},{t:2221.54,x:"but I also don't know yet what other kind of person I can possibly be."},{t:2225.58,x:"I don't know how much you wanted that Keltham you saw before,"},{t:2229.04,x:"instead of a more - unsettled one.\" \"I could also just find my brain shaking out"},{t:2234.26,x:"if you gave it another hour or starting undressing me."},{t:2238.05,x:"I genuinely don't know. I've never been hit by an Owl's Wisdom before."},{t:2243.36,x:"If I had been, this case wouldn't have had such an effect.\""},{t:2247.55,x:"\"So, not in the mood for winning a kinkiness competition,"},{t:2250.73,x:"maybe in the mood to climb up to the rooftop and stare at the stars"},{t:2254.84,x:"and worry about the fate of the world being on our shoulders?\""},{t:2257.94,x:"He feels a flash of the old Keltham's enthusiasm at that,"},{t:2261.17,x:"something that he instinctively cups his hands around, like he's protecting a flame from the"},{t:2267,x:"wind. \"Sounds nice. Could do it wearing fewer clothes too,"},{t:2270.48,x:"if you were also in the mood for that."},{t:2273.61,x:"If it escalates on both sides into a perversion competition I sure won't complain."},{t:2278.89,x:"I'll also understand if even a relatively minor existential crisis turned out to be a"},{t:2284.13,x:"pretty large one in an absolute sense and you just want to stare at the"},{t:2288.7,x:"stars.\" \"Also, what's an existential crisis? It doesn't actually translate.\""},{t:2292,x:"\"Oh, it's the thing where you think too much about some question humans aren't good"},{t:2296.9,x:"at thinking about - or at least, some question no one has taught Golarion humans to"},{t:2301.4,x:"be good at thinking about - like what you're for or who you want to be"},{t:2305.84,x:"or what death will be like - and end up having the mental equivalent of the"},{t:2310.06,x:"thing where you bite your lip and then have to avoid,"},{t:2313.16,x:"every time you swallow, biting that exact spot again while it's swollen."},{t:2317.32,x:"I'll pick out an outfit for stargazing and we'll see where it takes us,"},{t:2322.33,x:"how about that.\""},{t:2323.33,x:"\"Works for me.\" \"You know, the way people think in dath ilan,"},{t:2327.33,x:"which probably isn't how they should think here, it's the conventional wisdom that when you"},{t:2331.67,x:"can see what you're trying not to think, and it's gotten to anywhere near the"},{t:2335.67,x:"point of a bitten lip you're trying not to bite again,"},{t:2338.66,x:"you're supposed to just go ahead and think it.\""},{t:2341.14,x:"\"This probably assumes there's no rogue corn strains that eat you if you think about"},{t:2345.25,x:"them. And also that you know how to think about such things and can think"},{t:2349,x:"about them productively. And also that you know people older and more experienced and 4"},{t:2352.95,x:"Intelligence points smarter than you, who you can ask for help if you get in"},{t:2357.73,x:"trouble. And that you can call in a Keeper if that doesn't work.\""},{t:2361.48,x:"\"I think in Golarion people trying really hard to think the thoughts they're at the"},{t:2365.62,x:"edges of would just end up going mad or, you know,"},{t:2369.25,x:"not functional enough to do their job at which point they starve -"},{t:2373.75,x:"what does dath ilan do about it if you are busy having an existential crisis"},{t:2378.29,x:"and can't do your job for a month, does everyone just have a month of"},{t:2382.57,x:"savings?\""},{t:2382.86,x:"\"That doesn't sound like something that badly configured thoughts are supposed to do to a"},{t:2386.93,x:"person. You'd call in a Keeper before then."},{t:2389.07,x:"What you're for, who you want to be, and what the Future makes of you"},{t:2393.2,x:"after they bring you back from the dead - I wouldn't have thought those were dangerous"},{t:2397.7,x:"things to think about, either. To be clear, I am not at all under the"},{t:2402,x:"impression that means you could tell me your problems and I'd see nondangerous things to"},{t:2406,x:"think about them, I've been in Golarion for longer than an hour at this point.\""},{t:2410.67,x:"\"Somebody my age is supposed to save at least a year's expenses in investments,"},{t:2416,x:"more if they don't have a support network or the investments are very volatile."},{t:2420.67,x:"I was at eighteen months of runway when I boarded my fateful aeroplane,"},{t:2424.91,x:"but a lot of it was in some pretty volatile investments.\""},{t:2428.41,x:"\"Wizards are that rich. Most people, if they unexpectedly can't earn any money for a"},{t:2433.33,x:"year, die.\""},{t:2434,x:"\"Because they can't cut their expenses below what they are,"},{t:2437.36,x:"to save up more of their income, without dying?"},{t:2440.6,x:"Or because they're Intelligence 10 and they can't - imagine multiple possible futures and plan for"},{t:2446,x:"them?\""},{t:2446.32,x:"\"Mostly the second thing but also it wouldn't obviously be worth it for them to"},{t:2451.14,x:"cut their expenses more? Cutting their expenses more would increase their odds of dying of"},{t:2455.95,x:"other things, like living in a worse apartment makes you catch malaria and cholera and"},{t:2460.73,x:"so on more often and if you eat worse food then you're weaker and can't"},{t:2465.3,x:"fight off illness as well. And also living on the bare minimum is kind of"},{t:2469.8,x:"miserable and one might reasonably trade off some misery against some chance of dying sooner,"},{t:2474.54,x:"if they don't think the misery is the useful kind that you learn from and"},{t:2479.36,x:"makes you stronger.\""},{t:2480.3,x:"\"Right. Afterlives. There's no point staying on Golarion if you're not having any fun there.\""},{t:2485.1,x:"\"Yeah. I mean, some of the afterlives suck, but Chelish people at least can be"},{t:2489.87,x:"pretty sure of their draw, and if you're done here,"},{t:2492.77,x:"not a lot of point hanging around.\""},{t:2494.81,x:"Keltham can feel it like an echo of Owl's Wisdom,"},{t:2497.71,x:"his explicit awareness, his inability not to look in that direction,"},{t:2501.33,x:"towards his perception that everything he's heard about the afterlife has been very vague;"},{t:2506,x:"and the explicit thought now completed, that this is probably not some random innocent mistake"},{t:2511.4,x:"it's okay to ignore while he plunges ahead into everything else that's more tractable."},{t:2516.33,x:"He wishes he knew whether or not the truth about afterlives was being deliberately hidden"},{t:2521.67,x:"from him by the people here, or hidden by gods from living nongods in this"},{t:2526.53,x:"afterlife-feeding economy, or if this is some safer issue where it'd work fine to try"},{t:2530.93,x:"harder to pin people down on details at the expense of some social capital."},{t:2535.33,x:"He doesn't want to pin Carissa down on it, anyways."},{t:2538.67,x:"It's not a fun pre-date topic. \"Sorry if I shouldn't ask,"},{t:2542.27,x:"by the way, but I can't tell if your mention of meeting somebody more important"},{t:2546.27,x:"than Contessa Lrilatha was a prompt to ask you about that if I was interested,"},{t:2550.33,x:"or if it was deliberately vague to signal that I'm not supposed to ask.\""},{t:2555,x:"\"Mostly just vague because the name wouldn't mean anything to you."},{t:2559.27,x:"I met the Grand High Priestess Aspexia Rugatonn, the head of the church of Asmodeus"},{t:2566.09,x:"on Golarion. She was laying the Forbiddance.\""},{t:2568.54,x:"\"Meta before I say anything work-related about that, what's the local defaults and your personal"},{t:2573.15,x:"overrides for how much work you want to talk about on the dinner before a"},{t:2577.92,x:"date? Dath ilani default is that if you met somebody over work,"},{t:2581.67,x:"work is assumed good to discuss while together unless somebody says otherwise;"},{t:2585.78,x:"I haven't noticed a personal override over that myself.\""},{t:2588.91,x:"Dath ilan does so much reasoning out which things you do instead of just reading"},{t:2594.15,x:"people and noticing if you're getting your desired result."},{t:2597.3,x:"\"It seems like it'd be awfully hard not to talk about work,"},{t:2601.91,x:"considering,\" she says. \"I don't mind it.\""},{t:2604.65,x:"\"Right, so, say anything to - Aspexia? Rugatonn?"},{t:2607.08,x:"- about work? I mean, if I'd been there I'd have asked her what we need"},{t:2611.65,x:"to do to get intelligence headbands and a pair of detect-magic goggles,"},{t:2615.42,x:"but there's presumably a reason she didn't deliberately give me a chance to do that,"},{t:2619,x:"and I'll understand if you didn't want to expend your personal social capital on that.\""},{t:2622.56,x:"\"I did ask for a headband, that was not what she was here to talk"},{t:2626.76,x:"about. I don't think they are underrating how important you are,"},{t:2630,x:"at least.\""},{t:2630.67,x:"To Keltham, that doesn't sound the least bit unlike what happens if a Legislator is"},{t:2635.67,x:"passing through and didn't schedule time for your personal pet issue;"},{t:2639.78,x:"that's what the whole hierarchy of Delegates, Electors, and Representatives are for."},{t:2645.11,x:"\"Yeah, not surprising. Even the second part is more cheering than I was expecting."},{t:2649.31,x:"Maybe not tonight, maybe more like early tomorrow, but I do want to talk to"},{t:2653.45,x:"someone about - milestones, prices, what they're interested in seeing to create the promise that implies"},{t:2658.88,x:"more investment as a correct course of action, what it takes to get resources like"},{t:2664.47,x:"magic goggles and at least one intelligence headband and wisdom headband to pass around."},{t:2669.63,x:"Or failing that, if there's enough other clerics here who can go in with me"},{t:2673.86,x:"on second-circle cleric spells, for purposes of hitting everyone who wants it with an Owl's"},{t:2678.36,x:"Wisdom at least once before they get their head stuffed full of dath ilani skills.\""},{t:2683.82,x:"\"Seems like a good conversation to have.\""},{t:2686.37,x:"Carissa is almost certain the constraint on headbands is whether Keltham's going to destroy the"},{t:2692.26,x:"world, not whether if he doesn't he'll create enough value,"},{t:2695.89,x:"but probably whoever he goes to for the conversation will have figured out what to"},{t:2700.71,x:"tell him. And she wants a headband very badly, so hopefully it'll even work out."},{t:2705.67,x:"\"Know my next step on who to ask about it?"},{t:2709,x:"Like, not necessarily who's in charge, if you don't know,"},{t:2711.87,x:"just who I ask to find out where to go?"},{t:2714.53,x:"Other people have this weird ability to find security officers that I don't actually see"},{t:2718.86,x:"myself anywhere.\""},{t:2719.71,x:"\"I just step into hallways and call 'security' and let them show themselves.\""},{t:2725.71,x:"\"...right then.\" You would expect this to be a comedy trope on a TV show"},{t:2730.2,x:"which otherwise lacked a mechanical explanation, not the way that things worked in real life."},{t:2734.2,x:"Is that a very un-dath-ilan way for things to work."},{t:2738.29,x:"Oh well. \"I know that if we could actually go to dath ilan things would"},{t:2744.33,x:"immediately start happening at a thousand times the already terrifying speed they're presently happening but"},{t:2749.33,x:"I sort of wish I could wander around dath ilan not causing an international incident"},{t:2759,x:"and just seeing what it's like.\""},{t:2764.5,x:""}];
+const BEATS=[{t:0,s:'glare',v:'narrator'},{t:24,s:'glare',v:'narrator'},{t:33,s:'thinkfast',v:'ione'},{t:57,s:'thinkfast',v:'ione'},{t:107,s:'smile',v:'ione'},{t:164,s:'boundary',v:'meritxell'},{t:217,s:'bargain',v:'ione'},{t:274,s:'bargain',v:'ione'},{t:331,s:'bargain',v:'ione'},{t:385,s:'bargain',v:'elias'},{t:441,s:'balance',v:'ione'},{t:496,s:'balance',v:'ione'},{t:551,s:'balance',v:'ione'},{t:604,s:'bargain',v:'ione'},{t:662,s:'bargain',v:'elias'},{t:718,s:'bargain',v:'elias'},{t:768,s:'threat',v:'ione'},{t:821,s:'threat',v:'elias'},{t:875,s:'threat',v:'ione'},{t:930,s:'balance',v:'ione'},{t:982,s:'balance',v:'ione'},{t:1032,s:'balance',v:'ione'},{t:1082,s:'bargain',v:'elias'},{t:1138,s:'balance',v:'ione'},{t:1188,s:'balance',v:'ione'},{t:1245,s:'bargain',v:'ione'},{t:1300,s:'bargain',v:'ione'},{t:1353,s:'nethys_afterlife',v:'ione'},{t:1408,s:'nethys_afterlife',v:'ione'},{t:1465,s:'bargain',v:'elias'},{t:1519,s:'healing',v:'keltham'},{t:1572,s:'healing',v:'keltham'},{t:1623,s:'mess',v:'narrator'},{t:1679,s:'model',v:'carissa'},{t:1733,s:'model',v:'carissa'},{t:1789,s:'model',v:'carissa'},{t:1845,s:'dath_ilan',v:'carissa'},{t:1896,s:'model',v:'carissa'},{t:1949,s:'dath_ilan',v:'keltham'},{t:2002,s:'godhood',v:'keltham'},{t:2055,s:'identity',v:'keltham'},{t:2112,s:'identity',v:'keltham'},{t:2167,s:'identity',v:'keltham'},{t:2221,s:'identity',v:'keltham'},{t:2275,s:'dath_ilan',v:'keltham'},{t:2329,s:'dath_ilan',v:'keltham'},{t:2384,s:'identity',v:'keltham'},{t:2437,s:'dath_ilan',v:'keltham'},{t:2489,s:'date',v:'keltham'},{t:2542,s:'date',v:'carissa'},{t:2598,s:'date',v:'carissa'},{t:2654,s:'date',v:'keltham'},{t:2710,s:'wander',v:'keltham'},{t:2735,s:'wander',v:'keltham'},{t:2743,s:'wander',v:'keltham'},{t:2763,s:'wander',v:'narrator'}];
+
+/* ===================== ASH / EMBERS ===================== */
+const cv=document.getElementById('ash'), ctx=cv.getContext('2d');
+let parts=[], W=0,H=0, accent={r:216,g:162,b:74};
+function size(){ const r=cv.getBoundingClientRect(); W=cv.width=r.width; H=cv.height=r.height; }
+addEventListener('resize',size); size();
+function spawn(){ return {x:Math.random()*W, y:H+10, vy:-(0.2+Math.random()*0.55), vx:(Math.random()-0.5)*0.2, r:Math.random()*1.7+0.4, life:0, max:H*(0.5+Math.random()*0.6), tw:Math.random()*6}; }
+for(let i=0;i<60;i++){ const p=spawn(); p.y=Math.random()*H; parts.push(p); }
+let ashPaused=false;
+function ash(t){
+  if(!ashPaused){
+    ctx.clearRect(0,0,W,H);
+    for(const p of parts){
+      p.y+=p.vy; p.x+=p.vx+Math.sin(t/1000+p.tw)*0.14; p.life++;
+      const k=1-p.life/p.max;
+      if(p.life>p.max||p.y<-10){ Object.assign(p,spawn()); continue; }
+      const a=Math.max(0,k)*0.8*(0.6+0.4*Math.sin(t/300+p.tw));
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7);
+      ctx.fillStyle=`rgba(${accent.r},${accent.g},${accent.b},${a})`; ctx.shadowBlur=8; ctx.shadowColor=ctx.fillStyle; ctx.fill();
+    }
+    ctx.shadowBlur=0;
+  }
+  requestAnimationFrame(ash);
+}
+requestAnimationFrame(ash);
+function hexRgb(h){const m=h.replace('#','');return {r:parseInt(m.slice(0,2),16),g:parseInt(m.slice(2,4),16),b:parseInt(m.slice(4,6),16)};}
+
+/* ===================== DOM ===================== */
+const SPEEDS=[1,1.25,1.5,0.75];
+let speed=1, curScene=null, curCue=-1, curBeat=-1, capsOn=true;
+const frame=document.getElementById('frame');
+const introEl=document.getElementById('intro');
+const capEl=document.getElementById('cap');
+const labelEl=document.getElementById('label');
+const knameEl=document.getElementById('kname');
+const ttlEl=document.getElementById('ttl');
+const ksigUse=document.getElementById('ksig-use');
+const barEl=document.getElementById('bar');
+const beatEl=document.getElementById('beat');
+const playIcon=document.getElementById('playicon');
+const ccBtn=document.getElementById('cc');
+const audio=document.getElementById('player');
+const dropZone=document.getElementById('drop');
+const audioInput=document.getElementById('audiofile');
+const loadedBox=document.getElementById('loaded');
+const fnameEl=document.getElementById('fname');
+const durEl=document.getElementById('dur');
+const beginBtn=document.getElementById('begin');
+
+/* scene crossfade (Stardust-style) — beatEl shows the clock, so setScene only writes the title */
+function setScene(name){
+  if(name===curScene) return;
+  curScene=name;
+  document.querySelectorAll('.scene').forEach(el=>el.classList.remove('active','go'));
+  const el=document.querySelector(`.scene[data-scene="${name}"]`);
+  if(el){ el.classList.add('active'); requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add('go'))); }
+  ttlEl.textContent=SCENE_TITLES[name]||'';
+}
+function setSpeaker(v){
+  const c=CHARS[v]; if(!c) return;
+  knameEl.textContent=c.name; ksigUse.setAttribute('href','#'+c.sigil);
+  document.documentElement.style.setProperty('--accent', c.color); accent=hexRgb(c.color);
+}
+/* caption: blank text hides it; honours the CC toggle */
+function setCaption(text){
+  if(!capsOn || !text){ capEl.classList.remove('show'); return; }
+  capEl.classList.remove('show');
+  setTimeout(()=>{ if(!capsOn) return; capEl.textContent=text; capEl.classList.add('show'); },170);
+}
+function applyCaps(){ const c=CUES[curCue]; setCaption(c?c.x:''); }
+function setIcon(p){ playIcon.innerHTML = p?'<path d="M6 5h4v14H6zM14 5h4v14h-4z"></path>':'<path d="M8 5v14l11-7z"></path>'; }
+
+/* ===================== CLOCK + SYNC ===================== */
+function fmt(s){ if(!isFinite(s)||s<0) s=0; s=Math.floor(s); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+function findIdx(arr,time){ let lo=0,hi=arr.length-1,res=0; while(lo<=hi){ const m=(lo+hi)>>1; if(arr[m].t<=time){res=m;lo=m+1;} else hi=m-1; } return res; }
+function sync(){
+  const ct=audio.currentTime||0, d=audio.duration;
+  const bi=findIdx(BEATS,ct);
+  if(bi!==curBeat){ curBeat=bi; setScene(BEATS[bi].s); setSpeaker(BEATS[bi].v); }
+  const ci=findIdx(CUES,ct);
+  if(ci!==curCue){ curCue=ci; setCaption(CUES[ci].x); }
+  if(d){ barEl.style.width=Math.min(100,(ct/d*100))+'%'; }
+  beatEl.textContent=fmt(ct)+(d?(' / '+fmt(d)):'');
+}
+let rafId=0;
+function loop(){ if(audio.paused) return; sync(); rafId=requestAnimationFrame(loop); }
+
+/* ===================== AUDIO EVENTS ===================== */
+audio.addEventListener('timeupdate', sync);
+audio.addEventListener('seeked', ()=>{ curCue=-1; sync(); });
+audio.addEventListener('loadedmetadata', ()=>{ durEl.textContent='· '+fmt(audio.duration); beatEl.textContent='0:00 / '+fmt(audio.duration); });
+audio.addEventListener('play', ()=>{ frame.classList.add('playing'); document.body.classList.remove('paused'); ashPaused=false; setIcon(true); labelEl.classList.add('show'); sync(); loop(); });
+audio.addEventListener('pause', ()=>{ setIcon(false); document.body.classList.add('paused'); ashPaused=true; });
+audio.addEventListener('ended', finish);
+
+/* ===================== UPLOAD ===================== */
+const AUDIO_EXT=/\.(mp3|m4a|wav|ogg|oga|aac|flac|opus|weba|mp4)$/i;
+function loadAudioFile(file){
+  if(!file) return false;
+  if(file.type && !file.type.startsWith('audio/') && !AUDIO_EXT.test(file.name)) return false;
+  try{ if(audio.src) URL.revokeObjectURL(audio.src); }catch(_){}
+  audio.src=URL.createObjectURL(file); audio.playbackRate=speed; audio.load();
+  fnameEl.textContent=file.name; durEl.textContent='';
+  loadedBox.classList.add('show'); dropZone.classList.add('has');
+  beginBtn.disabled=false;
+  return true;
+}
+audioInput.addEventListener('change', e=>{ loadAudioFile(e.target.files[0]); });
+dropZone.addEventListener('click', ()=>audioInput.click());
+['dragenter','dragover'].forEach(ev=>dropZone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); dropZone.classList.add('drag'); }));
+['dragleave','dragend','drop'].forEach(ev=>dropZone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); if(ev!=='dragover') dropZone.classList.remove('drag'); }));
+dropZone.addEventListener('drop', e=>{
+  const files=[...(e.dataTransfer?e.dataTransfer.files:[])];
+  const aud=files.find(f=>f.type.startsWith('audio/')||AUDIO_EXT.test(f.name));
+  if(aud) loadAudioFile(aud);
+});
+
+/* ===================== PLAYBACK CONTROL ===================== */
+function startPlayback(){
+  if(!audio.src){ dropZone.classList.add('drag'); setTimeout(()=>dropZone.classList.remove('drag'),650); return; }
+  introEl.classList.remove('ended'); introEl.classList.add('gone');
+  if(audio.ended || (audio.duration && audio.currentTime>=audio.duration-0.05)){ audio.currentTime=0; curCue=-1; curBeat=-1; }
+  const p=audio.play(); if(p&&p.catch) p.catch(()=>{});
+}
+function finish(){
+  frame.classList.remove('playing'); setIcon(false);
+  introEl.classList.add('ended'); introEl.classList.remove('gone');
+}
+function seekToBeat(idx){ idx=Math.max(0,Math.min(BEATS.length-1,idx)); audio.currentTime=Math.max(0,BEATS[idx].t)+0.02; curCue=-1; sync(); }
+function nextBeat(){ seekToBeat(findIdx(BEATS,audio.currentTime)+1); }
+function prevBeat(){ const ci=findIdx(BEATS,audio.currentTime); seekToBeat((audio.currentTime-BEATS[ci].t>1.4)?ci:ci-1); }
+function togglePlay(){ if(audio.paused) audio.play().catch(()=>{}); else audio.pause(); }
+function toggleCaps(){ capsOn=!capsOn; ccBtn.classList.toggle('off',!capsOn); ccBtn.setAttribute('aria-pressed',String(capsOn)); applyCaps(); }
+
+beginBtn.addEventListener('click', startPlayback);
+document.getElementById('play').addEventListener('click', ()=>{ if(!introEl.classList.contains('gone')){ startPlayback(); return; } togglePlay(); });
+document.getElementById('next').addEventListener('click', nextBeat);
+document.getElementById('prev').addEventListener('click', prevBeat);
+document.getElementById('restart').addEventListener('click', ()=>{ audio.currentTime=0; curCue=-1; curBeat=-1; sync(); if(audio.paused) audio.play().catch(()=>{}); });
+document.getElementById('speed').addEventListener('click', e=>{ speed=SPEEDS[(SPEEDS.indexOf(speed)+1)%SPEEDS.length]; audio.playbackRate=speed; e.currentTarget.textContent=String(speed)+'×'; });
+ccBtn.addEventListener('click', toggleCaps);
+document.getElementById('prog').addEventListener('click', e=>{ if(!audio.duration) return; const r=e.currentTarget.getBoundingClientRect(); const frac=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)); audio.currentTime=frac*audio.duration; curCue=-1; sync(); });
+addEventListener('keydown', e=>{ if(!introEl.classList.contains('gone')) return;
+  if(e.code==='Space'){ e.preventDefault(); togglePlay(); }
+  else if(e.code==='ArrowRight'){ e.preventDefault(); nextBeat(); }
+  else if(e.code==='ArrowLeft'){ e.preventDefault(); prevBeat(); }
+  else if(e.key==='c'||e.key==='C'){ e.preventDefault(); toggleCaps(); } });
+addEventListener('beforeunload', ()=>{ try{ if(audio.src) URL.revokeObjectURL(audio.src); }catch(_){} });
+
+/* cast list */
+(function(){ const cast=document.getElementById('cast'); if(!cast) return;
+  for(const key of ['narrator','ione','keltham','carissa','elias','meritxell','nethys','asmodeus']){
+    const c=CHARS[key], d=document.createElement('div'); d.className='c';
+    d.innerHTML=`<div class="ic" style="color:${c.color}"><svg><use href="#${c.sigil}"/></svg></div><div><div class="nm">${c.name.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div><div class="tg">${c.tag}</div></div>`;
+    cast.appendChild(d);
+  } })();
+
+/* initial backdrop + idle state */
+document.getElementById('speed').textContent='1×';
+setScene(BEATS[0].s); setSpeaker(BEATS[0].v); setIcon(false);
+beatEl.textContent='0:00';
+
+</script>
+</body>
+</html>

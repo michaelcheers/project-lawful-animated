@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planecrash — Corrigibility · an animated reading</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Spectral:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0608; --ink:#f0e6d8; --muted:#9a8a84;
+  --accent:#d8a24a; --gold:#d8a24a; --blood:#c2152f; --ember:#ff8a3c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:radial-gradient(120% 90% at 50% 6%, #1a0c10 0%, var(--bg) 55%, #050304 100%);
+  color:var(--ink); font-family:"Spectral",Georgia,serif; overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+.paused .anim, .paused .scene *{animation-play-state:paused !important}
+
+/* ---------- cinematic stage ---------- */
+#stage{position:fixed; inset:0; display:flex; align-items:center; justify-content:center}
+.frame{
+  position:relative; width:min(100vw,177.7vh); height:min(100vh,56.25vw);
+  overflow:hidden; background:#06040a; box-shadow:0 0 140px rgba(0,0,0,.8) inset, 0 30px 90px rgba(0,0,0,.6);
+}
+#ash{position:absolute; inset:0; z-index:1; pointer-events:none}
+
+.scene{position:absolute; inset:0; z-index:2; opacity:0; transition:opacity 1.5s ease; pointer-events:none}
+.scene.active{opacity:1}
+.scene svg{position:absolute; inset:0; width:100%; height:100%}
+/* a soft vignette over scenes */
+#vignette{position:absolute; inset:0; z-index:4; pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 42%, transparent 52%, rgba(5,3,4,.55) 100%);}
+
+/* ---------- speaker / beat label ---------- */
+#label{position:absolute; left:4.4%; top:7.5%; z-index:6; opacity:0; transform:translateY(8px);
+  transition:opacity .8s ease, transform .8s ease; max-width:54%}
+#label.show{opacity:1; transform:none}
+#label .kicker{display:flex; align-items:center; gap:9px; margin-bottom:5px}
+#label .ksig{width:26px; height:26px; color:var(--accent); transition:color .6s ease; flex:0 0 auto}
+#label .ksig svg{width:100%;height:100%}
+#label .kname{font-family:"Cinzel",serif; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
+  font-size:clamp(9px,1.05vw,13px); color:var(--accent); transition:color .6s ease}
+#label .ttl{font-family:"Cinzel",serif; font-weight:700; line-height:1.04; letter-spacing:.005em;
+  font-size:clamp(20px,3.4vw,50px); color:#fff; text-shadow:0 2px 26px rgba(0,0,0,.7)}
+
+/* ---------- caption ---------- */
+#cap-wrap{position:absolute; left:0; right:0; bottom:8.5%; z-index:6; display:flex; justify-content:center;
+  padding:0 6%; pointer-events:none}
+#cap{position:relative; max-width:min(1080px,90%); text-align:center;
+  font-size:clamp(14px,1.85vw,25px); line-height:1.45; font-weight:400; letter-spacing:.004em; color:var(--ink);
+  text-shadow:0 2px 20px rgba(0,0,0,.95), 0 0 60px rgba(0,0,0,.85);
+  opacity:0; transform:translateY(10px); transition:opacity .5s ease, transform .5s ease}
+#cap.show{opacity:1; transform:none}
+#cap.dlg{font-style:italic}
+#cap::before{content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:135%; height:340%; z-index:-1; pointer-events:none;
+  background:radial-gradient(closest-side, rgba(6,4,6,.82), rgba(6,4,6,.4) 60%, transparent 100%)}
+
+/* ---------- intro ---------- */
+#intro{position:absolute; inset:0; z-index:20; overflow-y:auto;
+  background:radial-gradient(80% 80% at 50% 40%, rgba(26,12,16,.55), rgba(4,3,4,.95));
+  transition:opacity 1.1s ease}
+#intro.gone{opacity:0; pointer-events:none}
+.intro-in{min-height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; gap:2.2vh; padding:5vh 7vw 7vh}
+#intro .eyebrow{font-family:"Cinzel",serif; font-size:clamp(9px,1.05vw,13px); letter-spacing:.5em; text-transform:uppercase; color:var(--gold)}
+#intro h1{font-family:"Cinzel",serif; font-weight:700; letter-spacing:.02em; font-size:clamp(40px,9vw,118px); line-height:.92;
+  background:linear-gradient(180deg,#fff 0%, #e9c277 52%, #b3122b 132%); -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent; filter:drop-shadow(0 8px 50px rgba(179,18,43,.32))}
+#intro .sub{font-size:clamp(13px,1.55vw,19px); font-style:italic; color:#cbb9a9; max-width:44ch; line-height:1.55; font-weight:300}
+.cast{display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:11px 18px; width:100%; max-width:760px; margin-top:1vh}
+.cast .c{display:flex; align-items:center; gap:11px; text-align:left; padding:7px 10px; border:1px solid rgba(216,162,74,.13); border-radius:9px; background:rgba(255,255,255,.012)}
+.cast .ic{width:32px;height:32px;flex:0 0 auto} .cast .ic svg{width:100%;height:100%}
+.cast .nm{font-family:"Cinzel",serif; font-size:12px; letter-spacing:.02em; line-height:1.15}
+.cast .tg{font-style:italic; font-size:11px; color:var(--muted); margin-top:1px}
+#begin{margin-top:1vh; display:inline-flex; align-items:center; gap:.7em; font-family:"Cinzel",serif; font-weight:600;
+  font-size:clamp(14px,1.5vw,17px); letter-spacing:.06em; color:#1a0c0a; padding:.85em 2.1em; border:none; border-radius:100px;
+  cursor:pointer; background:linear-gradient(180deg,#f0cd86,#d8a24a);
+  box-shadow:0 12px 44px rgba(216,162,74,.34), inset 0 0 0 1px rgba(255,255,255,.25); transition:transform .25s, box-shadow .25s}
+#begin:hover{transform:translateY(-2px) scale(1.02); box-shadow:0 18px 56px rgba(216,162,74,.5)}
+#begin .tri{width:0;height:0;border-left:11px solid #1a0c0a;border-top:7px solid transparent;border-bottom:7px solid transparent}
+#intro .note{font-size:11px;color:#6a5a56;letter-spacing:.03em}
+#intro .src{font-size:11px;color:#5e4f4b;max-width:52ch;line-height:1.6}
+
+/* ---------- controls ---------- */
+#controls{position:absolute; left:0; right:0; bottom:0; z-index:30; display:flex; align-items:center; gap:13px;
+  padding:13px 4.4%; background:linear-gradient(0deg, rgba(5,3,5,.85), transparent);
+  opacity:0; transition:opacity .4s ease; pointer-events:none}
+.frame.playing #controls{opacity:1; pointer-events:auto}
+.btn{background:rgba(240,230,216,.05); border:1px solid rgba(216,162,74,.28); color:var(--ink); border-radius:50%;
+  cursor:pointer; flex:0 0 auto; display:grid; place-items:center; transition:background .2s,border-color .2s,transform .15s}
+.btn:hover{background:rgba(216,162,74,.16); border-color:var(--accent)} .btn:active{transform:scale(.94)}
+.btn svg{fill:var(--ink)}
+.btn.lg{width:46px;height:46px} .btn.lg svg{width:18px;height:18px}
+.btn.sm{width:38px;height:38px} .btn.sm svg{width:14px;height:14px}
+#speed{width:auto;min-width:46px;height:38px;border-radius:20px;padding:0 12px;font-family:"Spectral",serif;font-style:italic;font-size:13px}
+#prog{flex:1; height:3px; border-radius:3px; background:rgba(240,230,216,.13); position:relative; cursor:pointer}
+#bar{position:absolute; left:0;top:0;bottom:0; width:0; background:linear-gradient(90deg,var(--accent),var(--blood)); border-radius:3px; transition:width .5s ease, background .8s ease}
+#beat{font-family:"Cinzel",serif; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); min-width:120px; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:24%}
+
+/* ---------- shared animation helpers ---------- */
+.spin{transform-origin:center;animation:spin 60s linear infinite}
+.spin-s{transform-origin:center;animation:spin 120s linear infinite}
+.spin-r{transform-origin:center;animation:spin 80s linear infinite reverse}
+.spin-f{transform-origin:center;animation:spin 9s linear infinite}
+.spin-vf{transform-origin:center;animation:spin 2.4s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.breathe{transform-origin:center;animation:breathe 6s ease-in-out infinite}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.flick{transform-origin:bottom center;animation:flick 1.4s ease-in-out infinite}
+@keyframes flick{0%,100%{opacity:.9;transform:scaleY(1) scaleX(1)}40%{opacity:1;transform:scaleY(1.1) scaleX(.94)}70%{opacity:.85;transform:scaleY(.96) scaleX(1.04)}}
+.sway{transform-origin:top center;animation:sway 4s ease-in-out infinite}
+@keyframes sway{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+.tw{animation:tw 3s ease-in-out infinite}
+@keyframes tw{0%,100%{opacity:.2}50%{opacity:1}}
+.pulse{animation:pulse 3.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.25}50%{opacity:.95}}
+.pulse-f{animation:pulse 1.6s ease-in-out infinite}
+.drift{animation:drift 26s ease-in-out infinite}
+@keyframes drift{0%{transform:translate(0,0)}50%{transform:translate(2.4%,-2%)}100%{transform:translate(0,0)}}
+@keyframes floatUp{0%{transform:translateY(34px);opacity:0}16%{opacity:.9}100%{transform:translateY(-58px);opacity:0}}
+.flow{stroke-dasharray:8 16; animation:flow 2.2s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-48}}
+.draw{stroke-dasharray:600; stroke-dashoffset:600; animation:draw 5s ease-in-out infinite alternate}
+@keyframes draw{to{stroke-dashoffset:0}}
+.beam{animation:beam 1.7s ease-in-out infinite}
+@keyframes beam{0%,100%{opacity:.12}50%{opacity:.6}}
+
+/* one-shot scene-entry effects (fire when scene gets .go) */
+.flash{opacity:0}
+.scene.active.go .flash{animation:flashK 1.7s ease-out .3s forwards}
+@keyframes flashK{0%{opacity:0}12%{opacity:.85}100%{opacity:0}}
+.burst{opacity:0;transform-origin:center}
+.scene.active.go .burst{animation:burstK 3s cubic-bezier(.1,.7,.3,1) .3s forwards}
+@keyframes burstK{0%{opacity:0;transform:scale(.08)}14%{opacity:1}100%{opacity:0;transform:scale(4.2)}}
+.stamp{opacity:0;transform-origin:center}
+.scene.active.go .stamp{animation:stampK 1.2s cubic-bezier(.2,1.4,.4,1) .4s forwards}
+@keyframes stampK{0%{opacity:0;transform:scale(2.4) rotate(-12deg)}60%{opacity:1;transform:scale(1) rotate(0)}100%{opacity:1;transform:scale(1)}}
+.fall{opacity:0;transform-origin:center}
+.scene.active.go .fall{animation:fallK 3.4s ease-in 1s forwards}
+@keyframes fallK{0%{opacity:0;transform:translateY(-260px) scale(.6)}20%{opacity:1}82%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(10px) scale(2.2)}}
+.rise{transform-origin:center;animation:rise 7s ease-in-out infinite alternate}
+@keyframes rise{from{transform:translateY(8px)}to{transform:translateY(-8px)}}
+
+@media (max-width:640px){ #beat{display:none} #label{max-width:78%} }
+
+/* ---- audio upload UI ---- */
+#drop{margin:1.6vh auto .2vh;width:min(560px,90%);border:1.6px dashed rgba(216,162,74,.42);border-radius:14px;padding:24px 20px 20px;cursor:pointer;background:rgba(255,255,255,.015);transition:border-color .2s, background .2s, transform .2s}
+#drop:hover{border-color:var(--gold);background:rgba(216,162,74,.06)}
+#drop.drag{border-color:var(--gold);background:rgba(216,162,74,.14);transform:scale(1.012)}
+#drop.has{border-style:solid;border-color:rgba(79,230,205,.5);background:rgba(79,230,205,.05)}
+#drop .dz-ic{width:30px;height:30px;color:var(--gold);opacity:.9;margin-bottom:6px}
+#drop.has .dz-ic{color:#4fe6cd}
+#drop .dz-msg{font-family:"Spectral",serif;font-style:italic;font-size:15px;color:#e9dcc8;letter-spacing:.01em}
+#drop .dz-sub{font-size:11px;color:#7c6a64;margin-top:7px;letter-spacing:.02em}
+#loaded{display:none;align-items:center;justify-content:center;gap:9px;margin:11px auto 2px;font-size:12.5px;color:#cbb9a9}
+#loaded.show{display:flex}
+#loaded .ck{color:#4fe6cd;font-weight:700}
+#loaded .fn{font-family:"Cinzel",serif;letter-spacing:.02em;color:#f0e6d8;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#loaded #dur{color:#7c6a64}
+#begin[disabled]{opacity:.38;cursor:not-allowed;filter:grayscale(.45);box-shadow:none}
+#begin[disabled]:hover{transform:none}
+#intro.ended #drop, #intro.ended #loaded, #intro.ended .cast{display:none}
+audio{display:none}
+/* captions toggle */
+#cc{font-family:"Cinzel",serif;font-weight:600;letter-spacing:.06em;font-size:12px;position:relative}
+#cc.off{opacity:.5}
+#cc.off::after{content:"";position:absolute;left:18%;right:18%;top:50%;height:1.5px;background:currentColor;transform:rotate(-12deg);opacity:.85}
+</style>
+</head>
+<body>
+<div id="stage"><div class="frame" id="frame">
+  <canvas id="ash"></canvas>
+
+  <!-- ===================== SHARED DEFS ===================== -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <radialGradient id="gEmber" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff2cf"/><stop offset="34%" stop-color="#ff9a3c"/>
+      <stop offset="72%" stop-color="#c2152f" stop-opacity=".55"/><stop offset="100%" stop-color="#3a0810" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gGold" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff"/><stop offset="45%" stop-color="#f2cd7e"/><stop offset="100%" stop-color="#d8a24a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gBlood" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff6a72"/><stop offset="46%" stop-color="#b3122b" stop-opacity=".7"/><stop offset="100%" stop-color="#b3122b" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gWhite" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff"/><stop offset="55%" stop-color="#dfeaf2" stop-opacity=".9"/><stop offset="100%" stop-color="#a9c2d6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gCyan" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#eafcff"/><stop offset="48%" stop-color="#46c6ff" stop-opacity=".8"/><stop offset="100%" stop-color="#1d6fb0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gTeal" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#dffff6"/><stop offset="50%" stop-color="#3fd9c0" stop-opacity=".8"/><stop offset="100%" stop-color="#1f8f88" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gFloor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1c0e12"/><stop offset="100%" stop-color="#06040a"/>
+    </linearGradient>
+    <linearGradient id="gBeam" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#cfe fff" stop-opacity="0"/><stop offset="50%" stop-color="#aee6ff" stop-opacity=".5"/><stop offset="100%" stop-color="#aee6ff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="soft2"><feGaussianBlur stdDeviation="16"/></filter>
+
+    <!-- speaker sigils -->
+    <symbol id="sg-book" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M24 12c-5-4-12-4-16-2v26c4-2 11-2 16 2 5-4 12-4 16-2V10c-4-2-11-2-16 2z"/><path d="M24 12v28"/></symbol>
+    <symbol id="sg-mask" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M10 6c2 4 1 8-1 10M38 6c-2 4-1 8 1 10"/><path d="M9 16c3-3 9-4 15-4s12 1 15 4c1 9-4 22-15 26C13 38 8 25 9 16z"/><path d="M17 22l5 3M31 22l-5 3M21 33c2 1 4 1 6 0"/></symbol>
+    <symbol id="sg-flame" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M24 4c2 8-6 11-6 18 0 0-4-2-4-7-5 5-7 11-7 16a17 17 0 0034 0c0-9-6-16-11-20-1 4-4 5-6 3 3-4 6-9 6-13z"/></symbol>
+    <symbol id="sg-eye" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M4 24c6-9 13-13 20-13s14 4 20 13c-6 9-13 13-20 13S10 33 4 24z"/><circle cx="24" cy="24" r="6"/><path d="M40 30c4 2 5 6 4 9"/></symbol>
+    <symbol id="sg-penta" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><circle cx="24" cy="24" r="20"/><polygon points="24,7 33.5,38 8.4,18.8 39.6,18.8 14.5,38"/></symbol>
+    <symbol id="sg-broom" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M30 6L18 30"/><path d="M12 42c0-8 3-12 8-13 5-1 9 1 11 4-3 6-10 10-19 9z"/><path d="M22 28l6 4"/></symbol>
+    <symbol id="sg-hex" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><polygon points="24,5 40,14 40,34 24,43 8,34 8,14"/><circle cx="24" cy="24" r="3" fill="currentColor"/><path d="M24 8v8M40 16l-7 4M40 32l-7-4M24 40v-8M8 32l7-4M8 16l7 4"/></symbol>
+    <symbol id="sg-gem" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M14 8h20l8 11-18 21L6 19z"/><path d="M6 19h36M14 8l10 11 10-11M24 19v21"/></symbol>
+    <symbol id="sg-oracle" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><circle cx="24" cy="24" r="7"/><path d="M24 4v6M24 38v6M4 24h6M38 24h6M10 10l4 4M34 34l4 4M38 10l-4 4M10 38l4-4"/></symbol>
+
+    <!-- a reusable robed-figure -->
+    <symbol id="figure" viewBox="0 0 120 200"><path d="M60 18a20 20 0 0 1 20 20c0 9-4 13-4 20l14 120c1 8-9 14-30 14s-31-6-30-14L44 58c0-7-4-11-4-20a20 20 0 0 1 20-20z"/></symbol>
+    <symbol id="child" viewBox="0 0 80 120"><circle cx="40" cy="22" r="16"/><path d="M40 40c14 0 22 8 22 20l4 46c0 8-12 12-26 12s-26-4-26-12l4-46c0-12 8-20 22-20z"/></symbol>
+      <symbol id="sg-watch" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M6 16C13 7 20 5 24 5s11 2 18 11"/><path d="M8 26c5-7 11-10 16-10s11 3 16 10c-5 7-11 10-16 10s-11-3-16-10z"/><circle cx="24" cy="26" r="6"/><circle cx="24" cy="26" r="2" fill="currentColor"/></symbol>
+  </defs></svg>
+
+  <!-- ===================== SCENES ===================== -->
+
+  <!-- chamber : the Forbiddance -->
+    <!-- SCENES (episode 21) -->
+
+  <!-- orient : visible objects in the air -->
+  <div class="scene" data-scene="orient">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#070b10"/>
+      <ellipse cx="800" cy="440" rx="600" ry="320" fill="url(#gCyan)" opacity=".08" filter="url(#soft2)"/>
+      <!-- faint wireframe objects becoming visible -->
+      <g fill="none" stroke="#5fd0ff" stroke-opacity=".45">
+        <g class="rise" style="transform-origin:380px 300px"><polygon points="380,250 440,285 440,355 380,390 320,355 320,285" stroke-width="2"/><path d="M320,285 380,320 440,285M380,320 380,390" stroke-width="1.4" stroke-opacity=".3"/></g>
+        <g class="rise" style="transform-origin:1180px 340px; animation-delay:-3s"><polygon points="1120,300 1240,300 1240,420 1120,420" stroke-width="2"/><path d="M1120,300 1170,260 1290,260 1240,300M1240,420 1290,380 1290,260" stroke-width="1.4" stroke-opacity=".3"/></g>
+        <g class="rise" style="transform-origin:620px 600px; animation-delay:-5s"><polygon points="620,540 690,660 550,660" stroke-width="2" class="pulse"/></g>
+        <g class="drift" style="transform-origin:980px 580px"><polygon points="980,540 1030,570 1030,630 980,660 930,630 930,570" stroke-width="1.6" stroke-opacity=".35"/></g>
+      </g>
+      <!-- Keltham, getting oriented -->
+      <use href="#figure" x="740" y="430" width="120" height="200" fill="#13262e"/>
+      <g fill="#bfeafa" opacity=".5"><circle cx="700" cy="380" r="3" class="tw"/><circle cx="900" cy="420" r="2.4" class="tw" style="animation-delay:-1.4s"/><circle cx="780" cy="350" r="2.6" class="tw" style="animation-delay:-2.2s"/></g>
+    </svg>
+  </div>
+
+  <!-- spells : the plan of spells -->
+  <div class="scene" data-scene="spells">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#080b0f"/>
+      <line x1="260" y1="400" x2="1340" y2="400" stroke="#2a3a44" stroke-width="2" stroke-dasharray="6 10" class="flow"/>
+      <!-- 5 queued spell glyphs -->
+      <g>
+        <!-- eagle's splendor (highlighted) -->
+        <g transform="translate(320 400)"><circle r="64" fill="url(#gGold)" opacity=".25" class="breathe"/><circle r="64" fill="none" stroke="#ffd27a" stroke-width="2.5"/><path d="M-30 6L0 -16 30 6M-18 16L0 2 18 16" fill="none" stroke="#ffd27a" stroke-width="3" stroke-linecap="round"/></g>
+        <!-- owl's wisdom -->
+        <g transform="translate(575 400)"><circle r="58" fill="none" stroke="#5fd0ff" stroke-width="2" stroke-opacity=".7"/><circle r="22" fill="none" stroke="#bfeafa" stroke-width="2.5"/><circle r="7" fill="#bfeafa"/></g>
+        <!-- haste -->
+        <g transform="translate(820 400)"><circle r="58" fill="none" stroke="#5fd0ff" stroke-width="2" stroke-opacity=".7"/><path d="M-26 -18L8 0 -26 18M0 -18L34 0 0 18" fill="none" stroke="#bfeafa" stroke-width="3" stroke-linecap="round"/></g>
+        <!-- guidance -->
+        <g transform="translate(1065 400)"><circle r="58" fill="none" stroke="#5fd0ff" stroke-width="2" stroke-opacity=".7"/><path d="M0 -30L7 -7 30 0 7 7 0 30 -7 7 -30 0 -7 -7z" fill="none" stroke="#bfeafa" stroke-width="2.5"/></g>
+        <!-- read magic -->
+        <g transform="translate(1310 400)"><circle r="58" fill="none" stroke="#5fd0ff" stroke-width="2" stroke-opacity=".7"/><polygon points="0,-26 22,-13 22,13 0,26 -22,13 -22,-13" fill="none" stroke="#bfeafa" stroke-width="2.5"/><circle r="5" fill="#bfeafa"/></g>
+      </g>
+      <!-- Keltham reading the plan -->
+      <use href="#figure" x="740" y="560" width="118" height="196" fill="#13262e"/>
+    </svg>
+  </div>
+
+  <!-- catch : catching the cantrip -->
+  <div class="scene" data-scene="catch">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#070b10"/>
+      <circle cx="800" cy="440" r="320" fill="url(#gCyan)" opacity=".12" filter="url(#soft2)"/>
+      <!-- descending glyph being caught -->
+      <g class="fall"><g transform="translate(800 360)"><polygon points="0,-34 29,-17 29,17 0,34 -29,17 -29,-17" fill="none" stroke="#bfeafa" stroke-width="3"/><circle r="8" fill="#dff6ff" class="pulse-f"/></g></g>
+      <!-- cupped hands -->
+      <g stroke="#13262e" stroke-width="26" stroke-linecap="round" fill="none">
+        <path d="M700 560C720 500 770 480 800 490"/>
+        <path d="M900 560C880 500 830 480 800 490"/>
+      </g>
+      <!-- sparkle motes -->
+      <g fill="#bfeafa"><circle cx="760" cy="470" r="3.4" class="tw"/><circle cx="840" cy="470" r="3" class="tw" style="animation-delay:-1s"/><circle cx="800" cy="430" r="2.6" class="tw" style="animation-delay:-1.6s"/></g>
+      <!-- girls watching -->
+      <g fill="#1a1222" opacity=".7"><use href="#figure" x="300" y="500" width="84" height="140"/><use href="#figure" x="400" y="510" width="80" height="134"/><use href="#figure" x="1180" y="505" width="82" height="138"/><use href="#figure" x="1276" y="515" width="78" height="130"/></g>
+    </svg>
+  </div>
+
+  <!-- eagles_splendor : eagle's splendor -->
+  <div class="scene" data-scene="eagles_splendor">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0c0a06"/>
+      <g transform="translate(800 440)">
+        <circle r="360" fill="url(#gGold)" opacity=".3" filter="url(#soft2)" class="breathe" style="animation-duration:7s"/>
+        <g class="spin-s" opacity=".5"><g fill="#ffcf86"><polygon points="-5,0 5,0 11,-420 -11,-420"/><polygon points="-5,0 5,0 11,-420 -11,-420" transform="rotate(45)"/><polygon points="-5,0 5,0 11,-420 -11,-420" transform="rotate(90)"/><polygon points="-5,0 5,0 11,-420 -11,-420" transform="rotate(135)"/><polygon points="-5,0 5,0 11,-420 -11,-420" transform="rotate(180)"/><polygon points="-5,0 5,0 11,-420 -11,-420" transform="rotate(225)"/><polygon points="-5,0 5,0 11,-420 -11,-420" transform="rotate(270)"/><polygon points="-5,0 5,0 11,-420 -11,-420" transform="rotate(315)"/></g></g>
+        <!-- wings -->
+        <path d="M-40 -10C-160 -60 -260 -40 -320 10 -240 0 -180 20 -60 30M40 -10C160 -60 260 -40 320 10 240 0 180 20 60 30" fill="url(#gGold)" opacity=".35" class="breathe" style="animation-duration:5s"/>
+      </g>
+      <use href="#figure" x="740" y="430" width="120" height="200" fill="#241a0c"/>
+      <!-- luminous words streaming -->
+      <g fill="#ffd27a" opacity=".7"><circle cx="900" cy="420" r="4" style="animation:floatUp 5s ease-in infinite"/><circle cx="950" cy="460" r="3.4" style="animation:floatUp 5s ease-in infinite; animation-delay:-1.6s"/><circle cx="1000" cy="440" r="3" style="animation:floatUp 5s ease-in infinite; animation-delay:-3s"/></g>
+    </svg>
+  </div>
+
+  <!-- salesman : the rat exterminator -->
+  <div class="scene" data-scene="salesman">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0c0a08"/>
+      <!-- spotlight -->
+      <polygon points="700,0 900,0 1040,640 560,640" fill="url(#gGold)" opacity=".12"/>
+      <!-- presentation board with rising chart -->
+      <g transform="translate(1060 200)">
+        <rect width="380" height="300" rx="8" fill="#14110c" stroke="#caa86a" stroke-width="2"/>
+        <g fill="#ff8a3c" opacity=".8"><rect x="40" y="200" width="48" height="60"/><rect x="110" y="160" width="48" height="100"/><rect x="180" y="110" width="48" height="150"/><rect x="250" y="60" width="48" height="200"/></g>
+        <path d="M40 230L300 70" stroke="#ffd27a" stroke-width="3" fill="none"/><path d="M300 70l-22 4 6 -22z" fill="#ffd27a"/>
+      </g>
+      <!-- podium + smooth presenter -->
+      <path d="M700 620L760 480h80l60 140z" fill="#1a140c" stroke="#6a5230" stroke-width="2"/>
+      <use href="#figure" x="720" y="320" width="120" height="200" fill="#241a0c"/>
+      <!-- rats fleeing along the floor -->
+      <g fill="#2a2018">
+        <g><ellipse cx="0" cy="0" rx="22" ry="11"/><path d="M22 0c18 0 26 -8 30 -16" stroke="#2a2018" stroke-width="3" fill="none"/><circle cx="-18" cy="-4" r="4"/><animateTransform attributeName="transform" type="translate" values="500,720;120,740;500,720" dur="6s" repeatCount="indefinite"/></g>
+        <g><ellipse cx="0" cy="0" rx="18" ry="9"/><path d="M18 0c14 0 22 -6 26 -12" stroke="#2a2018" stroke-width="2.6" fill="none"/><circle cx="-14" cy="-3" r="3.4"/><animateTransform attributeName="transform" type="translate" values="640,760;200,776;640,760" dur="7.5s" repeatCount="indefinite"/></g>
+        <g><ellipse cx="0" cy="0" rx="16" ry="8"/><path d="M16 0c12 0 20 -6 24 -10" stroke="#2a2018" stroke-width="2.4" fill="none"/><circle cx="-12" cy="-3" r="3"/><animateTransform attributeName="transform" type="translate" values="560,800;160,812;560,800" dur="5.4s" repeatCount="indefinite"/></g>
+      </g>
+    </svg>
+  </div>
+
+  <!-- girls : the girls, glaring -->
+  <div class="scene" data-scene="girls">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a070c"/>
+      <ellipse cx="800" cy="460" rx="540" ry="260" fill="url(#gBlood)" opacity=".1" filter="url(#soft2)"/>
+      <!-- five chelish girls -->
+      <use href="#figure" x="320" y="460" width="100" height="166" fill="#1c1226"/>
+      <use href="#figure" x="520" y="450" width="104" height="172" fill="#221020"/>
+      <use href="#figure" x="740" y="455" width="102" height="170" fill="#1c1226"/>
+      <use href="#figure" x="960" y="450" width="104" height="172" fill="#221020"/>
+      <use href="#figure" x="1170" y="460" width="100" height="166" fill="#1c1226"/>
+      <!-- glare lines between two of them -->
+      <path d="M576 490C680 470 720 470 796 488" stroke="#ff5560" stroke-width="2" stroke-opacity=".6" fill="none" class="pulse-f"/>
+      <g fill="#ff8a8f" opacity=".7"><circle cx="686" cy="479" r="4" class="tw"/></g>
+      <!-- competitive sparks -->
+      <g fill="#c2a0ff" opacity=".6"><circle cx="572" cy="470" r="3" class="pulse-f"/><circle cx="1012" cy="470" r="3" class="pulse-f" style="animation-delay:-.6s"/></g>
+    </svg>
+  </div>
+
+  <!-- owls_wisdom : owl's wisdom -->
+  <div class="scene" data-scene="owls_wisdom">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#080a12"/>
+      <g transform="translate(800 440)">
+        <!-- wisdom rings -->
+        <circle r="340" fill="none" stroke="#7fb0ff" stroke-width="1.5" stroke-opacity=".22" class="breathe" style="animation-duration:6s"/>
+        <circle r="250" fill="none" stroke="#9fc4ff" stroke-width="1.5" stroke-opacity=".3" class="breathe" style="animation-duration:6s; animation-delay:-2s"/>
+        <!-- the great owl-eye -->
+        <circle r="180" fill="#0e1424"/>
+        <circle r="180" fill="none" stroke="#b98cff" stroke-width="3" stroke-opacity=".7"/>
+        <circle r="110" fill="url(#gCyan)" opacity=".4"/>
+        <circle r="110" fill="none" stroke="#bfeafa" stroke-width="2" class="pulse"/>
+        <circle r="42" fill="#0a0e1a"/>
+        <circle r="13" fill="#dff6ff" class="pulse-f"/>
+        <!-- feathered brow tufts -->
+        <path d="M-180 -60C-150 -120 -90 -150 -40 -150M180 -60C150 -120 90 -150 40 -150" fill="none" stroke="#b98cff" stroke-width="2.5" stroke-opacity=".6"/>
+      </g>
+      <use href="#figure" x="744" y="640" width="112" height="186" fill="#16203a"/>
+    </svg>
+  </div>
+
+  <!-- window : overlapping spells -->
+  <div class="scene" data-scene="window">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0a0e"/>
+      <!-- window frame -->
+      <rect x="560" y="160" width="480" height="560" rx="6" fill="#0c1018" stroke="#3a4252" stroke-width="6"/>
+      <line x1="800" y1="160" x2="800" y2="720" stroke="#3a4252" stroke-width="6"/>
+      <line x1="560" y1="440" x2="1040" y2="440" stroke="#3a4252" stroke-width="6"/>
+      <!-- overlapping enchantment auras revealed by detect magic -->
+      <g style="mix-blend-mode:screen">
+        <ellipse cx="740" cy="380" rx="220" ry="240" fill="url(#gEmber)" opacity=".25" class="pulse"/>
+        <ellipse cx="860" cy="420" rx="200" ry="230" fill="url(#gBlood)" opacity=".22" class="pulse" style="animation-delay:-.7s"/>
+        <ellipse cx="800" cy="460" rx="240" ry="210" fill="url(#gCyan)" opacity=".2" class="pulse" style="animation-delay:-1.4s"/>
+        <ellipse cx="780" cy="400" rx="180" ry="260" fill="url(#gWhite)" opacity=".14" class="pulse" style="animation-delay:-2.1s"/>
+        <ellipse cx="840" cy="380" rx="160" ry="220" fill="#b98cff" opacity=".14" filter="url(#soft2)" class="pulse" style="animation-delay:-2.8s"/>
+      </g>
+      <!-- runic shimmer -->
+      <g fill="none" stroke="#bfeafa" stroke-width="1.5" stroke-opacity=".4" class="spin-s" style="transform-origin:800px 440px"><polygon points="800,300 880,440 800,580 720,440"/></g>
+      <!-- Keltham peering -->
+      <use href="#figure" x="1140" y="470" width="112" height="186" fill="#16203a"/>
+    </svg>
+  </div>
+
+  <!-- clarity : he can see clearly -->
+  <div class="scene" data-scene="clarity">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#070b10"/>
+      <!-- parting fog -->
+      <g style="mix-blend-mode:screen">
+        <ellipse class="drift" cx="360" cy="420" rx="320" ry="200" fill="#2a3038" opacity=".4"/>
+        <ellipse class="drift" cx="1240" cy="460" rx="320" ry="200" fill="#2a3038" opacity=".4" style="animation-delay:-13s"/>
+      </g>
+      <!-- the clear sharp core -->
+      <g transform="translate(800 440)">
+        <circle r="220" fill="url(#gCyan)" opacity=".18" class="breathe"/>
+        <circle r="220" fill="none" stroke="#bfeafa" stroke-width="2" stroke-opacity=".5" class="pulse"/>
+        <!-- crisp grid -->
+        <g stroke="#5fd0ff" stroke-width="1.5" stroke-opacity=".5"><path d="M-180 -60h360M-180 0h360M-180 60h360M-120 -100v200M0 -120v240M120 -100v200"/></g>
+        <circle r="16" fill="#dff6ff" class="pulse-f"/>
+        <!-- focusing ring -->
+        <circle r="260" fill="none" stroke="#bfeafa" stroke-width="2" stroke-dasharray="8 20" class="spin-f" style="animation-duration:10s"/>
+      </g>
+    </svg>
+  </div>
+
+  <!-- alone : off by myself to think -->
+  <div class="scene" data-scene="alone">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#080a0e"/>
+      <ellipse cx="560" cy="500" rx="320" ry="260" fill="url(#gCyan)" opacity=".08" filter="url(#soft2)"/>
+      <!-- distant group, far away + small -->
+      <g fill="#11141a" opacity=".7"><use href="#figure" x="1280" y="430" width="44" height="74"/><use href="#figure" x="1330" y="436" width="40" height="68"/><use href="#figure" x="1380" y="432" width="42" height="70"/></g>
+      <!-- lone Keltham, seated, writing -->
+      <g fill="#16203a" transform="translate(500 440)">
+        <circle cx="0" cy="0" r="30"/>
+        <path d="M-44 30C-44 0 44 0 44 30L52 150 -52 150z"/>
+        <rect x="-64" y="138" width="128" height="34" rx="17"/>
+      </g>
+      <!-- the notebook page -->
+      <g transform="translate(600 540)"><rect width="120" height="86" rx="5" fill="#1a2230" stroke="#3a4a5a" stroke-width="1.4"/><g stroke="#5fd0ff" stroke-width="2" stroke-opacity=".6" class="draw"><path d="M16 26h88M16 46h64M16 66h88"/></g></g>
+      <!-- the owl's-wisdom timer, depleting -->
+      <g transform="translate(500 200)">
+        <circle r="44" fill="none" stroke="#1a2838" stroke-width="6"/>
+        <circle r="44" fill="none" stroke="#5fd0ff" stroke-width="6" stroke-linecap="round" stroke-dasharray="276" transform="rotate(-90)" class="deplete"/>
+      </g>
+      <style>
+        @keyframes deplete21{from{stroke-dashoffset:0}to{stroke-dashoffset:276}}
+        [data-scene="alone"] .deplete{animation:deplete21 12s linear infinite}
+      </style>
+    </svg>
+  </div>
+
+  <!-- hints : a drumbeat of hints -->
+  <div class="scene" data-scene="hints">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a080e"/>
+      <!-- faint masks (people performing) -->
+      <g opacity=".22"><use href="#sg-mask" x="220" y="260" width="120" height="120" color="#8a7aa0"/><use href="#sg-mask" x="1240" y="540" width="120" height="120" color="#8a7aa0"/><use href="#sg-mask" x="980" y="220" width="96" height="96" color="#8a7aa0"/></g>
+      <!-- a rhythmic grid of pings he's been missing -->
+      <g fill="#b98cff">
+        <circle cx="380" cy="450" r="6" class="pulse-f"/><circle cx="520" cy="450" r="6" class="pulse-f" style="animation-delay:-.3s"/><circle cx="660" cy="450" r="6" class="pulse-f" style="animation-delay:-.6s"/><circle cx="800" cy="450" r="6" class="pulse-f" style="animation-delay:-.9s"/><circle cx="940" cy="450" r="6" class="pulse-f" style="animation-delay:-1.2s"/><circle cx="1080" cy="450" r="6" class="pulse-f" style="animation-delay:-1.5s"/><circle cx="1220" cy="450" r="6" class="pulse-f" style="animation-delay:-1.8s"/>
+      </g>
+      <!-- the hidden pattern connecting them, drawing in -->
+      <path d="M380 450C520 360 660 540 800 450 940 360 1080 540 1220 450" fill="none" stroke="#cbb0ff" stroke-width="2" stroke-opacity=".5" class="draw"/>
+      <!-- blue and orange motes -->
+      <g><circle cx="700" cy="600" r="7" fill="#5fd0ff" opacity=".6" class="pulse"/><circle cx="900" cy="600" r="7" fill="#ff8a3c" opacity=".6" class="pulse" style="animation-delay:-1.2s"/></g>
+    </svg>
+  </div>
+
+  <!-- builtmind : never built to withstand -->
+  <div class="scene" data-scene="builtmind">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#08060e"/>
+      <circle cx="800" cy="440" r="360" fill="url(#gCyan)" opacity=".07" filter="url(#soft2)"/>
+      <!-- mind silhouette -->
+      <g transform="translate(800 440)">
+        <path d="M-150 150C-200 60 -180 -90 -70 -150 60 -210 200 -130 200 10 200 120 130 180 60 180 60 220 -20 230 -60 200 -110 170 -130 180 -150 150z" fill="#0e1322" stroke="#3a4a6a" stroke-width="2"/>
+        <!-- internal scaffold lattice -->
+        <g stroke="#5fd0ff" stroke-width="1.6" stroke-opacity=".5" fill="none">
+          <path d="M-120 80L-40 -40 40 60 120 -60M-90 -80L0 40 90 -40M-120 80L-90 -80M-40 -40L0 40M40 60L90 -40M120 -60L120 40"/>
+        </g>
+        <g fill="#bfeafa" opacity=".7"><circle cx="-40" cy="-40" r="4"/><circle cx="40" cy="60" r="4"/><circle cx="0" cy="40" r="4"/><circle cx="90" cy="-40" r="4"/><circle cx="-90" cy="-80" r="4"/></g>
+        <!-- stressed / cracking beams -->
+        <g stroke="#ff5560" stroke-width="2.5" stroke-opacity=".8" class="pulse" fill="none"><path d="M-40 -40L40 60M90 -40L120 40"/></g>
+      </g>
+    </svg>
+  </div>
+
+  <!-- watcher : the watcher over children -->
+  <div class="scene" data-scene="watcher">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0c0a07"/>
+      <ellipse cx="800" cy="360" rx="520" ry="320" fill="url(#gGold)" opacity=".1" filter="url(#soft2)"/>
+      <!-- the Watcher, large and benevolent -->
+      <use href="#sg-watch" x="710" y="90" width="180" height="180" color="#e8c06a" class="breathe" opacity=".8"/>
+      <use href="#figure" x="710" y="290" width="180" height="300" fill="#241c10"/>
+      <!-- sheltering arc -->
+      <path d="M520 600C520 460 1080 460 1080 600" fill="none" stroke="#e8c06a" stroke-width="2" stroke-opacity=".4" class="pulse"/>
+      <!-- small children gathered below -->
+      <g fill="#1a1408"><use href="#child" x="560" y="640" width="60" height="90"/><use href="#child" x="660" y="650" width="56" height="84"/><use href="#child" x="900" y="650" width="56" height="84"/><use href="#child" x="990" y="640" width="60" height="90"/></g>
+      <!-- warm motes -->
+      <g fill="#ffd9a0" opacity=".6"><circle cx="700" cy="500" r="3" class="tw"/><circle cx="900" cy="520" r="2.6" class="tw" style="animation-delay:-1.6s"/></g>
+    </svg>
+  </div>
+
+  <!-- integrity : self-integrity -->
+  <div class="scene" data-scene="integrity">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#080b0e"/>
+      <g transform="translate(800 440)">
+        <circle r="280" fill="url(#gCyan)" opacity=".1" filter="url(#soft2)"/>
+        <!-- a figure assembled from fitted fragments -->
+        <g fill="none" stroke="#5fd0ff" stroke-width="2" stroke-opacity=".7">
+          <path d="M0 -150a44 44 0 0 1 44 44c0 20-9 29-9 44l16 150c2 18-20 22-51 22"/>
+          <path d="M0 -150a44 44 0 0 0 -44 44c0 20 9 29 9 44l-16 150c-2 18 20 22 51 22"/>
+        </g>
+        <!-- fragment seams (fitting together) -->
+        <g stroke="#bfeafa" stroke-width="1.4" stroke-opacity=".5"><path d="M-30 -60L30 -60M-34 0L34 0M-40 70L40 70M0 -106v260"/></g>
+        <!-- a glowing core of integrity -->
+        <circle cx="0" cy="20" r="26" fill="url(#gGold)"/>
+        <circle cx="0" cy="20" r="9" fill="#fff" class="pulse-f"/>
+      </g>
+      <g fill="#ffd27a" opacity=".5"><circle cx="640" cy="360" r="3" class="tw"/><circle cx="960" cy="420" r="2.6" class="tw" style="animation-delay:-1.4s"/></g>
+    </svg>
+  </div>
+
+  <!-- revise : still himself -->
+  <div class="scene" data-scene="revise">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#08070c"/>
+      <g transform="translate(800 440)">
+        <circle r="300" fill="url(#gCyan)" opacity=".1" filter="url(#soft2)"/>
+        <!-- orbiting shards being revised -->
+        <g class="spin-s">
+          <g fill="#5fd0ff" opacity=".55"><polygon points="0,-260 22,-300 -22,-300"/><polygon points="0,-260 22,-300 -22,-300" transform="rotate(90)"/></g>
+          <g fill="#ff8a3c" opacity=".5"><polygon points="0,-260 22,-300 -22,-300" transform="rotate(45)"/><polygon points="0,-260 22,-300 -22,-300" transform="rotate(135)"/></g>
+        </g>
+        <g class="spin-r" opacity=".4" fill="#bfeafa"><polygon points="0,-190 16,-220 -16,-220"/><polygon points="0,-190 16,-220 -16,-220" transform="rotate(120)"/><polygon points="0,-190 16,-220 -16,-220" transform="rotate(240)"/></g>
+        <!-- the steady core that is still himself -->
+        <use href="#figure" x="-50" y="-90" width="100" height="166" fill="#16203a"/>
+        <circle r="70" fill="none" stroke="#bfeafa" stroke-width="2" stroke-opacity=".6" class="breathe"/>
+        <circle r="12" fill="#dff6ff" class="pulse-f"/>
+      </g>
+    </svg>
+  </div>
+
+  <!-- think : continues to sit and think -->
+  <div class="scene" data-scene="think">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#070a0e"/>
+      <ellipse cx="800" cy="480" rx="420" ry="300" fill="url(#gCyan)" opacity=".06" filter="url(#soft2)"/>
+      <!-- Keltham, seated, thinking -->
+      <g fill="#13202e" transform="translate(800 430)">
+        <circle cx="0" cy="0" r="32"/>
+        <path d="M-46 32C-46 0 46 0 46 32L54 160 -54 160z"/>
+        <rect x="-66" y="148" width="132" height="36" rx="18"/>
+      </g>
+      <!-- slow thought-motes orbiting -->
+      <g transform="translate(800 360)"><g class="spin-s" opacity=".5"><circle cx="0" cy="-150" r="5" fill="#bfeafa"/><circle cx="130" cy="74" r="4" fill="#7fb0ff"/><circle cx="-130" cy="74" r="4" fill="#7fb0ff"/></g></g>
+      <!-- two dissonant pieces grinding slowly -->
+      <g transform="translate(560 560)"><polygon class="grindL" points="0,-30 26,15 -26,15" fill="none" stroke="#9fb4cf" stroke-width="2"/></g>
+      <g transform="translate(1040 560)"><polygon class="grindR" points="0,30 26,-15 -26,-15" fill="none" stroke="#9fb4cf" stroke-width="2"/></g>
+      <!-- fading owl's-wisdom glow -->
+      <circle cx="800" cy="430" r="200" fill="none" stroke="#7fb0ff" stroke-width="1.5" stroke-opacity=".25" class="pulse" style="animation-duration:6s"/>
+      <style>
+        @keyframes grindL21{0%,100%{transform:translateX(0) rotate(0)}50%{transform:translateX(10px) rotate(8deg)}}
+        @keyframes grindR21{0%,100%{transform:translateX(0) rotate(0)}50%{transform:translateX(-10px) rotate(-8deg)}}
+        [data-scene="think"] .grindL{animation:grindL21 4s ease-in-out infinite}
+        [data-scene="think"] .grindR{animation:grindR21 4s ease-in-out infinite}
+      </style>
+    </svg>
+  </div>
+
+  <!-- /SCENES -->
+
+  <div id="vignette"></div>
+
+  <div id="label">
+    <div class="kicker"><svg class="ksig"><use id="ksig-use" href="#sg-book"/></svg><span class="kname" id="kname">The Reading</span></div>
+    <div class="ttl" id="ttl">Corrigibility</div>
+  </div>
+
+  <div id="cap-wrap"><div id="cap"></div></div>
+
+  <!-- intro -->
+  <div id="intro">
+    <div class="intro-in">
+      <div class="eyebrow">an animated reading · episode 21</div>
+      <h1>Planecrash</h1>
+      <div class="sub">Keltham casts and catches spells, talks himself into a rat-extermination empire under <i>Eagle's Splendor</i>, and — under <i>Owl's Wisdom</i> — has an epiphany he can't take back. This plays the <b>AskWhoCasts AI</b> reading — load the audio and the animation follows it, captioned with the original text.</div>
+      <div id="drop">
+        <svg class="dz-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L8 8m4-4 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <div class="dz-msg">Drop the episode 21 audio here, or click to choose</div>
+        <div class="dz-sub">mp3 · m4a · wav · ogg — stays on your device, nothing is uploaded</div>
+        <input type="file" id="audiofile" accept="audio/*" hidden>
+      </div>
+      <div id="loaded"><span class="ck">✓</span> <span class="fn" id="fname"></span> <span id="dur"></span></div>
+      <button id="begin" disabled><span class="tri"></span> Play</button>
+      <div class="cast" id="cast"></div>
+      <div class="note">Sound from your file · seek, speed (1× / 1.25× / 1.5× / 0.75×), captions (CC / press “c”) and ← → arrows all work</div>
+      <div class="src">Reading &amp; audio by <b>AskWhoCasts AI</b> — support it at patreon.com/askwhocastsai. Episode 21 of “mad investor chaos and the woman of asmodeus” (Planecrash) by Iarwain &amp; lintamande.</div>
+    </div>
+  </div>
+  <audio id="player" preload="metadata"></audio>
+
+  <!-- controls -->
+  <div id="controls">
+    <button class="btn sm" id="prev" title="Previous passage" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M7 5h2v14H7zM20 5v14l-9-7z"/></svg></button>
+    <button class="btn lg" id="play" title="Play / Pause" aria-label="Play"><svg id="playicon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
+    <button class="btn sm" id="next" title="Next passage" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M15 5h2v14h-2zM4 5l9 7-9 7z"/></svg></button>
+    <button class="btn sm" id="restart" title="Restart" aria-label="Restart"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg></button>
+    <div id="prog"><div id="bar"></div></div>
+    <button class="btn" id="cc" title="Captions on/off (c)" aria-pressed="true">CC</button>
+    <button class="btn" id="speed" title="Reading speed">1.0×</button>
+    <div id="beat">The Forbiddance</div>
+  </div>
+
+</div></div>
+
+<script>
+
+/* ===================== CHARACTERS ===================== */
+const CHARS = {
+  narrator:  {name:'Narrator',      tag:'the tale itself',        color:'#d8c39a', sigil:'sg-book'},
+  keltham:   {name:'Keltham',       tag:'a mind from dath ilan',  color:'#5fd0ff', sigil:'sg-hex'},
+  carissa:   {name:'Carissa Sevar', tag:'to-let-you-in',          color:'#ff5d6c', sigil:'sg-flame'},
+  ione:      {name:'Ione Sala',     tag:'oracle of nethys',       color:'#4fe6cd', sigil:'sg-oracle'},
+  meritxell: {name:'Meritxell',     tag:'and the chelish girls',  color:'#c2a0ff', sigil:'sg-gem'},
+  watcher:   {name:'The Watcher',   tag:'over children',          color:'#e8c06a', sigil:'sg-watch'},
+};
+const SCENE_TITLES = {
+  orient:'Visible Objects in the Air', spells:'The Plan of Spells', catch:'Catching the Cantrip',
+  eagles_splendor:"Eagle's Splendor", salesman:'The Rat Exterminator', girls:'The Girls, Glaring',
+  owls_wisdom:"Owl's Wisdom", window:'Overlapping Spells', clarity:'He Can See Clearly',
+  alone:'Off By Myself to Think', hints:'A Drumbeat of Hints', builtmind:'Never Built to Withstand',
+  watcher:'The Watcher Over Children', integrity:'Self-Integrity', revise:'Still Himself', think:'Continues to Sit and Think'
+};
+
+/* ===================== CAPTIONS + SCENE/SPEAKER BEATS ===================== */
+/* CUES: the VERBATIM glowfic text, aligned to the audio's timeline {t: startSeconds, x: text}.
+   Empty x clears the caption (intro credits, and the tail the source doesn't cover).
+   BEATS: which scene + speaker is on screen at each time {t, s:scene, v:speaker}. */
+const CUES=[{t:0,x:""},{t:24.36,x:"This... plausibly is going to help, Keltham feels more oriented by knowing what's going on"},{t:29.82,x:"in the background and what kind of surface effects to look for,"},{t:34,x:"being caused by what, even if he can't do math to it."},{t:38,x:"Maybe it's a weird vestigial dath ilani security blanket thing but Keltham feels less like"},{t:42.67,x:"he's flailing around in empty air and more like he's flailing around in air that"},{t:47.11,x:"has visible objects in it. \"I'm reaching the edge of how much stamina I allocated"},{t:51.69,x:"to spend on this. I think next the plan says I try to cast -\""},{t:56.1,x:"Keltham has to think back on which spells he actually has."},{t:59.65,x:"Shit, he didn't think to use Eagle's Splendor while interacting with Lrilatha,"},{t:63.61,x:"which was almost certainly what that spell was for..."},{t:66.35,x:"oh well. He can use the two spells one of which is Eagle's Splendor (not"},{t:71.14,x:"as important here) and one of which is Owl's Wisdom,"},{t:74.95,x:"then have security cast Haste on him, then cast Guidance and try to catch it,"},{t:80.04,x:"then try to catch Read Magic - he thinks that was the plan they came up"},{t:84.42,x:"with this morning. \"Well, I get some spells cast on me and then try to"},{t:88.79,x:"catch my remaining cantrips. How long do Owl's Wisdom and Haste last,"},{t:92.8,x:"respectively?\""},{t:93.2,x:"\"Owl's wisdom is up to two minutes per caster circle,\""},{t:97.2,x:"the girls chorus, distracted from their meaningful glaring at each other."},{t:101.45,x:"\"And Haste is up to two rounds per caster circle.\""},{t:105.09,x:"\"Right, so Owl's Wisdom first, then. Can somebody call in whoever's doing Haste,"},{t:109.38,x:"before I do? And somebody please show me the gestures to catch Read Magic again.\""},{t:113.52,x:"Yaisa goes to the door and opens it and returns with the nearest visible security"},{t:118.7,x:"wizard; everyone else demonstrates how to catch Read Magic."},{t:122.75,x:"Keltham, somewhat hesitantly, tries casting his first mind-boosting magic that affects himself,"},{t:127.95,x:"given to him by his unknown but hopefully friendly god."},{t:131.63,x:"The spell Carissa identified as Transmutation, similar to the structure of what Carissa showed him"},{t:136.67,x:"for intelligence-boosting. The one that seems more like it should be Owl's Wisdom,"},{t:141.45,x:"going on either tiny intuition or sheer blind guessing passing itself as tiny intuition."},{t:146.47,x:"It does something - \"That's Eagle's Splendour,\" Meritxell beats everyone else to saying."},{t:152.16,x:"\"It does charisma.\""},{t:153.58,x:"This is truly odd. Something that Keltham has been doing his whole life,"},{t:157.96,x:"without really focusing on it that much, became weirdly much easier."},{t:161.22,x:"He's aware of his posture, what his posture is saying,"},{t:164.33,x:"how he could change it to project different emotions outward."},{t:167.67,x:"He knows - what he could say, to express these thoughts,"},{t:170.95,x:"or even to lie - but exactly because of that, it feels much more like any"},{t:175.73,x:"words he said would be something like a lie, a pose,"},{t:179.04,x:"at least until he became used to this state and it became more natural."},{t:183.12,x:"He could fling his arms wide and announce how overjoyed he is,"},{t:187.27,x:"and make it look real, or speak with quietly subdued enthusiasm,"},{t:191.27,x:"and make that look real, but Keltham does not know,"},{t:194.46,x:"under this spell, how to do anything that is real."},{t:197.38,x:"Eh, might as well go all in while it lasts."},{t:200.32,x:"\"This is really rather odd,\" Keltham says with a more charming smile than any girl"},{t:205.09,x:"here, or indeed, anyone in greater existence, has seen on his face before."},{t:209.43,x:"\"But distracting from magic, I fear. I hope I am not taking too much of"},{t:214.65,x:"security's valuable time if I ask them to bide a short while before Hasting me,"},{t:219.08,x:"until this wears off; no more than eight minutes should it be,"},{t:222.76,x:"and maybe less.\" Interesting how 'dashing gentleman' Baseline rhythms are coming out in Taldane;"},{t:228.1,x:"he hopes it's at all accurate and not just silly."},{t:231.84,x:"\"Of course,\" says the nearest visible security-person, smiling."},{t:235.16,x:"The spell provides no particular aid in interpreting his smile aside from making it apparent"},{t:239.59,x:"that smiles are a thing one can do in subtly different ways on purpose for"},{t:243.48,x:"subtly different results."},{t:244.27,x:"\"I do not know if I will ever request this spell from my god again,"},{t:248.31,x:"and foolish as I am, I forgot to think of this contingency earlier -"},{t:252.2,x:"but does anyone have any simple exercises for me to perform,"},{t:256.6,x:"in the realm of acting and emoting?"},{t:259.35,x:"I'd gain skills and experience, if I could, before this spell fades.\""},{t:263.55,x:"\"Pretend to be a duke receiving your idiot son who just got in trouble for"},{t:269.05,x:"rhinocerous racing in the streets,\" says Tonia."},{t:271.97,x:"\"Meritxell's the idiot son.\" Meritxell takes this in stride, and bows."},{t:277,x:"\"Father.\""},{t:277.5,x:"Duke sounds vaguely big and authoritative. Company president?"},{t:281.5,x:"Very Serious person? Keltham shifts his bearing older and more dignified,"},{t:286.38,x:"and sorrowful with a hint of frustration."},{t:289.58,x:"\"Son. Rhinocerous racing again? Really?\""},{t:292.5,x:"\"It's not like last time, Father. Last time, I fully acknowledge,"},{t:297.74,x:"I was irresponsible and caused a lot of property damage which was rightly taken out"},{t:303.3,x:"of my allowance. This time, we stayed off Queen's Avenue entirely,"},{t:308.5,x:"and only knocked over one carriage. And furthermore, it wasn't my idea,"},{t:313.88,x:"Callisto challenged me, and I did not think I'd be doing right by you and"},{t:318.25,x:"the name you've honored me with, if I refused and had him name me a"},{t:323,x:"coward.\""},{t:323.33,x:"Keltham's total ignorance of vast amounts of context is almost completely unable to interfere with"},{t:328.33,x:"his acting momentum! \"Son, has it ever occurred to you that there is a certain"},{t:333.52,x:"irony, or comedy even, in letting yourself be put into self-destroying situations for fear of"},{t:339.11,x:"being called a coward? I name you meta-coward now.\""},{t:343.32,x:"Meritxell heroically manages to keep a straight face at that."},{t:347.29,x:"\"Father! Should we embrace every injury to our name rather than falsify them?\""},{t:352.24,x:"\"And what, do tell, is this injury to our name,"},{t:355.91,x:"this proposition untrue, which could not possibly hold in any world in which you raced"},{t:361.44,x:"rhinoceruses, and so was decisively refuted by your acts?\""},{t:365.38,x:"\"That I was afraid to race rhinocerouses!!\""},{t:368.39,x:"\"Son, your logic, while possessed of a certain local validity,"},{t:372.3,x:"lacks an appreciation of greater contexts. Are you afraid to take half your earnings,"},{t:377.7,x:"and set them aflame?\""},{t:379.09,x:"\"- well, not if they're in gold, sir!\""},{t:381.7,x:"Er, right. \"Gold melts if the flame is hot enough."},{t:385,x:"Anything melts if the flame is hot enough."},{t:387,x:"Do you see where I'm leading with this, my son?\""},{t:389.5,x:"\"You're going to light me on fire if I do this again?\""},{t:392.5,x:"With Eagle's Splendour running, Keltham doesn't crack up at this."},{t:396.05,x:"\"I am saying, son, that like a sufficiently hot fire,"},{t:399.86,x:"the notion of proving oneself unafraid to do things has a certain dangerous generality."},{t:404.96,x:"How about if, in the future, you prove yourself unafraid of refusing to do things"},{t:410.35,x:"to prove yourself unafraid of them?\""},{t:412.32,x:"\" - yes, Father. Okay, pretend to be a thief casing a magic shop to learn its"},{t:418,x:"protections before you rob it, and Ione, you're a shopkeeper who is trying to figure"},{t:422.57,x:"out whether he's going to make a purchase and whether you'll offend anyone powerful kicking"},{t:427.35,x:"him out.\" This is, of course, a substantial social favor to Ione,"},{t:432.75,x:"though there's no indication of that in Meritxell's gesture; she might've chosen a classmate at"},{t:439.15,x:"random."},{t:439.67,x:"...Meritxell thinks Ione has got secret connections and/or magical bloodlines going for her,"},{t:444.88,x:"rather than HERESY, and Ione is going to pay for this later but for this"},{t:449.83,x:"one golden moment she'll take it for everything it has."},{t:453.62,x:"\"Good evening, sir,\" Ione says graciously, standing up from her chair."},{t:458.43,x:"\"Can I interest you in a slightly used mud golem?\""},{t:462.71,x:"She gestures at Asmodia. \"It isn't pretty but that doesn't mean it lacks all possible"},{t:469.4,x:"use.\""},{t:470.07,x:"Asmodia smiles pleasantly and only slightly murderously."},{t:473.47,x:"Thief? But a master criminal would be picking somebody else to impersonate -"},{t:479.12,x:"somebody rich, from context? Charming rich person?"},{t:482.38,x:"Oh, interesting his thoughts are moving faster on this subject too."},{t:487.35,x:"\"My, you undersell your wares, I think."},{t:489.82,x:"This is a fine mud golem! Look at its smile!"},{t:493.43,x:"What about this one here?\" Keltham gestures towards Pilar, and then,"},{t:498.14,x:"as soon as Ione's eyes shift in that direction, Keltham takes several lightning glances around"},{t:504.53,x:"the room before moving his gaze back to Ione, wow that's interesting he thinks his"},{t:510.86,x:"expression somehow did this thing where even if somebody was watching him that would have"},{t:515.14,x:"looked more natural and casual than it was."},{t:517.43,x:"\"Oh, that one is far more worthy of you, sir,\""},{t:520.56,x:"the more he takes out on Pilar, the less he'll take out on Ione,"},{t:525.04,x:"if Keltham happens to be a sadist."},{t:527.47,x:"\"An Alak-Kuata original, that one is, from Osirion!"},{t:530.42,x:"Have you ever had the pleasure of owning any golems of Sothis's making?\""},{t:535.35,x:"\"Not yet, I must say! A recent shipment?\""},{t:538.48,x:"\"Fresh as the sparkling morning dew, sir."},{t:541.22,x:"If it's not too forward of me, can I ask what kind of golems you"},{t:545.77,x:"have in your current collection?\""},{t:547.23,x:"\"Well, that is a bit forward, I'm afraid."},{t:549.55,x:"We've hardly even met and here you're asking me about my previous golem history?\""},{t:554.79,x:"Keltham slides an inch forward, leans slightly, and smiles flirtatiously at Ione."},{t:559.91,x:"It seems like a good idea to practice this particular skill at all,"},{t:563.87,x:"before the spell wears off."},{t:565.54,x:"Ione smiles back. \"It does tend to help in providing a man with an additional"},{t:571.73,x:"golem perfectly to his taste,\" she says solemnly."},{t:575,x:"Everyone seems incredibly entertained. Of course, Carissa herself seems incredibly entertained,"},{t:580.5,x:"while in reality this is occupying a tiny fraction of her attention,"},{t:585.33,x:"and who is she to say, really, that that isn't true of everyone else."},{t:590.07,x:"Ione, who presumably isn't stupid enough to have told everyone she's a oracle of Nethys,"},{t:597.11,x:"is pretending - what, exactly? Something's up with an invisible assassin halfling who might or might"},{t:602.85,x:"not be watching this, and that sure is some distracting information to have."},{t:607.68,x:"...for that matter, maybe every single person here - except Keltham,"},{t:611.89,x:"who couldn't hide it - is having a day as interesting as Carissa's."},{t:616.67,x:"The devil didn't promise the same offer wasn't being extended to everyone in the room."},{t:622.33,x:"Here she's been thinking she did something special but maybe this is actually just the"},{t:627.33,x:"default outcome in a situation of as much interest to the gods as this one."},{t:632.4,x:"While Ione and Keltham are flirting she checks for illusions,"},{t:635.9,x:"which would be suggestive of whether anyone has been arrested and is being impersonated already."},{t:641.68,x:"No one...seems to be? A promising sign, if they've all made it through the first"},{t:648.04,x:"day alive. Carissa hopes she is not called on for Improv With Innueno and relatedly"},{t:653.26,x:"is not at all in the mood to go on a date tonight."},{t:657.29,x:"An hour ago she was all delighted about it but now she does not want"},{t:661.57,x:"to beat Keltham at a challenge of sexual cleverness, she wants...what does she want...."},{t:667.5,x:"to burn in the purified flames of Hell and emerge perfected."},{t:672.41,x:"Well. That's kind of kinky."},{t:674.47,x:"Keltham's very weirdly augmented social-presentation skills are telling him that he's screwing up,"},{t:679.93,x:"faster than they're telling him how to fix it; the problem isn't in his body's"},{t:684.59,x:"execution of the orders his mind is sending, it's that his mind is sending bad"},{t:689.67,x:"orders. Ione may be acting interested for the sake of this skit,"},{t:693.67,x:"but in real life, well, he's not sure because everybody here is sort of hard"},{t:698.37,x:"to read, but in real life, Ione probably wouldn't be interested in the Roguish Gentleman"},{t:702.81,x:"Template he picked up from some of his own previous larping?"},{t:706.17,x:"Even if that Roguish Gentleman Template was being perfectly executed,"},{t:709.28,x:"and even if it didn't come across as a weird dath ilani trope that may"},{t:713.9,x:"not even exist here? Even if he's learning, he's probably learning the wrong thing right"},{t:718.4,x:"now. Keltham is used to this feeling."},{t:720.5,x:"He knows that learning a new art often feels like screwing up,"},{t:724,x:"or even meta-screwing-up the process of learning."},{t:726.57,x:"It doesn't occur to him to be embarrassed about that happening in public,"},{t:730.24,x:"he clearly said that he was going into a learning and practice mode;"},{t:733.38,x:"like, how would people here even know how to read if they'd never learned and"},{t:737,x:"practiced anything in the presence of another human being."},{t:740.24,x:"He tries another couple of flirting exchanges, makes no headway on the problem of getting"},{t:745.64,x:"Ione to admit when she's getting off work and leaving her workshop open to robbery,"},{t:750.77,x:"and then gives up. \"This scenario isn't working for me,"},{t:754.14,x:"can we switch again?\" Keltham says, with more calm and confidence than that statement even"},{t:759.86,x:"warranted."},{t:760.24,x:"\"I'm trying to hire some adventurers to clean the rats out of my garden,\""},{t:765.17,x:"Asmodia says, \"and you're all desperate to impress me with your qualifications.\""},{t:769.4,x:"\"I fought a dragon once,\" says Carissa instantly, \"Well, I was there while some people"},{t:775.4,x:"fought a dragon - pseudoddragon, but still. They're really rats with wings,"},{t:779.88,x:"they are, and after that regular rats don't seem so frightening."},{t:783.84,x:"Unless they've got the plague. Which would still be fine,"},{t:787.39,x:"I fought the plague once. Well, I was there while some people fought the plague"},{t:792.43,x:"-\""},{t:792.61,x:"\"I once slew three dozen rats in single combat, when I was a gladiator slave"},{t:798.12,x:"in Katapesh,\" says Tonia. \"I once did that barehanded,\" says Gregoria."},{t:802.62,x:"\"I used the corpse of the first rat to kill all the others.\""},{t:808.62,x:"Reliable salesman, go. \"I've solved over five thousand garden rat problems exactly like yours over"},{t:815.52,x:"just the past 10 days,\" Keltham says."},{t:818.19,x:"(Gladiator slave in Kata-something sounds unpleasant and like one of those things that's hard to"},{t:823.74,x:"translate into Baseline, but you hear a lot of things like that when you're a"},{t:828,x:"dath ilani in Golarion; Keltham decides not to put it on his priority list of"},{t:832.52,x:"things to ask about after an instant of internally sighing hesitation.)"},{t:836.59,x:"\"Five thousand?\" says Asmodia. \"How do you find the time?\""},{t:840.33,x:"\"Subcontractors,\" Keltham says instantly."},{t:842.11,x:"\"And you can cut out the middleman and just hire the subcontractors -"},{t:847.33,x:"I'm one of them,\" says Pilar. \"He's the guy you need if you need to"},{t:852.33,x:"hire a lot of contractors, but not if you need to kill a lot of"},{t:856.87,x:"rats.\""},{t:857.13,x:"\"Someone with that big of a rat-killing business has a lot of incentive to be"},{t:861.4,x:"going around releasing rats in everyone's gardens."},{t:863.4,x:"How much do you trust him?\""},{t:865.8,x:"\"I have solved a million rat problems just like yours in the last ten days,\""},{t:871.8,x:"Meritxell says. \"I battled the rat god Lao Shu Po in Tian Xia,"},{t:876.11,x:"and by injuring her grievously decreased global rat problems by 1 percent."},{t:880.5,x:"If I even walk near your garden, the rats will run scared.\""},{t:886.5,x:"Good comprehension of perverse incentives, Carissa! Keltham wasn't quite sure how much of that kind"},{t:892.43,x:"of knowledge would exist in a place like Cheliax."},{t:895.17,x:"\"As a full-service company we also offer post-action reports on the root cause of your"},{t:900.84,x:"rat problems,\" Keltham says smoothly, sounding like a much more reliable and businesslike salesperson than"},{t:905.86,x:"all his wild-eyed competitors. \"If you're concerned about our ethics,"},{t:910.14,x:"we can offer full-service ethical investigations of rat-related companies."},{t:914.36,x:"Buy all three of our services and get 20% off.\""},{t:918,x:"\"For half his price,\" Carissa says, \"I'll fight your rats,"},{t:921.64,x:"find whoever's spreading rats everywhere, and feed them to the rats.\""},{t:925.33,x:"\"What if it's the rats that are spreading rats everywhere?\""},{t:928.83,x:"Asmodia asks skeptically."},{t:930,x:"\"Well, I'll feed the rats to the other rats in a rat pit of cannibalistic"},{t:934.2,x:"death, and sell tickets, and split the profits with you.\""},{t:936.87,x:"\"My competitors talk a good game but have you considered that they might actually be"},{t:941.33,x:"rats wearing clever disguises.\""},{t:942.67,x:"\"For a rat extermination job, you want to hire a rat."},{t:946.36,x:"We know how rats think. We know where rats live."},{t:949.96,x:"And we know what rats fear more than death.\""},{t:953.2,x:"\"For a rat problem, you want the best experts on rats."},{t:956.91,x:"Most rats are too close to rats to see rats clearly."},{t:960.41,x:"Our highly trained rat experts -\" The Eagle's Splendour wears off."},{t:963.48,x:"Keltham decides in a split second to try to continue and see how much of"},{t:967.93,x:"a difference it makes and whether anyone says they've noticed."},{t:971.07,x:"\"- live in distant, isolated microcities where they do nothing except think about rats and experiment"},{t:978.14,x:"on rats every day. When rats have a rat question,"},{t:982.11,x:"they come to us.\""},{t:983.67,x:"\"You must be very busy, leading the world in rat extermination and rat research and"},{t:989.5,x:"ethics studies and rat infestation origin research,\" Meritxell says."},{t:993.42,x:"\"Unless you know the origins of all the rat infestations before you start,"},{t:998.89,x:"since you're releasing them, something your position as the world leader in rat research would"},{t:1004.75,x:"easily enable you to do. You don't want a rat or a rat researcher."},{t:1010,x:"You want someone whose footsteps make rats tremble."},{t:1013.05,x:"And that's me.\""},{t:1014.19,x:"\"Fight against the rat god must've gone pretty badly, if you're now reduced to begging"},{t:1019.8,x:"for garden assignments.\""},{t:1020.7,x:"\"I just hate rats so much I can't stop until they're all dead.\""},{t:1024.6,x:"\"What say we all compromise? We'll all do the job together so she has no"},{t:1029,x:"other options, charge her twenty times the price, and split the revenue fairly among ourselves.\""},{t:1033.41,x:"There are nods all around. \"FINE,\" Asmodia says, flinging her hands in the air hopelessly,"},{t:1039.95,x:"and then there are cheers. \"Are you going to need that Haste,\""},{t:1044.17,x:"says the security wizard, tiredly."},{t:1045.72,x:"\"Yeah, let me swap to Owl's Wisdom and then we'll run through it."},{t:1049.76,x:"Eagle's Splendour only wore off a quarter-minute ago, for what it's worth,"},{t:1053.25,x:"I wanted to see if anyone noticed from outside.\""},{t:1055.5,x:"\"Do you only have Wisdom and Splendour and not Cunning?\""},{t:1058.64,x:"Meritxell asks. \"I'd use Cunning, to try to learn spells...I guess Wisdom might be better"},{t:1065.18,x:"for just trying to understand the basics of how magic moves.\""},{t:1068.35,x:"\"Oh, right. I was thinking it might be wiser to try only one mental augment"},{t:1072.36,x:"at a time on my first day."},{t:1074.88,x:"And no, my god didn't give me Cunning, I think Carissa thought it wasn't a"},{t:1080.28,x:"cleric spell? But if somebody else has it - you're the experts,"},{t:1083.86,x:"tell me which one I should use.\""},{t:1086.09,x:"\"In general wizardry goes more off cunning."},{t:1088.82,x:"Cunning is cleverness, math, working memory, visualization."},{t:1094.55,x:"Wisdom is - perceptiveness, wordless inference, noticing if your thought patterns are avoiding something."},{t:1101.71,x:"I have Cunning, if you want.\""},{t:1104.53,x:"\"Key capability loading for catching a cantrip doesn't seem like cleverness and working memory,"},{t:1109.67,x:"though, so much as perception and speed?"},{t:1112,x:"Not saying you're wrong, just voicing my noticed confusion.\""},{t:1115.45,x:"“Yeah, there’s honestly an argument that what you’re specifically doing wants Dexterity rather than any"},{t:1121.59,x:"of the mental enhancements, and wisdom is probably fine, even though in general wizards trying"},{t:1127.09,x:"to grasp a new concept are limited on Cunning.”"},{t:1130.47,x:"”I can give him dexterity too,” says the security wizard slightly impatiently."},{t:1136.12,x:"Keltham doesn't need arguments, he's too ignorant for those, he needs somebody more informed to"},{t:1142.19,x:"give him the correct decision! \"Snap poll, dath ilani version."},{t:1146,x:"Put your hand in front of your face, then move it up if you think"},{t:1149.53,x:"I should use Wisdom, move it down if you think I should use Cunning,"},{t:1152.82,x:"how far you move your hand away from face level indicates the strength of your"},{t:1157.33,x:"opinion. If you think I'm asking the wrong question, close your hand into a fist"},{t:1162.27,x:"to signal defiance of the question itself, but answer anyways."},{t:1165.45,x:"Again, that's up for Wisdom, down for Cunning, fist to complain about the question.\""},{t:1170.95,x:"Keltham demonstrates by moving his hand in both directions as he speaks,"},{t:1176,x:"and briefly closing it into a fist."},{t:1178.33,x:"The girls watch each other nervously and settle on a moderately strong recommendation for Wisdom"},{t:1183.33,x:"which all hands then converge towards. An optimist might conclude this was because they're familiar"},{t:1189.47,x:"with the theorems governing rational agents persisting in disagreements they have mutual knowledge of."},{t:1195.27,x:"A Chelish person would likely interpret their uniform recommendation in the same spirit as their"},{t:1201.4,x:"uniform smiles."},{t:1202.2,x:"...okay those people just looked at each other and adjusted their votes."},{t:1207,x:"Later he will explain some important concepts about presenting unadjusted first impressions to avoid info"},{t:1212.48,x:"cascades - or better yet, just closing your eyes until you've moved your hand into place,"},{t:1217.76,x:"that seems like it would be a simpler and more robust rule for non-dath-ilani."},{t:1223.1,x:"But security guy seems impatient, so for now he'll quietly hope that that resolution procedure"},{t:1227.96,x:"had any kind of shard of Law within it for aggregating their knowledge."},{t:1231.81,x:"At least Carissa picked an opinion (Wisdom) and stuck with it,"},{t:1236.11,x:"and she's probably the most expert. Keltham casts Owl's Wisdom on himself."},{t:1241.38,x:"And Keltham-the-object snaps into focus to Keltham-the-perceiver."},{t:1245.57,x:"His first thought is that Keepers would trade out-of-preference sexual favors or do crimes for"},{t:1251.48,x:"this spell. His second thought is that there's so many thoughts he hasn't been thinking"},{t:1256.14,x:"in the last day. His third thought is that this is a mind-affecting drug,"},{t:1260.67,x:"one making him think that he can think better and promising epiphanies,"},{t:1264.22,x:"even if the rest of his mental processing isn't degraded."},{t:1267.75,x:"There are protocols trained for being hit by mind-affecting drugs like that,"},{t:1273.28,x:"which you're supposed to follow even if it seems like you have better ideas for"},{t:1277.41,x:"things to do while you're on the mind-affecting drug."},{t:1280.17,x:"It takes an additional effort and self-surety for Keltham to override that very trained and"},{t:1286.06,x:"solemnly advised protocol, even temporarily. But he can see, even more clearly than he could"},{t:1291.67,x:"at other times, that it would be stupid to follow standard protocol and run out"},{t:1296.59,x:"of this room immediately. He knows he's more awake right now,"},{t:1299.85,x:"and it doesn't matter how many people think they're becoming super awake as they fall"},{t:1304.3,x:"asleep and into madness, he can tell the difference."},{t:1307.04,x:"He still needs to cast his spells and then leave this room of untrusted others."},{t:1311.93,x:"These are rules that derive strength from their unconditionality; there is some real sense in"},{t:1318.64,x:"which even an extremely well-justified exception to them is breaking or bending a piece of"},{t:1323.79,x:"the Algorithm that would work better for other people the more unconditional it is,"},{t:1328.12,x:"and those people should remember the same thing about that Algorithm."},{t:1331.2,x:"That's even leaving aside where part of his reason for violating these hard-and-fast rules about"},{t:1336.25,x:"behaving under conditions of mental oddity, is that he died in a plane crash and"},{t:1341.07,x:"has been in a magical world for the last day,"},{t:1344.64,x:"which isn't the sort of epistemic state that - he's wasting time."},{t:1349.55,x:"\"It's up. Dexterity, Haste?\""},{t:1351.18,x:"The wizard casts those: Dexterity first, and then Haste."},{t:1354.23,x:"Keltham casts Guidance on himself. He tries to catch that cantrip too,"},{t:1358.36,x:"just in case he can."},{t:1360.02,x:"- yep. Then it's kind of sitting in his hand, a little fragile -"},{t:1365.14,x:"\"Now you kind of tuck it away like you're - spinning it so it's all in"},{t:1370.8,x:"some other dimension -\" Carissa says quickly -"},{t:1372.9,x:"Aided by Owl's Wisdom, Keltham is already over the shock of getting that far,"},{t:1377.48,x:"and trying to finish what he saw others doing earlier with his Greater Detect Magic."},{t:1382.14,x:"The spell folds tidily away, intact."},{t:1384,x:"Practice until the boosts run out, so he can catch cantrips in the future,"},{t:1387.5,x:"or until he fails enough to be out of cantrips,"},{t:1390,x:"or he needs to take the last of the Owl's Wisdom to truly think -"},{t:1394.18,x:"is the obvious course here - so Keltham tries his Read Magic,"},{t:1398.18,x:"using the boost from Guidance -"},{t:1400,x:"And catches it. His harem is cheering, though mostly silently so as not to be"},{t:1406.75,x:"distracting."},{t:1407.2,x:"Guidance again!"},{t:1408.1,x:"He catches the spell the next four times, and by then can feel that it's"},{t:1412.85,x:"starting to enter muscle memory, no longer something that without a bunch of reflex-enhancement he'd"},{t:1417.75,x:"be desperately struggling to do."},{t:1419.62,x:"He'll start trying to cast Detect Magic using the Guidance boosts."},{t:1423.75,x:"Detect Magic and Guidance are the two cantrips he's plausibly going to need over and"},{t:1428.67,x:"over and over."},{t:1429.47,x:"He manages it three times in a row before, on the fourth,"},{t:1432.67,x:"the window slams, security guy steps between it and Keltham casting something,"},{t:1436.17,x:"and Detect Magic slips away in Keltham's instant of distraction."},{t:1439.28,x:"Keltham looks at the window to see if this is a room-evacuating issue,"},{t:1443.72,x:"some of what his students said about Corn Failure Modes leaping awfully to mind."},{t:1448.76,x:"He'll also try to hold his concentration on Detect Magic,"},{t:1452.3,x:"if possible."},{t:1452.89,x:"There are a bunch of overlapping spells on the window,"},{t:1455.85,x:"but nothing observably entering through it; there is a dead bird on the ground outside"},{t:1460.47,x:"the window. \"Most likely,\" security guy says without moving, \"it's just a regular dead bird"},{t:1467.29,x:"that the Forbiddance picked off, of which there've been dozens in the last half-hour."},{t:1471.94,x:"We have a team checking it out, though.\""},{t:1474.26,x:"Keltham goes back to practicing at once."},{t:1476.36,x:"He will continue casting Guidance and using it to boost its own next cast until"},{t:1481.82,x:"Haste runs out or catching fails, then practice more Read Magic without Guidance until another"},{t:1486.88,x:"minute of that passes or catching Read Magic fails."},{t:1489.76,x:"He doesn't fail at Guidance before Haste runs out."},{t:1492.67,x:"He manages six of Read Magic without Guidance before losing it."},{t:1496.33,x:"\"This was a great success, everyone, and with any luck I can start looking more"},{t:1501.33,x:"at how magic works tomorrow, once I can watch magic happening."},{t:1505,x:"Right now, though, I think I should quickly go off by myself and think for"},{t:1509.57,x:"a few remaining minutes before the Owl's Wisdom runs out,"},{t:1512.43,x:"and do that right away, see you possibly at dinner -\""},{t:1515.36,x:"Keltham is grabbing a couple of sheets of paper and a writing implement even as"},{t:1519.27,x:"he speaks."},{t:1519.8,x:"No one interferes with him."},{t:1521.13,x:"Keltham moves out of the room even faster than he usually would,"},{t:1524.82,x:"thanks to Cat's Grace, also still in effect."},{t:1527.73,x:"\"See you later,\" says Carissa, who is officially the person with the rights to that"},{t:1533,x:"line tonight, as he reaches the door."},{t:1535.17,x:"Heh. \"Indeed!\" And then he's out of the library and speeds up again,"},{t:1539.38,x:"on the lookout for an apparently quiet and deserted unoccupied room on the way to"},{t:1544.58,x:"his assigned bedroom - he'd rather not spend remaining spelltime to reach his assigned bedroom."},{t:1549.15,x:"But he'll go all the way to his bedroom if he doesn't see anywhere that"},{t:1553.19,x:"looks appropriate for meditation. And also he's already started thinking."},{t:1556.44,x:"dath ilan: (Standard procedure for dealing with a mind-affecting drug that claims to produce useful"},{t:1561.5,x:"insights is to write down the insights, and see how much sense they still make"},{t:1565.93,x:"after the drug wears off. While that's going on, you don't let people who aren't"},{t:1570.2,x:"Keeper-trained and Keeper-oathbound talk to you. You especially don't talk to people you don't trust"},{t:1575.04,x:"an awful lot. You double-especially don't talk to whoever talked you into using the drug"},{t:1579.5,x:"or maybe subtly guided you down a path that ended with that decision."},{t:1583.4,x:"There are known drugs that seem to have an effect of permanently relaxing your priors"},{t:1588,x:"about whatever somebody says to you while you're on drugs,"},{t:1591.33,x:"which in dath ilani terms is something like a date rape of the soul."},{t:1595.98,x:"Keltham has had drugs that mimic the more innocuous effects that go along with those,"},{t:1600.29,x:"and Owl's Wisdom is absolutely nothing like them, but still."},{t:1603.14,x:"All of this is, in any case, advice you'd only need in the first place"},{t:1607.48,x:"if you went to a Shop of Ill-Advised Consumer Goods."},{t:1610.39,x:"Or if a criminal dosed you. Dath ilan does not recognize any uses of lysergic"},{t:1615.19,x:"acid diethylamide, dimethyltryptamine, or psilocybin, within the mainstream of Well-Advised Consumer Goods."},{t:1620.89,x:"They don't do anything useful that can't be done by a high-ranking Keeper just talking"},{t:1625.63,x:"at you.)"},{t:1626.22,x:"The room right across from the library appears to be some kind of administrative staging"},{t:1631.6,x:"area but the room after that, some kind of antechamber,"},{t:1635.6,x:"is empty."},{t:1636.35,x:"Keltham ducks in and starts writing. Translation spells are a thing,"},{t:1640.2,x:"and he's not sure how that interacts with cracking the kiddie's substitution cipher he has"},{t:1645.62,x:"memorized, for writing non-readable notes to himself in RPGs and so on."},{t:1650.12,x:"Instead he's going to write down some cultural references from his homeworld,"},{t:1654.88,x:"and hope that there's no version of a cultural translation spell that reads through those;"},{t:1660.28,x:"Darmok and Jalad at Tanagra, as it were."},{t:1662.78,x:"He doesn't have time to think through very much, the first priority is just to"},{t:1667.22,x:"write out all the things he hasn't been thinking, notes to himself to hang the"},{t:1671.74,x:"thoughts upon, to be followed up later."},{t:1673.87,x:"Blue and orange, is the first thing he scratches out."},{t:1676.96,x:"There's a constant drumbeat of hints that the people around him operate on a very"},{t:1682.11,x:"alien and possibly inhumane morality, and he's been saying things to himself like Carissa was"},{t:1686.66,x:"probably making a joke he failed to get, when she talked about tossing the rats"},{t:1690.79,x:"into a pit to cannibalize each other and selling tickets to that like people would"},{t:1695,x:"pay to see it. There's a whole history of little pings like that and his"},{t:1699.29,x:"brain pushing back at the dissonance with 'Maybe it was a joke I didn't get?'"},{t:1704,x:"and he can see that, now, while he's got Owl's Wisdom running."},{t:1708,x:"Subverted True-man Show, he writes out next."},{t:1711,x:"The girls all wore permanently cheerful expressions during class, Meritxell and Ione and everyone else"},{t:1717.59,x:"didn't read as any less genuine to him than their usual selves read while they"},{t:1722.04,x:"were acting out routines, like they were all experienced actresses,"},{t:1725,x:"like they were all already acting. But they're not running a well-designed full Immersive Reality"},{t:1730.25,x:"TV Show trope on him either. If they were really such good actresses,"},{t:1734.78,x:"with smart people and smart scripts behind them, they wouldn't be giving that away by"},{t:1740,x:"wearing permanently cheerful smiles during class, or by not acting awkward when they were called"},{t:1744.62,x:"on to act out new weird scenarios."},{t:1746.77,x:"They're not trying to prevent him from realizing that they all have and are using"},{t:1752.5,x:"acting abilities like he got from his Charisma boost, which,"},{t:1756.59,x:"if they were actually constructing a false reality around him,"},{t:1759.48,x:"would be the first thing they'd try to avoid him knowing."},{t:1762.52,x:"(Keltham also makes a note in the back of his mind,"},{t:1765.64,x:"not for the first time today, that if they don't get adequate Governance support and"},{t:1770.44,x:"don't end up with more urgent priorities, inventing ballpoint pens sure seems like it should"},{t:1775.24,x:"be a moneymaker.)"},{t:1776.52,x:"The next part is - hard for him to write."},{t:1779.4,x:"It feels like it's a betrayal of the person that he'll be,"},{t:1783.26,x:"when this temporary boost wears off, to think about this part,"},{t:1786.81,x:"to write down the anchor for it."},{t:1789.06,x:"But he can't unsee it, and it's already too late."},{t:1792.22,x:"There is a commonly held wisdom, in dath ilan, about the way a human mind"},{t:1796.48,x:"is put together, that it is a thing made of little subtle tensions and balances"},{t:1801.89,x:"and internal compromises. The human mind being the limited thing that it is,"},{t:1806.67,x:"these balances form around your current level of ability to see into yourself and see"},{t:1811.67,x:"the implications of what you already know - or not see them,"},{t:1815.04,x:"as the case may be. The reason why not everybody runs off to learn all"},{t:1819.59,x:"they can from Keepers, the reason why not everyone asks a Keeper to tell them"},{t:1824.04,x:"all the answers about themselves, is that this would bring parts of themselves into conflict"},{t:1829.14,x:"that were previously living in a more agreeable truce of ignorance."},{t:1833.86,x:"You might not survive as yourself, if you could see yourself."},{t:1837.83,x:"Those who say \"That which can be destroyed by the truth should be\" may continue"},{t:1842.39,x:"to walk the Path from there. But not uncommonly, even somebody who sets out along"},{t:1847.73,x:"that Path, turns back at some point, and well short of becoming a Keeper."},{t:1852.75,x:"It's not a trivial price, higher for some than others,"},{t:1856.25,x:"and there is varying willingness to pay."},{t:1858.64,x:"A lot of the reason why Keepers exist as what they are,"},{t:1862.5,x:"is that the people who have large comparative advantages there -"},{t:1865.71,x:"in how little they'll be hurt by knowing themselves, or how much they really internally"},{t:1870.67,x:"want to keep going anyways - are conceived of by larger society as being paid to"},{t:1875.9,x:"throw themselves on that grenade, so others don't have to."},{t:1879.71,x:"And if, to some Keepers, it doesn't feel like much of a grenade at all,"},{t:1884.42,x:"they understand that their case is not typical, and are grateful for winning the comparative-advantage"},{t:1889,x:"lottery. Going up by two local standard deviations, in whatever it is that Owl's Wisdom"},{t:1894.25,x:"enhances, is something that the current structures of Keltham's personality were never built to withstand."},{t:1900.21,x:"He knows, from up here, because he couldn't stop himself from glancing in that direction,"},{t:1905.91,x:"that in dath ilan he would never have had his 144 children."},{t:1909.73,x:"He would have tried to be special and failed and been sad and then maybe"},{t:1916.13,x:"gotten an ordinary +0.8sd job and either paid for a child out of that or"},{t:1921.64,x:"decided he was too strange and unhappy to have one."},{t:1924.44,x:"It's not considered necessary for somebody Keltham's age to go and pay a Keeper to"},{t:1929.18,x:"tell them exactly what the probabilities are, about something like that."},{t:1932.71,x:"It's not so much that people are encouraged to lie to themselves,"},{t:1936.67,x:"reality forbid, but that people are told it's okay for them not to shove themselves"},{t:1941.67,x:"as hard as possible down the Pathway that will dissolve the mistakes their current personality"},{t:1946.35,x:"is built out of. That's what Keepers are for."},{t:1949.09,x:"They do it so that not everybody else has to."},{t:1952.1,x:"There are grownups around in Civilization, who can and will speak up if the people"},{t:1956.6,x:"less mature are about to make some terrible mistake out of their blindness."},{t:1960.25,x:"So you do not need to rush ahead to be a Keeper if you'd rather"},{t:1964,x:"be a little less coherent, a little more yourself and your mistakes and your contradictions,"},{t:1968,x:"a little more human, for a time."},{t:1970.33,x:"But it's too late now, for Keltham to go back,"},{t:1973.67,x:"because also in the common wisdom is that once you see what it is you"},{t:1978.54,x:"weren't letting yourself see - once you know which mistakes your personality is founded upon -"},{t:1983.04,x:"or even if you're trying hard not to know it,"},{t:1985.87,x:"to the point where it's becoming a big internal battle -"},{t:1988.53,x:"well, at that point, you're supposed to give it up."},{t:1991.2,x:"It means that, well, sorry, you are that smart now,"},{t:1994.33,x:"like it or not, you are that wise, you did grow up that much whether"},{t:1999.33,x:"or not you wished to stay a child for longer;"},{t:2002.35,x:"it's time to move on. And the part where he was going to fail at"},{t:2006.38,x:"his life's goals, in dath ilan, isn't even the important thing that he can't help"},{t:2011.43,x:"but see now, about himself; realize now, at this level of wisdom."},{t:2015.75,x:"dath ilan: There was a question asked once of some bright children,"},{t:2018.76,x:"among whom Keltham was numbered; in a class where he had seemed to be among"},{t:2022.9,x:"the oldest and worst performers; a class assembled of kids who were faster than Keltham."},{t:2027.67,x:"And young Keltham had, by that time, already seen through some of the Lies Told"},{t:2032.61,x:"To Children; he was past his experience with finding that lightly injured adult on his"},{t:2037.43,x:"way home. He had learned that children are sometimes put into contrived situations meant to"},{t:2042.15,x:"teach them things. Keltham was suspicious already, before the key moment;"},{t:2045.54,x:"he had already guessed that he was meant to learn,"},{t:2048.55,x:"in this class, something about what it feels like to be surrounded by others faster"},{t:2052.69,x:"and more knowledgeable and even younger than you are."},{t:2055.17,x:"But in this guess, Keltham proved to be wrong; he was not the one there"},{t:2059.87,x:"who was to learn a lesson, that day."},{t:2062.45,x:"The class was on self-integrity, and relatedly morals; a class taught directly by a Watcher-over-Children,"},{t:2068.33,x:"not entrusted to older children at all."},{t:2070.67,x:"And the Watcher told the class a parable about an adult,"},{t:2074.68,x:"coming across a child who'd somehow bypassed the various safeguards around a wilderness area,"},{t:2080.58,x:"and fallen into a muddy pond, and seemed to be showing signs of drowning (for"},{t:2085.5,x:"they'd already been told, then, what drowning looked like)."},{t:2088.39,x:"The water, in this parable, didn't look like it would be over their own adult"},{t:2093.08,x:"heads. But - in the parable - they'd just bought some incredibly-expensive clothing,"},{t:2097.08,x:"costing dozens of their own labor-hours, and less resilient than usual,"},{t:2100.4,x:"that would be ruined by the muddy water."},{t:2102.53,x:"And the Watcher asked the class if they thought it was right to save the"},{t:2106.62,x:"child, at the cost of ruining their clothing."},{t:2109.1,x:"Everyone in there moved their hand to the 'yes' position,"},{t:2112.21,x:"of course. Except Keltham, who by this point had already decided quite clearly who he"},{t:2116.91,x:"was, and who simply closed his hand into a fist,"},{t:2120.09,x:"otherwise saying neither 'yes' nor 'no' to the question, defying it entirely."},{t:2123.55,x:"The Watcher asked him to explain, and Keltham said that it seemed to him that"},{t:2127.42,x:"it was okay for an adult to take an extra quarter-minute to strip off all"},{t:2131.71,x:"their super-expensive clothing and then jump in to save the child."},{t:2135.14,x:"The Watcher invited the other children to argue with Keltham about that,"},{t:2138.73,x:"which they did, though Keltham's first defense, that his utility function was what it was,"},{t:2144.18,x:"had not been a friendly one, or inviting of further argument."},{t:2148.1,x:"But they did eventually convince Keltham that, especially if you weren't sure you could call"},{t:2153.32,x:"in other help or get attention or successfully drag the child's body towards help,"},{t:2157.77,x:"if that child actually did drown - meaning the child's true life was at stake -"},{t:2161.81,x:"then it would make sense to jump in right away,"},{t:2164.39,x:"not take the extra risk of waiting another quarter-minute to strip off your clothes,"},{t:2168.33,x:"and bill the child's parents' insurance for the cost."},{t:2171.33,x:"Or at least, that was where Keltham shifted his position,"},{t:2174.67,x:"in the face of that argumentative pressure."},{t:2176.92,x:"Some kids, at that point, questioned the Watcher about this actually being a pretty good"},{t:2181.72,x:"point, and why wouldn't anyone just bill the child's parents' insurance."},{t:2185.33,x:"To which the Watcher asked them to consider hypothetically the case where insurance refused to"},{t:2190.33,x:"pay out in cases like that, because it would be too easy for people to"},{t:2195.14,x:"set up 'accidents' letting them bill insurances - not that this precaution had proven to be"},{t:2199.92,x:"necessary in real life, of course. But the Watcher asked them to consider the Least"},{t:2204.72,x:"Convenient Possible World where insurance companies, and even parents, did need to reason like that;"},{t:2209.67,x:"because there'd proven to be too many master criminals setting up 'children at risk of"},{t:2215,x:"true death from drowning' accidents that they could apparently avert and claim bounties on."},{t:2220.6,x:"Well, said Keltham, in that case, he was going right back to taking another fifteen"},{t:2225.67,x:"seconds to strip off his super-expensive clothes, if the child didn't look like it was"},{t:2230.41,x:"literally right about to drown. And if society didn't like that,"},{t:2234,x:"it was society's job to solve that thing with the master criminals."},{t:2238,x:"Though he'd maybe modify that if they were in a possible-true-death situation,"},{t:2241.73,x:"because a true life is worth a huge number of labor-hours,"},{t:2244.93,x:"and that part did feel like some bit of decision theory would say that everyone"},{t:2249.52,x:"would be wealthier if everyone would sacrifice small amounts of wealth to save huge amounts"},{t:2254.39,x:"of somebody else's wealth, if that happened unpredictably to people,"},{t:2258.28,x:"and if society was also that incompetent at setting up proper reimbursements."},{t:2262.73,x:"Though if it was like that in real life instead of the Least Convenient Possible"},{t:2267.92,x:"World, it would mean that Civilization was terrible at coordination and it was time to"},{t:2273,x:"overthrow Governance and start over. This time the smarter kids did not succeed in pushing"},{t:2277.83,x:"Keltham away from his position, and after a few more minutes the Watcher called a"},{t:2281.97,x:"halt to it, and told the assembled children that they had been brought here today"},{t:2286.88,x:"to learn an important lesson from Keltham about self-integrity."},{t:2291.12,x:"Keltham is being coherent, said the Watcher."},{t:2294.09,x:"Keltham's decision is a valid one, given his own utility function (said the Watcher);"},{t:2299.18,x:"you were wrong to try to talk him into thinking that he was making an"},{t:2304,x:"objective error. It's easy for you to say you'd save the child (said the Watcher)"},{t:2308.5,x:"when you're not really there, when you don't actually have to make the sacrifice of"},{t:2312.33,x:"what you spent so many hours laboring to obtain, and would you all please note"},{t:2315.83,x:"how none of you even considered about whether or not to spend a quarter-minute stripping"},{t:2320.38,x:"off your clothes, or whether to try to bill the child's parents' insurance."},{t:2324.38,x:"Because you were too busy showing off how Moral you were,"},{t:2327.62,x:"and how willing to make Sacrifices. Maybe you would decide not to do it,"},{t:2331.71,x:"if the fifteen seconds were too costly; and then, any time you spent thinking about"},{t:2336.73,x:"it, would also have been costly; and in that sense it might make more sense"},{t:2342,x:"given your own utility functions (unlike Keltham's) to rush ahead without taking the time to"},{t:2347,x:"think, let alone the time to strip off your expensive fragile clothes."},{t:2351,x:"But labor does have value, along with a child's life;"},{t:2354.41,x:"and it is not incoherent or stupid for Keltham to weigh that too,"},{t:2359.73,x:"especially given his own utility function - so said the Watcher."},{t:2363.52,x:"Keltham did have enough dignity, by that point in his life,"},{t:2366.35,x:"not to rub it in or say 'told you so' to the other children,"},{t:2369.97,x:"as this would have distracted them from the process of updating."},{t:2373.62,x:"The Watcher spoke on, then, about how most people have selfish and unselfish parts -"},{t:2378.88,x:"not selfish and unselfish components in their utility function, but parts of themselves in some"},{t:2384.67,x:"less Law-aspiring way than that. Something with a utility function,"},{t:2388.72,x:"if it values an apple 1% more than an orange,"},{t:2392.17,x:"if offered a million apple-or-orange choices, will choose a million apples and zero oranges."},{t:2397.67,x:"The division within most people into selfish and unselfish components is not like that,"},{t:2402.33,x:"you cannot feed it all with unselfish choices whatever the ratio."},{t:2406,x:"Not unless you are a Keeper, maybe, who has made yourself sharper and more coherent;"},{t:2411,x:"or maybe not even then, who knows?"},{t:2413.39,x:"For (it was said in another place) it is hazardous to non-Keepers to know too"},{t:2418.96,x:"much about exactly how Keepers think. It is dangerous to believe,"},{t:2422.29,x:"said the Watcher, that you get extra virtue points the more that you let your"},{t:2426.71,x:"altruistic part hammer down the selfish part."},{t:2428.95,x:"If you were older, said the Watcher, if you were more able to dissect thoughts"},{t:2433.73,x:"into their parts and catalogue their effects, you would have noticed at once how this"},{t:2438.3,x:"whole parable of the drowning child, was set to crush down the selfish part of"},{t:2442.8,x:"you, to make it look like you would be invalid and shameful and harmful-to-others if"},{t:2447.85,x:"the selfish part of you won, because, you're meant to think,"},{t:2451.11,x:"people don't need expensive clothing - although somebody who's spent a lot on expensive clothing clearly"},{t:2455.69,x:"has some use for it or some part of themselves that desires it quite strongly."},{t:2460.3,x:"It is a parable calculated to set at odds two pieces of yourself (said the"},{t:2464.8,x:"Watcher), and your flaw is not that you made the wrong choice between the two"},{t:2469.29,x:"pieces, it was that you hammered one of those pieces down."},{t:2472.5,x:"Even though with a bit more thought, you could have at least seen the options"},{t:2477,x:"for being that piece of yourself too, and not too expensively."},{t:2480.67,x:"And much more importantly (said the Watcher), you failed to understand and notice a kind"},{t:2485.57,x:"of outside assault on your internal integrity, you did not notice how this parable was"},{t:2490.39,x:"setting up two pieces of yourself at odds, so that you could not be both"},{t:2494.69,x:"at once, and arranging for one of them to hammer down the other in a"},{t:2498.73,x:"way that would leave it feeling small and injured and unable to speak in its"},{t:2503.5,x:"own defense. \"If I'd actually wanted you to twist yourselves up and burn yourselves out"},{t:2508.3,x:"around this,\" said the Watcher, \"I could have designed an adversarial lecture that would have"},{t:2512.8,x:"driven everybody in this room halfway crazy - except for Keltham."},{t:2516.21,x:"He's not just immune because he's an agent with a slightly different utility function,"},{t:2521.35,x:"he's immune because he instinctively doesn't switch off a kind of self-integrity that everyone else"},{t:2526.88,x:"in this class needs to learn to not switch off so easily.\""},{t:2530.91,x:"It was a proud day for Keltham and a formative one,"},{t:2534.26,x:"that dath ilan had acknowledged that the alien in their midst might have his uses."},{t:2538.61,x:"Like making it slightly easier to demonstrate a useful children's lesson for a class full"},{t:2543.43,x:"of the smarter and more altruistic kids who would actually grow up to matter."},{t:2547.55,x:"But even so, there's a difference between growing up in a world that has no"},{t:2551.42,x:"place for you and no use for you and respects nothing about you,"},{t:2554.87,x:"versus a world which has a place for you and some use for you and"},{t:2559.23,x:"ever really actually admits you can get some things right a little faster."},{t:2562.98,x:"Keltham doesn't review all that in his mind."},{t:2565,x:"There isn't enough time left on the Owl's Wisdom for that."},{t:2567.75,x:"The other thing he sees, from up here, is the point that his mind was"},{t:2571.5,x:"put together the way it is, including the part where he's a kid who doesn't"},{t:2575.25,x:"have to rush down the Path to stare at things like the truth that he"},{t:2579,x:"couldn't have made a difference in dath ilan, and including the part where his contribution"},{t:2583.31,x:"to diversity is pursuing the Way of being selfish and the things that selfish people"},{t:2587.93,x:"can see faster than others, his whole self was put together,"},{t:2591.34,x:"based on the assumption that he's in dath ilan, where,"},{t:2594.45,x:"if Keltham is like that, terrible things won't happen to him."},{t:2598.7,x:"Or to other people. Golarion isn't dath ilan."},{t:2602.3,x:"His entire self and personality and emotional balance was assembled around beliefs that might not"},{t:2608.33,x:"still be true. Probably aren't true. Keltham doesn't try to make any big decisions right"},{t:2613.33,x:"now, he shouldn't, that's not what you do when you're on a new mind-affecting drug"},{t:2617.63,x:"that is promising all kinds of startling revelations about yourself and what a foolish wrong"},{t:2621.7,x:"person you've been. But it's something that he needs to think about after the spell"},{t:2626.95,x:"wears off. Drowning child, Keltham writes on the paper."},{t:2630.35,x:"Sorry."},{t:2630.74,x:"The spell doesn't wear off immediately after he writes it,"},{t:2634.65,x:"because reality isn't dramatic like that. He spends the remaining time looking around himself for"},{t:2639.77,x:"other hidden thoughts instead, because that is the sensible thing to do,"},{t:2643.46,x:"and when your Wisdom goes up by two local standard deviations,"},{t:2646.93,x:"doing the sensible thing has a greater intuitive force because you can actually see how"},{t:2651.75,x:"it is sensible and why."},{t:2653.36,x:"And then the spell wears off."},{t:2655.27,x:"He spends a while just breathing evenly, trying to absorb the full force of the"},{t:2660.05,x:"blow he's taken, which is also a recommended procedure."},{t:2663,x:"Flowers for mouse, he thinks, and doesn't bother to write it on the paper,"},{t:2667.67,x:"because it's not a message from the Wiser Keltham, and he doesn't even really feel"},{t:2671.73,x:"that way, it's just his brain completing a cliche."},{t:2674.13,x:"They - also say you're not supposed to throw away and revise your entire personality at"},{t:2678.91,x:"once - and he is still himself, he is still Keltham,"},{t:2682.55,x:"he is not an average dath ilani carrying out a LARP assignment of being more"},{t:2687.46,x:"selfish than average, he is actually the person who didn't need to be taught self-integrity"},{t:2693,x:"and who wanted to be paid for helping somebody else."},{t:2695.73,x:"If he decides to change things, it will have to be built around who Keltham"},{t:2700.09,x:"is, a person who is not an average dath ilani."},{t:2702.91,x:"And an average dath ilani would have to make changes too,"},{t:2706.26,x:"if they were here. Only a Keeper is supposed to be built out of pure"},{t:2710.6,x:"sharp coherent abstractions that could walk from one world to another and not need to"},{t:2714.6,x:"change their clothes along the way. The part of himself that's terrified he's going to"},{t:2719.31,x:"suddenly admit that everything he holds dear was a factual mistake and turn himself into"},{t:2725.08,x:"an average dath ilani in dath ilan, is - probably right to be terrified in some"},{t:2729.37,x:"ways, because in many particular dimensions that's a kind of decision that his Wiser self"},{t:2733.81,x:"left open as a possibility, and he can't unsee or unremember things he should have"},{t:2738.67,x:"been too young and stupid to see."},{t:2741,x:"But he is not supposed to turn into an average dath ilani in dath ilan."},{t:2745.64,x:"He needs to be Keltham in Golarion."},{t:2748.18,x:"Why didn't they warn him? Because people in Golarion get Owl's Wisdom cast on them"},{t:2752.86,x:"once every six months, and they've never experienced what it's like to have gone your"},{t:2757.14,x:"whole life without Owl's Wisdom? Somehow Keltham doesn't think that's it."},{t:2761.56,x:"It's a piece of - something wrong, something he doesn't know,"},{t:2766,x:"something he believes that's false - about this entire situation, this entire world."},{t:2770.67,x:"People not quite behaving like obvious models say they should."},{t:2774.33,x:"...or they just have so little internal stuff that is actually powered by self-reflection that"},{t:2779.33,x:"not very much happens to them when they suddenly get amplified reflection?"},{t:2783.33,x:"No, that also feels like one of those weird excuses that Keltham was coming up"},{t:2788.67,x:"with inside, to dismiss puzzle pieces. Keltham does feel - annoyed,"},{t:2792.7,x:"on some level, injured even, that there weren't more warning signs."},{t:2797.65,x:"He thought he was getting a perception boost or maybe the equivalent of +0.1sd at"},{t:2803.69,x:"some innate mental quality, not this. Or, well, no, he didn't have that much of"},{t:2811,x:"a model, he didn't really think about it at all,"},{t:2814,x:"he didn't ask, because he was still mentally living in a world where everything that"},{t:2817.75,x:"can hit you really hard has a clearly attached warning sign that Civilization put there."},{t:2821.67,x:"But it's also not the sort of thing that you should just allow to happen,"},{t:2825.67,x:"if you are running a massive complicated scam on the alien visitor."},{t:2829.07,x:"Unless you figure that you can't really stop him from casting Owl's Wisdom on himself"},{t:2833.52,x:"so you might as well just let it happen?"},{t:2836.07,x:"They could've told him it would only last ten seconds and then sneakily hit him"},{t:2840.33,x:"with a Dispel Magic, he knows that's a standard magic,"},{t:2843,x:"it was in the books."},{t:2844.61,x:"Keltham can feel that he's thinking little dissonant pieces of thoughts grinding against themselves,"},{t:2849.11,x:"and he knows that if he had Owl's Wisdom back,"},{t:2852.3,x:"he would be able to see how and why they were grinding against themselves and"},{t:2856.87,x:"sort them out much more easily. Maybe if he casts this spell on himself once"},{t:2861.55,x:"per day, and practices thinking the way he practiced cantrips,"},{t:2865.05,x:"he'll be able to - well, turn into a more Keeperlike version of himself."},{t:2871.5,x:"If he wants that. Well, no, he's pretty sure he doesn't want that."},{t:2876.67,x:"If he chooses it anyways."},{t:2878.67,x:"There is - something dangerous, Keltham thinks, about having a sense of perspective,"},{t:2882.67,x:"if too much of it comes on too quickly - there is seeing yourself,"},{t:2887,x:"and the shadow of everything you've done, from the perspective where it is smaller and"},{t:2891.71,x:"stupider - even the parts of you that provided all of your drive and your will"},{t:2896,x:"and your sense of enjoyment in life, maybe not as ill things in themselves,"},{t:2900.55,x:"but arranged stupidly - and with no better way to arrange them being obvious,"},{t:2905.27,x:"as yet, because you were only wiser for something less than eight minutes."},{t:2910.4,x:"Of which you spent half that time practicing spellcasting."},{t:2914,x:"He is - not looking forwards as much, to his date with Carissa tonight,"},{t:2918.4,x:"as he was an hour ago. Because he's looked back and reflected on himself,"},{t:2922.6,x:"and on the whole headlong rush forwards that is a defining quality of Mad Investor"},{t:2927.33,x:"Chaos. And now he is, in fact, thinking questioning thoughts about whether it is really"},{t:2932.37,x:"in his own long-term self-interest - or yes the interest of a bunch of drowning children"},{t:2937.89,x:"that he does care about literally at all even if he wants to be paid"},{t:2942.48,x:"for saving them - for him to prioritize having sex with his research harem as one"},{t:2946.84,x:"of his top goals on his second day in another universe."},{t:2950.33,x:"Should he actually be hesitant about that?"},{t:2952.67,x:"It doesn't make sense, does it? He should not, in the face of this shock,"},{t:2957.55,x:"have suddenly turned into a standard dath ilani."},{t:2960.09,x:"He is still himself, he should still have the parts of himself that are hyped"},{t:2964.7,x:"for a date with Carissa. Being hit with a temporary spell should not have changed"},{t:2969.2,x:"those internal parts. And if now his self is in a weird internal state of"},{t:2973.61,x:"strife that prevents him from ever having any fun again -"},{t:2976.52,x:"then he is pretty sure a Keeper would tell him that this is not the"},{t:2980.92,x:"optimal way to get smashed and rearranged by a temporary reflectivity-increasing mind-affecting drug."},{t:2985.54,x:"There's a lot to be said for trying to snap out of this and go"},{t:2989.65,x:"back to his normal, and then only change one piece of himself at a time"},{t:2993.18,x:"from there, in response to new facts about Golarion as he actually learns them,"},{t:2996.8,x:"because Keltham has not precached any other sensibly configured ways to be."},{t:3001.6,x:"That sounds to Keltham like the sort of standard advice that a Keeper would give"},{t:3006.33,x:"you about what to do if you've had an overly large epiphany,"},{t:3009.44,x:"especially one induced by a temporary state of perception you can't go back and access"},{t:3018,x:"again. Keltham continues to sit and think, for a time."},{t:3026.5,x:""}];
+const BEATS=[{t:0,s:'orient',v:'narrator'},{t:24,s:'orient',v:'keltham'},{t:54,s:'spells',v:'keltham'},{t:116,s:'catch',v:'narrator'},{t:170,s:'eagles_splendor',v:'keltham'},{t:222,s:'eagles_splendor',v:'keltham'},{t:274,s:'salesman',v:'keltham'},{t:329,s:'salesman',v:'keltham'},{t:385,s:'salesman',v:'keltham'},{t:444,s:'girls',v:'ione'},{t:502,s:'girls',v:'keltham'},{t:559,s:'salesman',v:'keltham'},{t:614,s:'salesman',v:'carissa'},{t:672,s:'salesman',v:'carissa'},{t:730,s:'salesman',v:'keltham'},{t:786,s:'salesman',v:'keltham'},{t:839,s:'salesman',v:'keltham'},{t:897,s:'salesman',v:'keltham'},{t:955,s:'salesman',v:'keltham'},{t:1010,s:'salesman',v:'keltham'},{t:1066,s:'owls_wisdom',v:'keltham'},{t:1122,s:'owls_wisdom',v:'keltham'},{t:1176,s:'girls',v:'meritxell'},{t:1233,s:'owls_wisdom',v:'keltham'},{t:1288,s:'clarity',v:'keltham'},{t:1343,s:'catch',v:'keltham'},{t:1400,s:'catch',v:'keltham'},{t:1452,s:'window',v:'keltham'},{t:1507,s:'alone',v:'keltham'},{t:1563,s:'alone',v:'keltham'},{t:1620,s:'hints',v:'keltham'},{t:1676,s:'hints',v:'keltham'},{t:1732,s:'hints',v:'keltham'},{t:1791,s:'builtmind',v:'keltham'},{t:1843,s:'builtmind',v:'keltham'},{t:1896,s:'builtmind',v:'keltham'},{t:1950,s:'builtmind',v:'keltham'},{t:2008,s:'integrity',v:'keltham'},{t:2066,s:'watcher',v:'watcher'},{t:2122,s:'watcher',v:'watcher'},{t:2175,s:'watcher',v:'watcher'},{t:2231,s:'watcher',v:'watcher'},{t:2285,s:'integrity',v:'keltham'},{t:2340,s:'integrity',v:'keltham'},{t:2397,s:'integrity',v:'keltham'},{t:2452,s:'integrity',v:'keltham'},{t:2508,s:'watcher',v:'watcher'},{t:2563,s:'revise',v:'keltham'},{t:2621,s:'revise',v:'keltham'},{t:2676,s:'revise',v:'keltham'},{t:2735,s:'revise',v:'keltham'},{t:2790,s:'think',v:'keltham'},{t:2843,s:'think',v:'keltham'},{t:2898,s:'think',v:'keltham'},{t:2955,s:'think',v:'keltham'},{t:3011,s:'think',v:'keltham'},{t:3025,s:'think',v:'narrator'}];
+
+/* ===================== ASH / EMBERS ===================== */
+const cv=document.getElementById('ash'), ctx=cv.getContext('2d');
+let parts=[], W=0,H=0, accent={r:216,g:162,b:74};
+function size(){ const r=cv.getBoundingClientRect(); W=cv.width=r.width; H=cv.height=r.height; }
+addEventListener('resize',size); size();
+function spawn(){ return {x:Math.random()*W, y:H+10, vy:-(0.2+Math.random()*0.55), vx:(Math.random()-0.5)*0.2, r:Math.random()*1.7+0.4, life:0, max:H*(0.5+Math.random()*0.6), tw:Math.random()*6}; }
+for(let i=0;i<60;i++){ const p=spawn(); p.y=Math.random()*H; parts.push(p); }
+let ashPaused=false;
+function ash(t){
+  if(!ashPaused){
+    ctx.clearRect(0,0,W,H);
+    for(const p of parts){
+      p.y+=p.vy; p.x+=p.vx+Math.sin(t/1000+p.tw)*0.14; p.life++;
+      const k=1-p.life/p.max;
+      if(p.life>p.max||p.y<-10){ Object.assign(p,spawn()); continue; }
+      const a=Math.max(0,k)*0.8*(0.6+0.4*Math.sin(t/300+p.tw));
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7);
+      ctx.fillStyle=`rgba(${accent.r},${accent.g},${accent.b},${a})`; ctx.shadowBlur=8; ctx.shadowColor=ctx.fillStyle; ctx.fill();
+    }
+    ctx.shadowBlur=0;
+  }
+  requestAnimationFrame(ash);
+}
+requestAnimationFrame(ash);
+function hexRgb(h){const m=h.replace('#','');return {r:parseInt(m.slice(0,2),16),g:parseInt(m.slice(2,4),16),b:parseInt(m.slice(4,6),16)};}
+
+/* ===================== DOM ===================== */
+const SPEEDS=[1,1.25,1.5,0.75];
+let speed=1, curScene=null, curCue=-1, curBeat=-1, capsOn=true;
+const frame=document.getElementById('frame');
+const introEl=document.getElementById('intro');
+const capEl=document.getElementById('cap');
+const labelEl=document.getElementById('label');
+const knameEl=document.getElementById('kname');
+const ttlEl=document.getElementById('ttl');
+const ksigUse=document.getElementById('ksig-use');
+const barEl=document.getElementById('bar');
+const beatEl=document.getElementById('beat');
+const playIcon=document.getElementById('playicon');
+const ccBtn=document.getElementById('cc');
+const audio=document.getElementById('player');
+const dropZone=document.getElementById('drop');
+const audioInput=document.getElementById('audiofile');
+const loadedBox=document.getElementById('loaded');
+const fnameEl=document.getElementById('fname');
+const durEl=document.getElementById('dur');
+const beginBtn=document.getElementById('begin');
+
+/* scene crossfade (Stardust-style) — beatEl shows the clock, so setScene only writes the title */
+function setScene(name){
+  if(name===curScene) return;
+  curScene=name;
+  document.querySelectorAll('.scene').forEach(el=>el.classList.remove('active','go'));
+  const el=document.querySelector(`.scene[data-scene="${name}"]`);
+  if(el){ el.classList.add('active'); requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add('go'))); }
+  ttlEl.textContent=SCENE_TITLES[name]||'';
+}
+function setSpeaker(v){
+  const c=CHARS[v]; if(!c) return;
+  knameEl.textContent=c.name; ksigUse.setAttribute('href','#'+c.sigil);
+  document.documentElement.style.setProperty('--accent', c.color); accent=hexRgb(c.color);
+}
+/* caption: blank text hides it; honours the CC toggle */
+function setCaption(text){
+  if(!capsOn || !text){ capEl.classList.remove('show'); return; }
+  capEl.classList.remove('show');
+  setTimeout(()=>{ if(!capsOn) return; capEl.textContent=text; capEl.classList.add('show'); },170);
+}
+function applyCaps(){ const c=CUES[curCue]; setCaption(c?c.x:''); }
+function setIcon(p){ playIcon.innerHTML = p?'<path d="M6 5h4v14H6zM14 5h4v14h-4z"></path>':'<path d="M8 5v14l11-7z"></path>'; }
+
+/* ===================== CLOCK + SYNC ===================== */
+function fmt(s){ if(!isFinite(s)||s<0) s=0; s=Math.floor(s); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+function findIdx(arr,time){ let lo=0,hi=arr.length-1,res=0; while(lo<=hi){ const m=(lo+hi)>>1; if(arr[m].t<=time){res=m;lo=m+1;} else hi=m-1; } return res; }
+function sync(){
+  const ct=audio.currentTime||0, d=audio.duration;
+  const bi=findIdx(BEATS,ct);
+  if(bi!==curBeat){ curBeat=bi; setScene(BEATS[bi].s); setSpeaker(BEATS[bi].v); }
+  const ci=findIdx(CUES,ct);
+  if(ci!==curCue){ curCue=ci; setCaption(CUES[ci].x); }
+  if(d){ barEl.style.width=Math.min(100,(ct/d*100))+'%'; }
+  beatEl.textContent=fmt(ct)+(d?(' / '+fmt(d)):'');
+}
+let rafId=0;
+function loop(){ if(audio.paused) return; sync(); rafId=requestAnimationFrame(loop); }
+
+/* ===================== AUDIO EVENTS ===================== */
+audio.addEventListener('timeupdate', sync);
+audio.addEventListener('seeked', ()=>{ curCue=-1; sync(); });
+audio.addEventListener('loadedmetadata', ()=>{ durEl.textContent='· '+fmt(audio.duration); beatEl.textContent='0:00 / '+fmt(audio.duration); });
+audio.addEventListener('play', ()=>{ frame.classList.add('playing'); document.body.classList.remove('paused'); ashPaused=false; setIcon(true); labelEl.classList.add('show'); sync(); loop(); });
+audio.addEventListener('pause', ()=>{ setIcon(false); document.body.classList.add('paused'); ashPaused=true; });
+audio.addEventListener('ended', finish);
+
+/* ===================== UPLOAD ===================== */
+const AUDIO_EXT=/\.(mp3|m4a|wav|ogg|oga|aac|flac|opus|weba|mp4)$/i;
+function loadAudioFile(file){
+  if(!file) return false;
+  if(file.type && !file.type.startsWith('audio/') && !AUDIO_EXT.test(file.name)) return false;
+  try{ if(audio.src) URL.revokeObjectURL(audio.src); }catch(_){}
+  audio.src=URL.createObjectURL(file); audio.playbackRate=speed; audio.load();
+  fnameEl.textContent=file.name; durEl.textContent='';
+  loadedBox.classList.add('show'); dropZone.classList.add('has');
+  beginBtn.disabled=false;
+  return true;
+}
+audioInput.addEventListener('change', e=>{ loadAudioFile(e.target.files[0]); });
+dropZone.addEventListener('click', ()=>audioInput.click());
+['dragenter','dragover'].forEach(ev=>dropZone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); dropZone.classList.add('drag'); }));
+['dragleave','dragend','drop'].forEach(ev=>dropZone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); if(ev!=='dragover') dropZone.classList.remove('drag'); }));
+dropZone.addEventListener('drop', e=>{
+  const files=[...(e.dataTransfer?e.dataTransfer.files:[])];
+  const aud=files.find(f=>f.type.startsWith('audio/')||AUDIO_EXT.test(f.name));
+  if(aud) loadAudioFile(aud);
+});
+
+/* ===================== PLAYBACK CONTROL ===================== */
+function startPlayback(){
+  if(!audio.src){ dropZone.classList.add('drag'); setTimeout(()=>dropZone.classList.remove('drag'),650); return; }
+  introEl.classList.remove('ended'); introEl.classList.add('gone');
+  if(audio.ended || (audio.duration && audio.currentTime>=audio.duration-0.05)){ audio.currentTime=0; curCue=-1; curBeat=-1; }
+  const p=audio.play(); if(p&&p.catch) p.catch(()=>{});
+}
+function finish(){
+  frame.classList.remove('playing'); setIcon(false);
+  introEl.classList.add('ended'); introEl.classList.remove('gone');
+}
+function seekToBeat(idx){ idx=Math.max(0,Math.min(BEATS.length-1,idx)); audio.currentTime=Math.max(0,BEATS[idx].t)+0.02; curCue=-1; sync(); }
+function nextBeat(){ seekToBeat(findIdx(BEATS,audio.currentTime)+1); }
+function prevBeat(){ const ci=findIdx(BEATS,audio.currentTime); seekToBeat((audio.currentTime-BEATS[ci].t>1.4)?ci:ci-1); }
+function togglePlay(){ if(audio.paused) audio.play().catch(()=>{}); else audio.pause(); }
+function toggleCaps(){ capsOn=!capsOn; ccBtn.classList.toggle('off',!capsOn); ccBtn.setAttribute('aria-pressed',String(capsOn)); applyCaps(); }
+
+beginBtn.addEventListener('click', startPlayback);
+document.getElementById('play').addEventListener('click', ()=>{ if(!introEl.classList.contains('gone')){ startPlayback(); return; } togglePlay(); });
+document.getElementById('next').addEventListener('click', nextBeat);
+document.getElementById('prev').addEventListener('click', prevBeat);
+document.getElementById('restart').addEventListener('click', ()=>{ audio.currentTime=0; curCue=-1; curBeat=-1; sync(); if(audio.paused) audio.play().catch(()=>{}); });
+document.getElementById('speed').addEventListener('click', e=>{ speed=SPEEDS[(SPEEDS.indexOf(speed)+1)%SPEEDS.length]; audio.playbackRate=speed; e.currentTarget.textContent=String(speed)+'×'; });
+ccBtn.addEventListener('click', toggleCaps);
+document.getElementById('prog').addEventListener('click', e=>{ if(!audio.duration) return; const r=e.currentTarget.getBoundingClientRect(); const frac=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)); audio.currentTime=frac*audio.duration; curCue=-1; sync(); });
+addEventListener('keydown', e=>{ if(!introEl.classList.contains('gone')) return;
+  if(e.code==='Space'){ e.preventDefault(); togglePlay(); }
+  else if(e.code==='ArrowRight'){ e.preventDefault(); nextBeat(); }
+  else if(e.code==='ArrowLeft'){ e.preventDefault(); prevBeat(); }
+  else if(e.key==='c'||e.key==='C'){ e.preventDefault(); toggleCaps(); } });
+addEventListener('beforeunload', ()=>{ try{ if(audio.src) URL.revokeObjectURL(audio.src); }catch(_){} });
+
+/* cast list */
+(function(){ const cast=document.getElementById('cast'); if(!cast) return;
+  for(const key of ['narrator','keltham','carissa','ione','meritxell','watcher']){
+    const c=CHARS[key], d=document.createElement('div'); d.className='c';
+    d.innerHTML=`<div class="ic" style="color:${c.color}"><svg><use href="#${c.sigil}"/></svg></div><div><div class="nm">${c.name.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div><div class="tg">${c.tag}</div></div>`;
+    cast.appendChild(d);
+  } })();
+
+/* initial backdrop + idle state */
+document.getElementById('speed').textContent='1×';
+setScene(BEATS[0].s); setSpeaker(BEATS[0].v); setIcon(false);
+beatEl.textContent='0:00';
+
+</script>
+</body>
+</html>

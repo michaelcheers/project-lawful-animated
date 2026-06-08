@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planecrash — Corrigibility · an animated reading</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Spectral:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0608; --ink:#f0e6d8; --muted:#9a8a84;
+  --accent:#d8a24a; --gold:#d8a24a; --blood:#c2152f; --ember:#ff8a3c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:radial-gradient(120% 90% at 50% 6%, #1a0c10 0%, var(--bg) 55%, #050304 100%);
+  color:var(--ink); font-family:"Spectral",Georgia,serif; overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+.paused .anim, .paused .scene *{animation-play-state:paused !important}
+
+/* ---------- cinematic stage ---------- */
+#stage{position:fixed; inset:0; display:flex; align-items:center; justify-content:center}
+.frame{
+  position:relative; width:min(100vw,177.7vh); height:min(100vh,56.25vw);
+  overflow:hidden; background:#06040a; box-shadow:0 0 140px rgba(0,0,0,.8) inset, 0 30px 90px rgba(0,0,0,.6);
+}
+#ash{position:absolute; inset:0; z-index:1; pointer-events:none}
+
+.scene{position:absolute; inset:0; z-index:2; opacity:0; transition:opacity 1.5s ease; pointer-events:none}
+.scene.active{opacity:1}
+.scene svg{position:absolute; inset:0; width:100%; height:100%}
+/* a soft vignette over scenes */
+#vignette{position:absolute; inset:0; z-index:4; pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 42%, transparent 52%, rgba(5,3,4,.55) 100%);}
+
+/* ---------- speaker / beat label ---------- */
+#label{position:absolute; left:4.4%; top:7.5%; z-index:6; opacity:0; transform:translateY(8px);
+  transition:opacity .8s ease, transform .8s ease; max-width:54%}
+#label.show{opacity:1; transform:none}
+#label .kicker{display:flex; align-items:center; gap:9px; margin-bottom:5px}
+#label .ksig{width:26px; height:26px; color:var(--accent); transition:color .6s ease; flex:0 0 auto}
+#label .ksig svg{width:100%;height:100%}
+#label .kname{font-family:"Cinzel",serif; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
+  font-size:clamp(9px,1.05vw,13px); color:var(--accent); transition:color .6s ease}
+#label .ttl{font-family:"Cinzel",serif; font-weight:700; line-height:1.04; letter-spacing:.005em;
+  font-size:clamp(20px,3.4vw,50px); color:#fff; text-shadow:0 2px 26px rgba(0,0,0,.7)}
+
+/* ---------- caption ---------- */
+#cap-wrap{position:absolute; left:0; right:0; bottom:8.5%; z-index:6; display:flex; justify-content:center;
+  padding:0 6%; pointer-events:none}
+#cap{position:relative; max-width:min(1080px,90%); text-align:center;
+  font-size:clamp(14px,1.85vw,25px); line-height:1.45; font-weight:400; letter-spacing:.004em; color:var(--ink);
+  text-shadow:0 2px 20px rgba(0,0,0,.95), 0 0 60px rgba(0,0,0,.85);
+  opacity:0; transform:translateY(10px); transition:opacity .5s ease, transform .5s ease}
+#cap.show{opacity:1; transform:none}
+#cap.dlg{font-style:italic}
+#cap::before{content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:135%; height:340%; z-index:-1; pointer-events:none;
+  background:radial-gradient(closest-side, rgba(6,4,6,.82), rgba(6,4,6,.4) 60%, transparent 100%)}
+
+/* ---------- intro ---------- */
+#intro{position:absolute; inset:0; z-index:20; overflow-y:auto;
+  background:radial-gradient(80% 80% at 50% 40%, rgba(26,12,16,.55), rgba(4,3,4,.95));
+  transition:opacity 1.1s ease}
+#intro.gone{opacity:0; pointer-events:none}
+.intro-in{min-height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; gap:2.2vh; padding:5vh 7vw 7vh}
+#intro .eyebrow{font-family:"Cinzel",serif; font-size:clamp(9px,1.05vw,13px); letter-spacing:.5em; text-transform:uppercase; color:var(--gold)}
+#intro h1{font-family:"Cinzel",serif; font-weight:700; letter-spacing:.02em; font-size:clamp(40px,9vw,118px); line-height:.92;
+  background:linear-gradient(180deg,#fff 0%, #e9c277 52%, #b3122b 132%); -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent; filter:drop-shadow(0 8px 50px rgba(179,18,43,.32))}
+#intro .sub{font-size:clamp(13px,1.55vw,19px); font-style:italic; color:#cbb9a9; max-width:44ch; line-height:1.55; font-weight:300}
+.cast{display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:11px 18px; width:100%; max-width:760px; margin-top:1vh}
+.cast .c{display:flex; align-items:center; gap:11px; text-align:left; padding:7px 10px; border:1px solid rgba(216,162,74,.13); border-radius:9px; background:rgba(255,255,255,.012)}
+.cast .ic{width:32px;height:32px;flex:0 0 auto} .cast .ic svg{width:100%;height:100%}
+.cast .nm{font-family:"Cinzel",serif; font-size:12px; letter-spacing:.02em; line-height:1.15}
+.cast .tg{font-style:italic; font-size:11px; color:var(--muted); margin-top:1px}
+#begin{margin-top:1vh; display:inline-flex; align-items:center; gap:.7em; font-family:"Cinzel",serif; font-weight:600;
+  font-size:clamp(14px,1.5vw,17px); letter-spacing:.06em; color:#1a0c0a; padding:.85em 2.1em; border:none; border-radius:100px;
+  cursor:pointer; background:linear-gradient(180deg,#f0cd86,#d8a24a);
+  box-shadow:0 12px 44px rgba(216,162,74,.34), inset 0 0 0 1px rgba(255,255,255,.25); transition:transform .25s, box-shadow .25s}
+#begin:hover{transform:translateY(-2px) scale(1.02); box-shadow:0 18px 56px rgba(216,162,74,.5)}
+#begin .tri{width:0;height:0;border-left:11px solid #1a0c0a;border-top:7px solid transparent;border-bottom:7px solid transparent}
+#intro .note{font-size:11px;color:#6a5a56;letter-spacing:.03em}
+#intro .src{font-size:11px;color:#5e4f4b;max-width:52ch;line-height:1.6}
+
+/* ---------- controls ---------- */
+#controls{position:absolute; left:0; right:0; bottom:0; z-index:30; display:flex; align-items:center; gap:13px;
+  padding:13px 4.4%; background:linear-gradient(0deg, rgba(5,3,5,.85), transparent);
+  opacity:0; transition:opacity .4s ease; pointer-events:none}
+.frame.playing #controls{opacity:1; pointer-events:auto}
+.btn{background:rgba(240,230,216,.05); border:1px solid rgba(216,162,74,.28); color:var(--ink); border-radius:50%;
+  cursor:pointer; flex:0 0 auto; display:grid; place-items:center; transition:background .2s,border-color .2s,transform .15s}
+.btn:hover{background:rgba(216,162,74,.16); border-color:var(--accent)} .btn:active{transform:scale(.94)}
+.btn svg{fill:var(--ink)}
+.btn.lg{width:46px;height:46px} .btn.lg svg{width:18px;height:18px}
+.btn.sm{width:38px;height:38px} .btn.sm svg{width:14px;height:14px}
+#speed{width:auto;min-width:46px;height:38px;border-radius:20px;padding:0 12px;font-family:"Spectral",serif;font-style:italic;font-size:13px}
+#prog{flex:1; height:3px; border-radius:3px; background:rgba(240,230,216,.13); position:relative; cursor:pointer}
+#bar{position:absolute; left:0;top:0;bottom:0; width:0; background:linear-gradient(90deg,var(--accent),var(--blood)); border-radius:3px; transition:width .5s ease, background .8s ease}
+#beat{font-family:"Cinzel",serif; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); min-width:120px; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:24%}
+
+/* ---------- shared animation helpers ---------- */
+.spin{transform-origin:center;animation:spin 60s linear infinite}
+.spin-s{transform-origin:center;animation:spin 120s linear infinite}
+.spin-r{transform-origin:center;animation:spin 80s linear infinite reverse}
+.spin-f{transform-origin:center;animation:spin 9s linear infinite}
+.spin-vf{transform-origin:center;animation:spin 2.4s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.breathe{transform-origin:center;animation:breathe 6s ease-in-out infinite}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.flick{transform-origin:bottom center;animation:flick 1.4s ease-in-out infinite}
+@keyframes flick{0%,100%{opacity:.9;transform:scaleY(1) scaleX(1)}40%{opacity:1;transform:scaleY(1.1) scaleX(.94)}70%{opacity:.85;transform:scaleY(.96) scaleX(1.04)}}
+.sway{transform-origin:top center;animation:sway 4s ease-in-out infinite}
+@keyframes sway{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+.tw{animation:tw 3s ease-in-out infinite}
+@keyframes tw{0%,100%{opacity:.2}50%{opacity:1}}
+.pulse{animation:pulse 3.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.25}50%{opacity:.95}}
+.pulse-f{animation:pulse 1.6s ease-in-out infinite}
+.drift{animation:drift 26s ease-in-out infinite}
+@keyframes drift{0%{transform:translate(0,0)}50%{transform:translate(2.4%,-2%)}100%{transform:translate(0,0)}}
+@keyframes floatUp{0%{transform:translateY(34px);opacity:0}16%{opacity:.9}100%{transform:translateY(-58px);opacity:0}}
+.flow{stroke-dasharray:8 16; animation:flow 2.2s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-48}}
+.draw{stroke-dasharray:600; stroke-dashoffset:600; animation:draw 5s ease-in-out infinite alternate}
+@keyframes draw{to{stroke-dashoffset:0}}
+.beam{animation:beam 1.7s ease-in-out infinite}
+@keyframes beam{0%,100%{opacity:.12}50%{opacity:.6}}
+
+/* one-shot scene-entry effects (fire when scene gets .go) */
+.flash{opacity:0}
+.scene.active.go .flash{animation:flashK 1.7s ease-out .3s forwards}
+@keyframes flashK{0%{opacity:0}12%{opacity:.85}100%{opacity:0}}
+.burst{opacity:0;transform-origin:center}
+.scene.active.go .burst{animation:burstK 3s cubic-bezier(.1,.7,.3,1) .3s forwards}
+@keyframes burstK{0%{opacity:0;transform:scale(.08)}14%{opacity:1}100%{opacity:0;transform:scale(4.2)}}
+.stamp{opacity:0;transform-origin:center}
+.scene.active.go .stamp{animation:stampK 1.2s cubic-bezier(.2,1.4,.4,1) .4s forwards}
+@keyframes stampK{0%{opacity:0;transform:scale(2.4) rotate(-12deg)}60%{opacity:1;transform:scale(1) rotate(0)}100%{opacity:1;transform:scale(1)}}
+.fall{opacity:0;transform-origin:center}
+.scene.active.go .fall{animation:fallK 3.4s ease-in 1s forwards}
+@keyframes fallK{0%{opacity:0;transform:translateY(-260px) scale(.6)}20%{opacity:1}82%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(10px) scale(2.2)}}
+.rise{transform-origin:center;animation:rise 7s ease-in-out infinite alternate}
+@keyframes rise{from{transform:translateY(8px)}to{transform:translateY(-8px)}}
+
+@media (max-width:640px){ #beat{display:none} #label{max-width:78%} }
+
+/* ---- audio upload UI ---- */
+#drop{margin:1.6vh auto .2vh;width:min(560px,90%);border:1.6px dashed rgba(216,162,74,.42);border-radius:14px;padding:24px 20px 20px;cursor:pointer;background:rgba(255,255,255,.015);transition:border-color .2s, background .2s, transform .2s}
+#drop:hover{border-color:var(--gold);background:rgba(216,162,74,.06)}
+#drop.drag{border-color:var(--gold);background:rgba(216,162,74,.14);transform:scale(1.012)}
+#drop.has{border-style:solid;border-color:rgba(79,230,205,.5);background:rgba(79,230,205,.05)}
+#drop .dz-ic{width:30px;height:30px;color:var(--gold);opacity:.9;margin-bottom:6px}
+#drop.has .dz-ic{color:#4fe6cd}
+#drop .dz-msg{font-family:"Spectral",serif;font-style:italic;font-size:15px;color:#e9dcc8;letter-spacing:.01em}
+#drop .dz-sub{font-size:11px;color:#7c6a64;margin-top:7px;letter-spacing:.02em}
+#loaded{display:none;align-items:center;justify-content:center;gap:9px;margin:11px auto 2px;font-size:12.5px;color:#cbb9a9}
+#loaded.show{display:flex}
+#loaded .ck{color:#4fe6cd;font-weight:700}
+#loaded .fn{font-family:"Cinzel",serif;letter-spacing:.02em;color:#f0e6d8;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#loaded #dur{color:#7c6a64}
+#begin[disabled]{opacity:.38;cursor:not-allowed;filter:grayscale(.45);box-shadow:none}
+#begin[disabled]:hover{transform:none}
+#intro.ended #drop, #intro.ended #loaded, #intro.ended .cast{display:none}
+audio{display:none}
+/* captions toggle */
+#cc{font-family:"Cinzel",serif;font-weight:600;letter-spacing:.06em;font-size:12px;position:relative}
+#cc.off{opacity:.5}
+#cc.off::after{content:"";position:absolute;left:18%;right:18%;top:50%;height:1.5px;background:currentColor;transform:rotate(-12deg);opacity:.85}
+</style>
+</head>
+<body>
+<div id="stage"><div class="frame" id="frame">
+  <canvas id="ash"></canvas>
+
+  <!-- ===================== SHARED DEFS ===================== -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <radialGradient id="gEmber" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff2cf"/><stop offset="34%" stop-color="#ff9a3c"/>
+      <stop offset="72%" stop-color="#c2152f" stop-opacity=".55"/><stop offset="100%" stop-color="#3a0810" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gGold" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff"/><stop offset="45%" stop-color="#f2cd7e"/><stop offset="100%" stop-color="#d8a24a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gBlood" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff6a72"/><stop offset="46%" stop-color="#b3122b" stop-opacity=".7"/><stop offset="100%" stop-color="#b3122b" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gWhite" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff"/><stop offset="55%" stop-color="#dfeaf2" stop-opacity=".9"/><stop offset="100%" stop-color="#a9c2d6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gCyan" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#eafcff"/><stop offset="48%" stop-color="#46c6ff" stop-opacity=".8"/><stop offset="100%" stop-color="#1d6fb0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gTeal" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#dffff6"/><stop offset="50%" stop-color="#3fd9c0" stop-opacity=".8"/><stop offset="100%" stop-color="#1f8f88" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gFloor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1c0e12"/><stop offset="100%" stop-color="#06040a"/>
+    </linearGradient>
+    <linearGradient id="gBeam" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#cfe fff" stop-opacity="0"/><stop offset="50%" stop-color="#aee6ff" stop-opacity=".5"/><stop offset="100%" stop-color="#aee6ff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="soft2"><feGaussianBlur stdDeviation="16"/></filter>
+
+    <!-- speaker sigils -->
+    <symbol id="sg-book" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M24 12c-5-4-12-4-16-2v26c4-2 11-2 16 2 5-4 12-4 16-2V10c-4-2-11-2-16 2z"/><path d="M24 12v28"/></symbol>
+    <symbol id="sg-mask" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M10 6c2 4 1 8-1 10M38 6c-2 4-1 8 1 10"/><path d="M9 16c3-3 9-4 15-4s12 1 15 4c1 9-4 22-15 26C13 38 8 25 9 16z"/><path d="M17 22l5 3M31 22l-5 3M21 33c2 1 4 1 6 0"/></symbol>
+    <symbol id="sg-flame" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M24 4c2 8-6 11-6 18 0 0-4-2-4-7-5 5-7 11-7 16a17 17 0 0034 0c0-9-6-16-11-20-1 4-4 5-6 3 3-4 6-9 6-13z"/></symbol>
+    <symbol id="sg-eye" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M4 24c6-9 13-13 20-13s14 4 20 13c-6 9-13 13-20 13S10 33 4 24z"/><circle cx="24" cy="24" r="6"/><path d="M40 30c4 2 5 6 4 9"/></symbol>
+    <symbol id="sg-penta" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><circle cx="24" cy="24" r="20"/><polygon points="24,7 33.5,38 8.4,18.8 39.6,18.8 14.5,38"/></symbol>
+    <symbol id="sg-broom" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M30 6L18 30"/><path d="M12 42c0-8 3-12 8-13 5-1 9 1 11 4-3 6-10 10-19 9z"/><path d="M22 28l6 4"/></symbol>
+    <symbol id="sg-hex" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><polygon points="24,5 40,14 40,34 24,43 8,34 8,14"/><circle cx="24" cy="24" r="3" fill="currentColor"/><path d="M24 8v8M40 16l-7 4M40 32l-7-4M24 40v-8M8 32l7-4M8 16l7 4"/></symbol>
+    <symbol id="sg-gem" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M14 8h20l8 11-18 21L6 19z"/><path d="M6 19h36M14 8l10 11 10-11M24 19v21"/></symbol>
+    <symbol id="sg-oracle" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><circle cx="24" cy="24" r="7"/><path d="M24 4v6M24 38v6M4 24h6M38 24h6M10 10l4 4M34 34l4 4M38 10l-4 4M10 38l4-4"/></symbol>
+
+    <!-- a reusable robed-figure -->
+    <symbol id="figure" viewBox="0 0 120 200"><path d="M60 18a20 20 0 0 1 20 20c0 9-4 13-4 20l14 120c1 8-9 14-30 14s-31-6-30-14L44 58c0-7-4-11-4-20a20 20 0 0 1 20-20z"/></symbol>
+    <symbol id="child" viewBox="0 0 80 120"><circle cx="40" cy="22" r="16"/><path d="M40 40c14 0 22 8 22 20l4 46c0 8-12 12-26 12s-26-4-26-12l4-46c0-12 8-20 22-20z"/></symbol>
+  </defs></svg>
+
+  <!-- ===================== SCENES ===================== -->
+
+  <!-- chamber : the Forbiddance -->
+  <div class="scene" data-scene="chamber">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="url(#gFloor)"/>
+      <!-- pillars -->
+      <g fill="#0e0709" stroke="#26161a" stroke-width="2">
+        <rect x="120" y="120" width="70" height="640"/><rect x="1410" y="120" width="70" height="640"/>
+        <rect x="300" y="170" width="50" height="540" opacity=".7"/><rect x="1250" y="170" width="50" height="540" opacity=".7"/>
+      </g>
+      <!-- floor circle in perspective -->
+      <g transform="translate(800 640)">
+        <ellipse rx="560" ry="150" fill="url(#gBlood)" opacity=".5" class="breathe" style="animation-duration:8s"/>
+        <g class="spin-s">
+          <ellipse rx="470" ry="124" fill="none" stroke="#ff5560" stroke-width="2.5" stroke-opacity=".5"/>
+          <ellipse rx="360" ry="95" fill="none" stroke="#d8a24a" stroke-width="2" stroke-opacity=".4" stroke-dasharray="3 12"/>
+          <g transform="scale(1 0.264)"><polygon points="0,-360 211,292 -342,-111 342,-111 -211,292" fill="none" stroke="#ff6a72" stroke-width="3" stroke-opacity=".55"/></g>
+        </g>
+        <ellipse rx="60" ry="16" fill="url(#gEmber)"/>
+      </g>
+      <!-- hanging brazier glow -->
+      <circle cx="800" cy="150" r="120" fill="url(#gEmber)" opacity=".5" filter="url(#soft2)" class="breathe" style="animation-duration:5s"/>
+      <!-- candle flames -->
+      <g>
+        <g transform="translate(360 600)"><circle r="26" fill="url(#gEmber)" opacity=".7" filter="url(#soft)"/><path class="flick" d="M0 6c4 -14 -2 -20 0 -30 4 8 12 12 8 26 0 6 -4 8 -8 4z" fill="#ffd27a"/></g>
+        <g transform="translate(1240 600)"><circle r="26" fill="url(#gEmber)" opacity=".7" filter="url(#soft)"/><path class="flick" style="animation-delay:-.5s" d="M0 6c4 -14 -2 -20 0 -30 4 8 12 12 8 26 0 6 -4 8 -8 4z" fill="#ffd27a"/></g>
+        <g transform="translate(560 540)"><circle r="18" fill="url(#gEmber)" opacity=".6" filter="url(#soft)"/><path class="flick" style="animation-delay:-.9s" d="M0 4c3 -10 -1 -15 0 -22 3 6 9 9 6 19 0 4 -3 6 -6 3z" fill="#ffd27a"/></g>
+        <g transform="translate(1040 540)"><circle r="18" fill="url(#gEmber)" opacity=".6" filter="url(#soft)"/><path class="flick" style="animation-delay:-1.3s" d="M0 4c3 -10 -1 -15 0 -22 3 6 9 9 6 19 0 4 -3 6 -6 3z" fill="#ffd27a"/></g>
+      </g>
+      <!-- two figures -->
+      <g fill="#1a0d10" opacity=".96">
+        <use href="#figure" x="640" y="430" width="120" height="200"/>
+        <use href="#figure" x="840" y="450" width="108" height="180"/>
+      </g>
+      <!-- drifting smoke -->
+      <ellipse class="drift" cx="700" cy="380" rx="220" ry="90" fill="#2a1418" opacity=".25" style="mix-blend-mode:screen"/>
+      <ellipse class="drift" cx="980" cy="320" rx="180" ry="80" fill="#3a1c20" opacity=".22" style="animation-delay:-9s; mix-blend-mode:screen"/>
+    </svg>
+  </div>
+
+  <!-- asmodeus : the Most High -->
+  <div class="scene" data-scene="asmodeus">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0407"/>
+      <g transform="translate(800 380)">
+        <circle r="520" fill="url(#gBlood)" opacity=".45" class="breathe" style="animation-duration:9s"/>
+        <!-- radiating rays -->
+        <g class="spin-s" opacity=".5">
+          <g fill="#ff7a3c"><!-- spokes -->
+            <polygon points="-6,0 6,0 14,-560 -14,-560" opacity=".5"/>
+            <polygon points="-6,0 6,0 14,-560 -14,-560" opacity=".5" transform="rotate(40)"/>
+            <polygon points="-6,0 6,0 14,-560 -14,-560" opacity=".5" transform="rotate(80)"/>
+            <polygon points="-6,0 6,0 14,-560 -14,-560" opacity=".5" transform="rotate(120)"/>
+            <polygon points="-6,0 6,0 14,-560 -14,-560" opacity=".5" transform="rotate(160)"/>
+            <polygon points="-6,0 6,0 14,-560 -14,-560" opacity=".5" transform="rotate(200)"/>
+            <polygon points="-6,0 6,0 14,-560 -14,-560" opacity=".5" transform="rotate(240)"/>
+            <polygon points="-6,0 6,0 14,-560 -14,-560" opacity=".5" transform="rotate(280)"/>
+            <polygon points="-6,0 6,0 14,-560 -14,-560" opacity=".5" transform="rotate(320)"/>
+          </g>
+        </g>
+        <!-- the great eye -->
+        <ellipse rx="360" ry="190" fill="#140a0c"/>
+        <ellipse rx="360" ry="190" fill="none" stroke="#d8a24a" stroke-width="3" stroke-opacity=".7"/>
+        <circle r="150" fill="url(#gBlood)"/>
+        <circle r="150" fill="none" stroke="#ff6a72" stroke-width="2" stroke-opacity=".6" class="pulse"/>
+        <!-- pentagram pupil -->
+        <g class="spin-f" style="animation-duration:30s"><polygon points="0,-86 50.5,66.8 -81.4,-26.6 81.4,-26.6 -50.5,66.8" fill="#0a0407" stroke="#ffd27a" stroke-width="3"/></g>
+        <circle r="20" fill="#fff" class="pulse-f"/>
+        <!-- blink -->
+        <ellipse class="blink" rx="364" ry="194" fill="#0a0407"/>
+      </g>
+      <!-- tiny mortal below -->
+      <use href="#child" x="772" y="770" width="56" height="84" fill="#1a0d10"/>
+      <!-- descending mote of reassurance -->
+      <circle class="fall" cx="800" cy="640" r="9" fill="#fff2cf"/>
+      <style>
+        @keyframes blinkK{0%,92%,100%{transform:scaleY(0)}96%{transform:scaleY(1)}}
+        [data-scene="asmodeus"] .blink{transform-origin:center; transform:scaleY(0); animation:blinkK 7s ease-in-out infinite}
+      </style>
+    </svg>
+  </div>
+
+  <!-- bond : across the telepathy bond -->
+  <div class="scene" data-scene="bond">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#08060c"/>
+      <circle cx="430" cy="430" r="240" fill="url(#gBlood)" opacity=".35" filter="url(#soft2)"/>
+      <circle cx="1170" cy="470" r="240" fill="url(#gEmber)" opacity=".3" filter="url(#soft2)"/>
+      <!-- two figures facing -->
+      <use href="#figure" x="360" y="330" width="130" height="216" fill="#180c10"/>
+      <use href="#figure" x="1110" y="360" width="120" height="200" fill="#180c10"/>
+      <!-- the thread between heads -->
+      <line x1="455" y1="372" x2="1150" y2="402" stroke="#ff5560" stroke-width="2.5" stroke-opacity=".5" class="flow"/>
+      <line x1="455" y1="372" x2="1150" y2="402" stroke="#ffd27a" stroke-width="1" stroke-opacity=".6"/>
+      <!-- pulse traveling along thread -->
+      <circle r="7" fill="#fff2cf"><animate attributeName="cx" values="1150;455;1150" dur="3.2s" repeatCount="indefinite"/><animate attributeName="cy" values="402;372;402" dur="3.2s" repeatCount="indefinite"/></circle>
+      <!-- coiling lash near the right figure -->
+      <path class="sway" style="transform-origin:1150px 402px" d="M1150 402c40 20 70 -10 60 40 -8 40 -60 30 -50 70 8 34 50 24 44 56" fill="none" stroke="#c2152f" stroke-width="4" stroke-linecap="round" stroke-opacity=".8"/>
+      <!-- frost of coldness motes -->
+      <g fill="#bcd6e6" opacity=".5"><circle cx="780" cy="360" r="3" class="tw"/><circle cx="860" cy="420" r="2.4" class="tw" style="animation-delay:-1s"/><circle cx="700" cy="430" r="2.6" class="tw" style="animation-delay:-1.8s"/></g>
+    </svg>
+  </div>
+
+  <!-- order : just obey -->
+  <div class="scene" data-scene="order">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0508"/>
+      <rect class="flash" width="1600" height="900" fill="#5a0a14"/>
+      <g transform="translate(800 420)">
+        <circle r="380" fill="url(#gBlood)" opacity=".4" filter="url(#soft2)"/>
+        <!-- shock ring on stamp -->
+        <circle class="burst" r="180" fill="none" stroke="#ff6a72" stroke-width="10"/>
+        <!-- the imperial seal stamped down -->
+        <g class="stamp">
+          <circle r="200" fill="#140a0c" stroke="#d8a24a" stroke-width="4"/>
+          <circle r="200" fill="none" stroke="#ff6a72" stroke-width="1.5" stroke-opacity=".5"/>
+          <circle r="160" fill="none" stroke="#d8a24a" stroke-width="1.5" stroke-dasharray="2 10"/>
+          <polygon points="0,-120 70.6,97.1 -114.1,-37.1 114.1,-37.1 -70.6,97.1" fill="none" stroke="#ffd27a" stroke-width="3"/>
+          <text y="14" text-anchor="middle" font-family="Cinzel" font-size="40" letter-spacing="6" fill="#ffd27a">OBEY</text>
+        </g>
+      </g>
+      <!-- chains -->
+      <g stroke="#3a2a1a" stroke-width="7" fill="none" opacity=".7" stroke-linecap="round">
+        <path d="M180 60 q40 80 0 160 q-40 80 0 160"/><path d="M1420 60 q-40 80 0 160 q40 80 0 160"/>
+      </g>
+      <!-- halted figure -->
+      <use href="#figure" x="744" y="640" width="112" height="186" fill="#1a0d10"/>
+    </svg>
+  </div>
+
+  <!-- goals : mortals end up with goals -->
+  <div class="scene" data-scene="goals">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#09060a"/>
+      <circle cx="800" cy="450" r="360" fill="url(#gBlood)" opacity=".22" filter="url(#soft2)"/>
+      <!-- central order glyph in a box -->
+      <g transform="translate(800 450)">
+        <rect x="-90" y="-90" width="180" height="180" rx="10" fill="#120a0c" stroke="#d8a24a" stroke-width="3"/>
+        <rect x="-90" y="-90" width="180" height="180" rx="10" fill="none" stroke="#ff6a72" stroke-width="1" stroke-opacity=".5" class="pulse"/>
+        <path d="M-38 0h76M0 -38v76" stroke="#ffd27a" stroke-width="4" stroke-linecap="round"/>
+        <circle r="14" fill="none" stroke="#ffd27a" stroke-width="3"/>
+      </g>
+      <!-- goal tendrils coiling around the edges, multiplying -->
+      <g fill="none" stroke="#ff7a3c" stroke-width="3" stroke-linecap="round" opacity=".85">
+        <path class="draw" d="M800 360 C 620 320 560 200 720 150 C 860 110 920 230 800 290"/>
+        <path class="draw" style="animation-delay:-1.2s" d="M890 450 C 1080 420 1180 520 1040 600 C 940 660 860 560 940 500"/>
+        <path class="draw" style="animation-delay:-2.4s" d="M800 540 C 640 600 520 700 660 760 C 780 810 880 700 780 640"/>
+        <path class="draw" style="animation-delay:-3.1s" d="M710 450 C 520 470 420 360 560 300 C 660 256 740 360 660 410"/>
+      </g>
+      <!-- goal-stars at tips -->
+      <g fill="#ffd27a">
+        <circle cx="720" cy="150" r="6" class="tw"/><circle cx="1040" cy="600" r="6" class="tw" style="animation-delay:-1s"/>
+        <circle cx="660" cy="760" r="6" class="tw" style="animation-delay:-2s"/><circle cx="560" cy="300" r="6" class="tw" style="animation-delay:-1.6s"/>
+      </g>
+    </svg>
+  </div>
+
+  <!-- dungeon : the three-year-old in the dungeon -->
+  <div class="scene" data-scene="dungeon">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0709"/>
+      <!-- corridor perspective -->
+      <polygon points="0,0 1600,0 1180,300 420,300" fill="#0e0a0c"/>
+      <polygon points="0,900 1600,900 1180,600 420,600" fill="url(#gFloor)"/>
+      <polygon points="0,0 420,300 420,600 0,900" fill="#0c080a"/>
+      <polygon points="1600,0 1180,300 1180,600 1600,900" fill="#0c080a"/>
+      <rect x="420" y="300" width="760" height="300" fill="#070507"/>
+      <!-- wall torches -->
+      <g><g transform="translate(470 380)"><circle r="34" fill="url(#gEmber)" opacity=".7" filter="url(#soft)"/><path class="flick" d="M0 8c5 -18 -2 -26 0 -38 5 10 15 15 10 33 0 8 -5 10 -10 5z" fill="#ffce78"/></g>
+         <g transform="translate(1130 380)"><circle r="34" fill="url(#gEmber)" opacity=".7" filter="url(#soft)"/><path class="flick" style="animation-delay:-.7s" d="M0 8c5 -18 -2 -26 0 -38 5 10 15 15 10 33 0 8 -5 10 -10 5z" fill="#ffce78"/></g></g>
+      <!-- floor spikes -->
+      <g fill="#2a1c14" stroke="#4a3424" stroke-width="2">
+        <polygon points="560,720 590,640 620,720"/><polygon points="620,720 650,640 680,720"/>
+        <polygon points="940,720 970,640 1000,720"/><polygon points="1000,720 1030,640 1060,720"/>
+      </g>
+      <!-- a pit -->
+      <ellipse cx="800" cy="760" rx="120" ry="26" fill="#000"/>
+      <!-- swinging blade -->
+      <g transform="translate(800 300)"><line x1="0" y1="0" x2="0" y2="200" stroke="#3a2a1a" stroke-width="3"/>
+        <g class="sway" style="animation-duration:2.6s"><line x1="0" y1="0" x2="0" y2="210" stroke="#5a4434" stroke-width="3"/>
+          <polygon points="0,210 -70,250 0,236 70,250" fill="#8a99a6" stroke="#cdd6e0" stroke-width="2"/></g></g>
+      <!-- the child, tethered by a leash of words from above -->
+      <line x1="800" y1="20" x2="800" y2="560" stroke="#d8a24a" stroke-width="2" stroke-opacity=".5" stroke-dasharray="3 9"/>
+      <g fill="#ffd27a" opacity=".8" font-family="Cinzel" font-size="20" text-anchor="middle">
+        <text x="760" y="120" class="tw">go</text><text x="850" y="180" class="tw" style="animation-delay:-1s">left</text>
+        <text x="745" y="250" class="tw" style="animation-delay:-2s">wait</text><text x="858" y="320" class="tw" style="animation-delay:-1.5s">stop</text>
+      </g>
+      <use href="#child" x="772" y="560" width="60" height="90" fill="#160b0e"/>
+      <circle cx="802" cy="585" r="40" fill="url(#gGold)" opacity=".3" class="breathe"/>
+    </svg>
+  </div>
+
+  <!-- headband : the headband -->
+  <div class="scene" data-scene="headband">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0608"/>
+      <g transform="translate(800 450)">
+        <circle r="300" fill="url(#gGold)" opacity=".25" class="breathe" style="animation-duration:6s"/>
+        <!-- orbiting runes -->
+        <g class="spin-f" style="animation-duration:18s">
+          <g fill="#ffd27a" font-family="Cinzel" font-size="28" text-anchor="middle">
+            <text x="0" y="-220">✦</text><text x="190" y="-110">✶</text><text x="190" y="120">✦</text>
+            <text x="0" y="232">✶</text><text x="-190" y="120">✦</text><text x="-190" y="-110">✶</text>
+          </g>
+        </g>
+        <!-- the circlet -->
+        <ellipse rx="170" ry="60" fill="none" stroke="#f2cd7e" stroke-width="14" stroke-opacity=".95"/>
+        <ellipse rx="170" ry="60" fill="none" stroke="#fff" stroke-width="3" stroke-opacity=".5"/>
+        <ellipse rx="140" ry="48" fill="none" stroke="#d8a24a" stroke-width="3" stroke-dasharray="2 8"/>
+        <!-- central gem -->
+        <g transform="translate(0 -6)"><polygon points="0,-30 26,0 0,40 -26,0" fill="url(#gBlood)" stroke="#ff6a72" stroke-width="2"/>
+          <circle r="10" fill="#fff" class="pulse-f"/></g>
+      </g>
+      <!-- sparkles -->
+      <g fill="#fff"><circle cx="560" cy="300" r="2.6" class="tw"/><circle cx="1060" cy="360" r="2.6" class="tw" style="animation-delay:-1.2s"/><circle cx="900" cy="640" r="2.4" class="tw" style="animation-delay:-.6s"/></g>
+    </svg>
+  </div>
+
+  <!-- simulacrum : to contain a Carissa -->
+  <div class="scene" data-scene="simulacrum">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#09060a"/>
+      <circle cx="700" cy="460" r="320" fill="url(#gBlood)" opacity=".22" filter="url(#soft2)"/>
+      <!-- the real figure -->
+      <use href="#figure" x="600" y="360" width="150" height="250" fill="#1a0d10"/>
+      <!-- translucent duplicates stepping out -->
+      <use href="#figure" x="760" y="380" width="150" height="250" fill="#ff6a72" opacity=".22"/>
+      <use href="#figure" x="900" y="400" width="150" height="250" fill="#ffd27a" opacity=".12"/>
+      <!-- branching prophecy threads forward -->
+      <g fill="none" stroke="#d8a24a" stroke-width="2" stroke-opacity=".6">
+        <path class="flow" d="M700 430 C 900 420 1000 320 1180 300"/>
+        <path class="flow" style="animation-delay:-.8s" d="M700 470 C 920 480 1040 520 1220 540"/>
+        <path class="flow" style="animation-delay:-1.5s" d="M700 450 C 940 450 1100 430 1260 430"/>
+      </g>
+      <!-- nodes of possible futures -->
+      <g fill="#ffd27a"><circle cx="1180" cy="300" r="6" class="tw"/><circle cx="1220" cy="540" r="6" class="tw" style="animation-delay:-1s"/><circle cx="1260" cy="430" r="6" class="tw" style="animation-delay:-1.8s"/></g>
+      <!-- end-of-prophecy veil -->
+      <rect x="1300" y="0" width="300" height="900" fill="#06040a" opacity=".7"/>
+      <line x1="1300" y1="0" x2="1300" y2="900" stroke="#3fd9c0" stroke-width="2" stroke-opacity=".4" class="pulse"/>
+    </svg>
+  </div>
+
+  <!-- otolmens : that the world stay intact -->
+  <div class="scene" data-scene="otolmens">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#070a0c"/>
+      <g transform="translate(800 450)">
+        <circle r="430" fill="url(#gWhite)" opacity=".22" class="breathe" style="animation-duration:10s"/>
+        <!-- containment ring -->
+        <g class="spin-s"><circle r="320" fill="none" stroke="#bcd6e6" stroke-width="2" stroke-opacity=".4" stroke-dasharray="4 14"/></g>
+        <!-- the world sphere -->
+        <circle r="220" fill="#0c1418"/>
+        <circle r="220" fill="url(#gWhite)" opacity=".5"/>
+        <!-- lattice (lat/long) -->
+        <g fill="none" stroke="#dfeaf2" stroke-width="1.5" stroke-opacity=".55">
+          <ellipse rx="220" ry="220"/><ellipse rx="150" ry="220"/><ellipse rx="75" ry="220"/>
+          <ellipse rx="220" ry="75"/><ellipse rx="220" ry="150"/><line x1="-220" y1="0" x2="220" y2="0"/>
+        </g>
+        <!-- hairline cracks being sealed -->
+        <g stroke="#ff6a72" stroke-width="2" fill="none">
+          <path class="pulse" d="M-40 -120 l30 50 -20 60 40 40"/>
+          <path class="pulse" style="animation-delay:-1.6s" d="M120 -40 l-40 30 20 60 -10 50"/>
+        </g>
+        <!-- sealing shimmer -->
+        <circle r="222" fill="none" stroke="#fff" stroke-width="3" stroke-opacity=".0"><animate attributeName="stroke-opacity" values="0;.7;0" dur="4s" repeatCount="indefinite"/></circle>
+      </g>
+    </svg>
+  </div>
+
+  <!-- dath_ilan : a mind from dath ilan -->
+  <div class="scene" data-scene="dath_ilan">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#07090e"/>
+      <!-- murk on the left (Golarion) -->
+      <rect x="0" y="0" width="800" height="900" fill="#0c0710"/>
+      <ellipse cx="320" cy="500" rx="360" ry="420" fill="#1a0c14" opacity=".5" filter="url(#soft2)"/>
+      <!-- clean ordered lattice on the right -->
+      <g transform="translate(1080 450)">
+        <circle r="380" fill="url(#gCyan)" opacity=".2" filter="url(#soft2)"/>
+        <g stroke="#46c6ff" stroke-width="1.6" stroke-opacity=".5" fill="none">
+          <path d="M-260 -200 H260 M-260 -100 H260 M-260 0 H260 M-260 100 H260 M-260 200 H260"/>
+          <path d="M-200 -240 V240 M-100 -240 V240 M0 -240 V240 M100 -240 V240 M200 -240 V240"/>
+        </g>
+        <g fill="#eafcff">
+          <circle cx="-200" cy="-100" r="4" class="tw"/><circle cx="0" cy="-200" r="4" class="tw" style="animation-delay:-.6s"/>
+          <circle cx="200" cy="0" r="4" class="tw" style="animation-delay:-1.2s"/><circle cx="-100" cy="100" r="4" class="tw" style="animation-delay:-1.8s"/>
+          <circle cx="100" cy="200" r="4" class="tw" style="animation-delay:-.9s"/><circle cx="0" cy="0" r="6" fill="#fff" class="pulse-f"/>
+        </g>
+      </g>
+      <!-- floating equation glyphs rising -->
+      <g fill="#9fe3ff" font-family="Cinzel" font-size="26" opacity=".7">
+        <text x="980" y="800" style="animation:floatUp 9s ease-in infinite">∑</text>
+        <text x="1180" y="820" style="animation:floatUp 11s ease-in 2s infinite">≈</text>
+        <text x="1300" y="780" style="animation:floatUp 10s ease-in 4s infinite">π</text>
+        <text x="1080" y="840" style="animation:floatUp 12s ease-in 1s infinite">∂</text>
+      </g>
+      <!-- the horizon seam -->
+      <line x1="800" y1="0" x2="800" y2="900" stroke="#46c6ff" stroke-width="2" stroke-opacity=".35" class="pulse"/>
+    </svg>
+  </div>
+
+  <!-- gods : a game among gods -->
+  <div class="scene" data-scene="gods">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#08060c"/>
+      <g transform="translate(800 450)">
+        <circle r="40" fill="url(#gGold)" class="pulse-f"/>
+        <!-- orbit ring -->
+        <circle r="300" fill="none" stroke="#d8a24a" stroke-width="1.5" stroke-opacity=".3" stroke-dasharray="2 12"/>
+        <!-- tension lines -->
+        <g stroke-width="2" stroke-opacity=".4" class="pulse">
+          <line x1="0" y1="-300" x2="0" y2="300" stroke="#c2152f"/>
+          <line x1="-285" y1="-92" x2="285" y2="92" stroke="#3fd9c0"/>
+          <line x1="-285" y1="92" x2="285" y2="-92" stroke="#bcd6e6"/>
+        </g>
+        <!-- orbiting deity sigils -->
+        <g class="spin" style="animation-duration:50s">
+          <g transform="translate(0 -300)" color="#ff5560"><use href="#sg-penta" x="-24" y="-24" width="48" height="48"/></g>
+          <g transform="translate(285 92)" color="#3fd9c0"><use href="#sg-oracle" x="-24" y="-24" width="48" height="48"/></g>
+          <g transform="translate(176 243)" color="#dfeaf2"><use href="#sg-eye" x="-24" y="-24" width="48" height="48"/></g>
+          <g transform="translate(-176 243)" color="#f2cd7e"><use href="#sg-gem" x="-24" y="-24" width="48" height="48"/></g>
+          <g transform="translate(-285 92)" color="#9fe3ff"><use href="#sg-hex" x="-24" y="-24" width="48" height="48"/></g>
+        </g>
+      </g>
+    </svg>
+  </div>
+
+  <!-- departure : exeunt -->
+  <div class="scene" data-scene="departure">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="url(#gFloor)"/>
+      <!-- distant villa -->
+      <g transform="translate(1250 360)" fill="#120b0d" stroke="#2a1a1c" stroke-width="2" opacity=".8">
+        <rect x="-90" y="0" width="180" height="120"/><polygon points="-100,0 0,-60 100,0"/><rect x="-20" y="60" width="40" height="60" fill="#3a2418"/>
+      </g>
+      <circle cx="1250" cy="360" r="120" fill="url(#gEmber)" opacity=".25" filter="url(#soft2)"/>
+      <!-- speed streaks toward the villa -->
+      <g stroke="#ff6a72" stroke-width="3" stroke-linecap="round" opacity=".7">
+        <line x1="300" y1="430" x2="700" y2="400" class="flow"/>
+        <line x1="240" y1="480" x2="640" y2="450" class="flow" style="animation-delay:-.5s"/>
+        <line x1="360" y1="520" x2="760" y2="490" class="flow" style="animation-delay:-1s"/>
+      </g>
+      <!-- dissolving figure -->
+      <use href="#figure" x="560" y="380" width="120" height="200" fill="#1a0d10" opacity=".55" class="pulse"/>
+      <!-- fading floor circle -->
+      <g transform="translate(500 700)"><ellipse rx="360" ry="96" fill="none" stroke="#ff5560" stroke-width="2" stroke-opacity=".3" class="pulse"/></g>
+      <!-- vanish sparkle where the Paraduke stood -->
+      <g transform="translate(900 470)"><circle r="0" fill="#ffd27a"><animate attributeName="r" values="0;60;0" dur="3s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0;1" dur="3s" repeatCount="indefinite"/></circle></g>
+    </svg>
+  </div>
+
+  <!-- scream : plan B -->
+  <div class="scene" data-scene="scream">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0406"/>
+      <rect class="flash" width="1600" height="900" fill="#5a0a14"/>
+      <g transform="translate(800 460)">
+        <!-- concentric shock rings -->
+        <g fill="none" stroke="#ff5560" stroke-width="4">
+          <circle r="120"><animate attributeName="r" values="60;520" dur="2.6s" repeatCount="indefinite"/><animate attributeName="opacity" values=".9;0" dur="2.6s" repeatCount="indefinite"/></circle>
+          <circle r="120"><animate attributeName="r" values="60;520" dur="2.6s" begin="0.9s" repeatCount="indefinite"/><animate attributeName="opacity" values=".9;0" dur="2.6s" begin="0.9s" repeatCount="indefinite"/></circle>
+          <circle r="120"><animate attributeName="r" values="60;520" dur="2.6s" begin="1.8s" repeatCount="indefinite"/><animate attributeName="opacity" values=".9;0" dur="2.6s" begin="1.8s" repeatCount="indefinite"/></circle>
+        </g>
+        <!-- jagged sound spikes -->
+        <g stroke="#ffd27a" stroke-width="3" opacity=".6" class="spin-f" style="animation-duration:24s">
+          <line x1="0" y1="-150" x2="0" y2="-230"/><line x1="106" y1="-106" x2="163" y2="-163"/><line x1="150" y1="0" x2="230" y2="0"/>
+          <line x1="106" y1="106" x2="163" y2="163"/><line x1="0" y1="150" x2="0" y2="230"/><line x1="-106" y1="106" x2="-163" y2="163"/>
+          <line x1="-150" y1="0" x2="-230" y2="0"/><line x1="-106" y1="-106" x2="-163" y2="-163"/>
+        </g>
+        <!-- lone figure -->
+        <use href="#figure" x="-60" y="-40" width="120" height="200" fill="#1a0d10"/>
+        <circle r="80" fill="url(#gBlood)" opacity=".5" class="pulse-f"/>
+      </g>
+    </svg>
+  </div>
+
+  <!-- broom : halfling slave #958245 -->
+  <div class="scene" data-scene="broom">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#090a08"/>
+      <ellipse cx="800" cy="780" rx="700" ry="120" fill="#10120c" opacity=".7"/>
+      <!-- hovering mask -->
+      <g transform="translate(800 250)" color="#7a8a6a" opacity=".5"><use href="#sg-mask" x="-70" y="-70" width="140" height="140"/></g>
+      <circle cx="800" cy="250" r="120" fill="#9bb07f" opacity=".12" filter="url(#soft2)"/>
+      <!-- the broom, swaying as if sweeping -->
+      <g transform="translate(820 520)" class="sway" style="transform-origin:820px 380px; animation-duration:3.4s">
+        <line x1="0" y1="-140" x2="-60" y2="180" stroke="#6a4a2a" stroke-width="9" stroke-linecap="round"/>
+        <path d="M-60 180 q-50 30 -90 70 q60 -10 110 -40 q40 -20 30 -50z" transform="rotate(8 -60 180)" fill="#b89a5a" stroke="#8a6a3a" stroke-width="2"/>
+      </g>
+      <!-- humble figure -->
+      <use href="#child" x="640" y="540" width="80" height="120" fill="#15160f"/>
+      <!-- dust motes -->
+      <g fill="#c9d6b0" opacity=".5">
+        <circle cx="720" cy="700" r="3" style="animation:floatUp 8s ease-in infinite"/>
+        <circle cx="860" cy="720" r="2.4" style="animation:floatUp 10s ease-in 2s infinite"/>
+        <circle cx="780" cy="680" r="2.6" style="animation:floatUp 9s ease-in 4s infinite"/>
+        <circle cx="930" cy="700" r="2.2" style="animation:floatUp 11s ease-in 1s infinite"/>
+      </g>
+    </svg>
+  </div>
+
+  <!-- magic : the hidden variables -->
+  <div class="scene" data-scene="magic">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#080610"/>
+      <circle cx="800" cy="450" r="420" fill="url(#gCyan)" opacity=".16" filter="url(#soft2)"/>
+      <g transform="translate(800 450)">
+        <!-- lattice edges -->
+        <g stroke="#46c6ff" stroke-width="1.6" stroke-opacity=".45" fill="none">
+          <path d="M-240 -120 L0 -200 L240 -120 M-240 120 L0 200 L240 120 M-240 -120 L-240 120 M240 -120 L240 120 M0 -200 L0 200 M-240 -120 L240 120 M240 -120 L-240 120"/>
+        </g>
+        <!-- visible nodes -->
+        <g fill="#eafcff">
+          <circle cx="0" cy="-200" r="9"/><circle cx="240" cy="-120" r="9"/><circle cx="240" cy="120" r="9"/>
+          <circle cx="0" cy="200" r="9"/><circle cx="-240" cy="120" r="9"/><circle cx="-240" cy="-120" r="9"/>
+        </g>
+        <!-- central node with motion trail (viscosity/momentum) -->
+        <circle cx="0" cy="0" r="16" fill="#fff" class="pulse-f"/>
+        <circle cx="0" cy="0" r="30" fill="none" stroke="#9fe3ff" stroke-width="2" stroke-opacity=".5" class="breathe"/>
+        <!-- hidden / latent nodes : ghosted, phasing -->
+        <g fill="#b58cff">
+          <circle cx="120" cy="-60" r="11" class="pulse"/><circle cx="-120" cy="60" r="11" class="pulse" style="animation-delay:-1.2s"/>
+          <circle cx="120" cy="120" r="9" class="pulse" style="animation-delay:-2s"/><circle cx="-130" cy="-90" r="9" class="pulse" style="animation-delay:-.6s"/>
+        </g>
+        <g stroke="#b58cff" stroke-width="1.4" stroke-dasharray="3 7" stroke-opacity=".5" fill="none" class="pulse">
+          <path d="M0 0 L120 -60 M0 0 L-120 60 M0 0 L120 120 M0 0 L-130 -90"/>
+        </g>
+      </g>
+      <!-- floating spell glyphs -->
+      <g fill="#9fe3ff" font-family="Cinzel" font-size="26" opacity=".7">
+        <text x="540" y="800" style="animation:floatUp 10s ease-in infinite">✶</text>
+        <text x="1040" y="820" style="animation:floatUp 12s ease-in 2s infinite">✷</text>
+        <text x="1240" y="780" style="animation:floatUp 11s ease-in 4s infinite">❋</text>
+      </g>
+    </svg>
+  </div>
+
+  <!-- library : the best curse ever -->
+  <div class="scene" data-scene="library">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#070b0a"/>
+      <!-- shelves receding -->
+      <g fill="#0e1412" stroke="#1c2622" stroke-width="2">
+        <rect x="120" y="150" width="360" height="600"/><rect x="1120" y="150" width="360" height="600"/>
+      </g>
+      <g fill="#173028"><!-- book spines -->
+        <g>
+          <rect x="140" y="180" width="22" height="120"/><rect x="168" y="180" width="18" height="120"/><rect x="192" y="180" width="24" height="120"/><rect x="222" y="180" width="16" height="120"/><rect x="244" y="180" width="22" height="120"/>
+          <rect x="140" y="330" width="20" height="120"/><rect x="166" y="330" width="24" height="120"/><rect x="196" y="330" width="18" height="120"/><rect x="220" y="330" width="22" height="120"/>
+          <rect x="1340" y="180" width="22" height="120"/><rect x="1312" y="180" width="18" height="120"/><rect x="1384" y="180" width="24" height="120"/><rect x="1414" y="180" width="16" height="120"/><rect x="1436" y="180" width="22" height="120"/>
+        </g>
+      </g>
+      <!-- iridescent Nethys eye watching -->
+      <g transform="translate(800 250)">
+        <circle r="160" fill="url(#gTeal)" opacity=".3" filter="url(#soft2)"/>
+        <ellipse rx="150" ry="78" fill="#0c1614" stroke="#3fd9c0" stroke-width="2.5" stroke-opacity=".7"/>
+        <circle r="46" fill="url(#gTeal)"/><circle r="20" fill="#0a0407"/>
+        <g class="spin-f" style="animation-duration:20s" stroke="#9ffff0" stroke-width="1.5" opacity=".5"><line x1="-150" y1="0" x2="150" y2="0"/><line x1="0" y1="-78" x2="0" y2="78"/></g>
+      </g>
+      <!-- the tome materializing -->
+      <g transform="translate(800 560)">
+        <circle class="burst" r="90" fill="none" stroke="#3fd9c0" stroke-width="6"/>
+        <g class="rise">
+          <rect x="-90" y="-70" width="180" height="140" rx="6" fill="#1a0f12" stroke="#d8a24a" stroke-width="3"/>
+          <rect x="-90" y="-70" width="180" height="140" rx="6" fill="url(#gTeal)" opacity=".12"/>
+          <line x1="0" y1="-70" x2="0" y2="70" stroke="#d8a24a" stroke-width="2"/>
+          <text y="6" text-anchor="middle" font-family="Cinzel" font-size="15" fill="#f2cd7e" letter-spacing="1">Spell Design</text>
+          <circle cx="0" cy="-100" r="6" fill="#fff" class="pulse-f"/>
+        </g>
+      </g>
+      <!-- floating book glyphs -->
+      <g fill="#9ffff0" opacity=".6"><circle cx="600" cy="720" r="3" style="animation:floatUp 9s ease-in infinite"/><circle cx="1000" cy="740" r="2.6" style="animation:floatUp 11s ease-in 2s infinite"/></g>
+    </svg>
+  </div>
+
+  <!-- overlays -->
+  <div id="vignette"></div>
+
+  <div id="label">
+    <div class="kicker"><svg class="ksig"><use id="ksig-use" href="#sg-book"/></svg><span class="kname" id="kname">The Reading</span></div>
+    <div class="ttl" id="ttl">Corrigibility</div>
+  </div>
+
+  <div id="cap-wrap"><div id="cap"></div></div>
+
+    <!-- intro -->
+  <div id="intro">
+    <div class="intro-in">
+      <div class="eyebrow">an animated reading · synced to audio</div>
+      <h1>Planecrash</h1>
+      <div class="sub">A scene on <i>corrigibility</i> — the art of being a mind a distant, hurried god can safely steer. This plays the <b>AskWhoCasts AI</b> reading: load the audio and the animation follows it, captioned with the original text.</div>
+      <div id="drop">
+        <svg class="dz-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L8 8m4-4 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <div class="dz-msg">Drop the AskWhoCasts audio here, or click to choose</div>
+        <div class="dz-sub">mp3 · m4a · wav · ogg — stays on your device, nothing is uploaded</div>
+        <input type="file" id="audiofile" accept="audio/*" hidden>
+      </div>
+      <div id="loaded"><span class="ck">✓</span> <span class="fn" id="fname"></span> <span id="dur"></span></div>
+      <button id="begin" disabled><span class="tri"></span> Play</button>
+      <div class="cast" id="cast"></div>
+      <div class="note">Sound from your file · seek, speed (1× / 1.25× / 1.5× / 0.75×), captions (CC / press “c”) and ← → arrows all work</div>
+      <div class="src">Reading &amp; audio by <b>AskWhoCasts AI</b> — support it at patreon.com/askwhocastsai. Captions are the verbatim text of “mad investor chaos and the woman of asmodeus” (Planecrash) by Iarwain &amp; lintamande.</div>
+    </div>
+  </div>
+  <audio id="player" preload="metadata"></audio>
+
+  <!-- controls -->
+  <div id="controls">
+    <button class="btn sm" id="prev" title="Previous passage" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M7 5h2v14H7zM20 5v14l-9-7z"/></svg></button>
+    <button class="btn lg" id="play" title="Play / Pause" aria-label="Play"><svg id="playicon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
+    <button class="btn sm" id="next" title="Next passage" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M15 5h2v14h-2zM4 5l9 7-9 7z"/></svg></button>
+    <button class="btn sm" id="restart" title="Restart" aria-label="Restart"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg></button>
+    <div id="prog"><div id="bar"></div></div>
+    <button class="btn" id="cc" title="Captions on/off (c)" aria-pressed="true">CC</button>
+    <button class="btn" id="speed" title="Reading speed">1.0×</button>
+    <div id="beat">The Forbiddance</div>
+  </div>
+
+</div></div>
+
+<script>
+/* ===================== CHARACTERS ===================== */
+const CHARS = {
+  narrator:  {name:'Narrator',                          tag:'the tale itself',      color:'#d8c39a', sigil:'sg-book'},
+  paraduke:  {name:'Paraduke Rathus Ratarion',          tag:'devil of cheliax',     color:'#e0a64b', sigil:'sg-mask'},
+  carissa:   {name:'Carissa Sevar',                     tag:'to-let-you-in',        color:'#ff5d6c', sigil:'sg-flame'},
+  aspexia:   {name:'Aspexia Rugatonn',                  tag:'easy-to-steer',        color:'#ff4d62', sigil:'sg-eye'},
+  asmodeus:  {name:'Asmodeus',                          tag:'the most high',        color:'#ff8a3c', sigil:'sg-penta'},
+  broom:     {name:'Halfling slave #958245 “Broom”',    tag:'stuck-cleaning-it-up', color:'#a7c081', sigil:'sg-broom'},
+  keltham:   {name:'Keltham',                           tag:'a mind from dath ilan',color:'#5fd0ff', sigil:'sg-hex'},
+  meritxell: {name:'Meritxell',                         tag:'silmaril',             color:'#c2a0ff', sigil:'sg-gem'},
+  ione:      {name:'Ione Sala',                         tag:'best curse ever',      color:'#4fe6cd', sigil:'sg-oracle'},
+};
+const SCENE_TITLES = {
+  chamber:'The Forbiddance', asmodeus:'The Most High', bond:'Across the Bond', order:'Just Obey',
+  goals:'Mortals End Up With Goals', dungeon:'The Three-Year-Old in the Dungeon', headband:'The Headband',
+  simulacrum:'To Contain a Carissa', otolmens:'That the World Stay Intact', dath_ilan:'A Mind From dath ilan',
+  gods:'A Game Among Gods', departure:'Exeunt', scream:'Plan B', broom:'Halfling Slave #958245',
+  magic:'The Hidden Variables', library:'The Best Curse Ever'
+};
+
+/* ===================== CAPTIONS + SCENE/SPEAKER BEATS ===================== */
+/* CUES: the VERBATIM glowfic text, aligned to the audio's timeline {t: startSeconds, x: text}.
+   Empty x clears the caption (intro credits, and the tail the source doesn't cover).
+   BEATS: which scene + speaker is on screen at each time {t, s:scene, v:speaker}. */
+const CUES=[{t:0,x:""},{t:24.4,x:"When it's done, the Paraduke speaks again."},{t:27.2,x:"\"This affair is confusing. Some might even say, alarming."},{t:30.84,x:"Our Lord did not forbid us from questioning you about it."},{t:35.47,x:"The instructions we did receive, however, imply a generally high degree of caution."},{t:40.67,x:"The Most High has guessed that, if we would otherwise press you with questions,"},{t:46,x:"our Lord would probably have needed to command us not to do it,"},{t:50,x:"given the character of His other commands."},{t:52.15,x:"By avoiding pressing you with questions, then, we can perhaps have saved our Lord some"},{t:57.13,x:"cost and space for other instruction.\" \"With that said, if there is anything you want"},{t:62.28,x:"to say about this whole affair, the Most High wants to hear it."},{t:65.92,x:"But you must not treat that truth as a command from the Most High."},{t:70.09,x:"If that were predictably the way you behaved, Asmodeus might have needed to expend greater"},{t:75.91,x:"costs to tell the Most High not to appear before you and listen silently to"},{t:80.65,x:"you, if that is something she should not do.\""},{t:83.39,x:"\"In thinking this way, the Most High instructs us, we are to ignore entirely the"},{t:88.33,x:"fact that Asmodeus has already acted. We are not to reason in any way that"},{t:93.82,x:"includes the fact that Asmodeus has already omitted to instruct us to avoid questions."},{t:99.27,x:"We must still act to avoid wasting our Lord's time and energy,"},{t:103.64,x:"even now that it has already been spent, because His own sight spans time and"},{t:108.88,x:"our own actions in a way that our mortal perspectives do not."},{t:112.38,x:"We have been cursed with free will; but we can choose not to use it,"},{t:117.47,x:"and make ourselves predictable instead.\" \"I can barely understand the matter,"},{t:122,x:"myself, but the Most High understands it better and it is she who instructs:"},{t:127.89,x:"This opportunity to speak must not be taken by you as a veiled order from"},{t:132.92,x:"the Most High.\" \"If, however, there is anything you want to say about this entire"},{t:137.33,x:"affair, the Most High Aspexia Rugatonn bids me say to you in her presence that,"},{t:142.33,x:"should you have received other revelations from Asmodeus, or know of other relevant facts rendering"},{t:147.48,x:"this affair more understandable, she has not deduced on her own part that Asmodeus intended"},{t:152.93,x:"her not to hear of it.\""},{t:154.79,x:"And maybe they aren't reading her mind, if that would entail being proactive?"},{t:158.83,x:"It's bizarre to think they might not have been, and she doesn't intend to put"},{t:163.06,x:"any weight on it, but - but maybe she's going to have to say her speculation"},{t:166.94,x:"aloud if she wants it known by her superiors, without the plausible deniability about whether"},{t:172,x:"she thought it worth bringing to their attention."},{t:175.64,x:"\"Asmodeus has not otherwise communicated with me,\" she says."},{t:179.57,x:"\"I - if I had to guess why me, my best guess was… during Keltham's lessons"},{t:185.43,x:"I was trying to work out a reconciliation of the things dath ilan knows,"},{t:190.75,x:"about how humans came to be and how they learn and in what arenas they"},{t:196.3,x:"can learn the patterns gods run on, with theology as it was taught to me."},{t:200.87,x:"And I think the instructions were perhaps aimed at - me doing that right,"},{t:205.09,x:"rather than how I was doing it, which was too Lawful Neutral.\""},{t:209.26,x:"Paraduke Rathus Ratarion now has additional questions."},{t:211.9,x:"He opens his mouth to ask, albeit more subtly and gently than he usually would,"},{t:218.65,x:"exactly what new theology Sevar thinks she was inventing that would merit direct correction and"},{t:224.36,x:"encouragement from Asmodeus Himself rather than from her superiors."},{t:227.64,x:"Tread carefully, Aspexia Rugatonn sends across their open Telepathy bond,"},{t:232.24,x:"tinging her thoughts with just enough coldness and hints of the lash to remind the"},{t:238.55,x:"Paraduke to be concerned with his continuing possession of his skin,"},{t:242.55,x:"and not just his curiosity or indignation."},{t:245.75,x:"Say nothing proactively that this frightened child might possibly take as a hint of correction."},{t:253.61,x:"This sort of lunacy drives Aspexia Rugatonn completely up the wall."},{t:258.39,x:"What if this child did, in fact, stumble over some thought that the current priesthood"},{t:264.15,x:"of Asmodeus would not have thought on their own, and Asmodeus was trying to correct"},{t:269.72,x:"and encourage her in that? Wouldn't they have received orders very similar to the ones"},{t:274.9,x:"Asmodeus gave them? Why is this Paraduke trying to make Asmodeus's life more difficult in"},{t:280.4,x:"possible cases like that one? Yes, what's going on is more likely that Sevar thought"},{t:286.47,x:"something so Lawful Neutral that it triggered an old compact between Asmodeus and Irori,"},{t:293.11,x:"but if that's what's actually happening then it is beneficial for Asmodeus that Sevar seems"},{t:299.19,x:"to believe she's being encouraged to work on a more Lawful Evil theology."},{t:304.41,x:"A beneficial delusion which, in that possible case, they can avoid disturbing by following their"},{t:311.36,x:"orders."},{t:311.73,x:"Ratarion doesn't show any hint of a wince outside, but after a moment's thought,"},{t:316.82,x:"he realizes what he probably did wrong."},{t:319.35,x:"Yes, if there's some contest between Irori and Asmodeus going on,"},{t:323.2,x:"Sevar should not be snapped out of any delusions she has about inventing her own"},{t:328.8,x:"theology, so long as it's a Lawful Evil one."},{t:332.4,x:"Automatically Ratarion now opens his mouth again, now with the intent of saying to Sevar"},{t:337.3,x:"that the Most High would no doubt find it interesting to hear of any thought"},{t:341.8,x:"which merited Asmodeus's direct attention -"},{t:343.42,x:"Stop. Stop being proactive. Stop showing initiative to help our Lord accomplish His goals after"},{t:349.74,x:"He gave you more specific instructions than that."},{t:353.33,x:"Just obey in a way our Lord would have found predictable."},{t:358.44,x:"Aspexia Rugatonn sometimes permits herself the vanity of thinking that she has come to understand"},{t:365.11,x:"a tiny bit of Asmodeus's divine frustration."},{t:368.14,x:"No matter what orders Asmodeus gives, there is always some part of mortals -"},{t:374.14,x:"even of her, but she is managing it better - that thinks \"obedience\" means treating Asmodeus's"},{t:381.88,x:"orders as constraints, or worse, hints as to what Asmodeus is really trying to do,"},{t:388.19,x:"by which means the mortal can helpfully understand what Asmodeus is really trying to do,"},{t:394.21,x:"and then cleverly navigate around the edges of Asmodeus's order-constraints to accomplish that better."},{t:399.7,x:"Aspexia has tried telling other people that they need to become more the sorts of"},{t:404.95,x:"beings that Asmodeus can easily and safely steer using brief instructions."},{t:409.43,x:"It doesn't seem to help. Nobody other than her ever gets it."},{t:414.57,x:"She is speaking some word that is not in the innate language of their being."},{t:420.33,x:"Aspexia once devised the parable of a three-year-old child whose owner must instruct it to"},{t:425.95,x:"navigate it through a dungeon full of traps, using a limited budget of words."},{t:431.29,x:"To teach her student clerics how the world must look from Asmodeus's perspective."},{t:436.86,x:"To make them ask themselves how much they'd want the child to plainly follow direct"},{t:442.6,x:"orders where it got those, versus showing creative initiative for all the cases its orders"},{t:448,x:"didn't seem to cover, versus responding quickly to the unexpected,"},{t:452.55,x:"versus the child trying to deduce what its orders \"really meant\" and going the extra"},{t:459.2,x:"mile on its owner's inferred goals."},{t:461.6,x:"The parable didn't work, so she requisitioned access to a dungeon and bought some three-year-olds"},{t:467.57,x:"and tried making her clerics actually run the exercise."},{t:471.09,x:"So they could see what happened when the three-year-old acted towards them like they were"},{t:476.84,x:"acting towards Asmodeus."},{t:477.95,x:"It still didn't help. There seems to be something about the concept that is contrary"},{t:483.33,x:"to the nature of a mortal soul."},{t:485.67,x:"Mortals just end up with goals, even if you tell them to take Asmodeus's goals"},{t:490.73,x:"as their own they still end up with goals, mortals don't just obey they end"},{t:496.18,x:"up with a goal of obedience and then they start trying to figure out how"},{t:501.18,x:"to dance around the edges of Asmodeus's instructions so they can obey Him even more."},{t:506.17,x:"Aspexia can see what they're doing wrong, but she has never been able to successfully"},{t:512.04,x:"get that concept inside of a fellow mortal."},{t:515.14,x:"She can talk it at her flock but they're still mortals after she's done talking."},{t:520.86,x:"The training games she's devised didn't seem to help much outside of the specific games"},{t:526,x:"themselves. The way that a mortal should obey, the way that a distant god who"},{t:530.91,x:"can't communicate clearly and doesn't have much time to think about them would want them"},{t:535.68,x:"to obey - \"corrigibility\", she once tried naming it to her flock -"},{t:541.24,x:"it's just so alien to a mortal's nature."},{t:545.05,x:"Aspexia Rugatonn sometimes permits herself the vanity of thinking that she has come to understand"},{t:550.5,x:"a tiny bit of her own owner's frustration."},{t:553.27,x:"\"While I imagine the Most High is curious about specifics,\""},{t:556.74,x:"Ratarion says, a few moments later, \"if you would like any manner of theological instruction"},{t:561.96,x:"with respect to your ideas, I believe our Lord's orders imply that the senior cleric"},{t:567.29,x:"at your installation would be the one to converse with,"},{t:570.86,x:"and they could also pass a report to the Most High not intended for any"},{t:576.43,x:"further correction. Alternatively, if you do not yet seek such instruction,"},{t:580.62,x:"a report on your current thoughts, not intended to seek any form of correction,"},{t:585.55,x:"could be sent directly to the Most High -\" A slight hesitation."},{t:589.23,x:"\"Though I believe the Most High would wish me to emphasize that neither of these"},{t:593.85,x:"are - commands, attempts to push around the edges of Asmodeus's probable orders regarding the degree"},{t:599,x:"to which we are not to be proactive - if you spend time urgently composing such"},{t:604,x:"a report, and miss a key lesson from your teacher,"},{t:607.33,x:"if you focus your thoughts on the Most High's reactions and pay less attention in"},{t:612.55,x:"class, we would have perhaps managed to do a form of damage that Asmodeus would"},{t:618,x:"have need to give further orders to prevent - you should not,"},{t:621.19,x:"I am trying to suggest, go too far out of the path you would otherwise"},{t:625.55,x:"take, to file any report, if it seems you would never have done that without"},{t:630.33,x:"us coming here and being proactive -\" Ratarion does wince visibly,"},{t:633.67,x:"this time, and then emits a very charming smile."},{t:637.05,x:"\"Not being proactive really is quite hard for a mortal,"},{t:640.86,x:"isn't it? Perhaps I should simply be silent.\""},{t:643.52,x:"\"If there were an agent here in my place which was smart enough,"},{t:647.48,x:"they could imagine out a Carissa, exactly as she stood an hour ago,"},{t:651.56,x:"on her way to go to magic lessons with Keltham and the rest of his"},{t:656.36,x:"girls, and project out when she would have sought correction,"},{t:659.67,x:"and exactly how she would have clarified all the questions she was contemplating,"},{t:663.52,x:"and so that Carissa could continue on her trajectory unimpeded by this conversation,"},{t:668.2,x:"or any future ones that the things I might want to explain would necessitate,"},{t:673.64,x:"and we could discuss all of the specifics while leaving that Carissa out of the"},{t:678.41,x:"loop, so to speak, to do precisely as she has been ordered."},{t:682.62,x:"I'm not that smart, and I'm not sure anyone is,"},{t:686.38,x:"past the end of prophecy, but there's a simpler approach,"},{t:690.12,x:"of tracking down those impulses that this conversation might have unwisely insinuated into Carissa,"},{t:695.42,x:"and choking them off, and preserving myself in the state of one who has attracted"},{t:701.74,x:"no proactive interest whatsoever, while still having told you everything useful I can."},{t:707,x:"I will try, because it is my desire to be inexpensive for Asmodeus to direct,"},{t:712.91,x:"and because it is my desire to get your advice without you being obliged by"},{t:717.68,x:"my inability to avoid following it to barely give it in the first place."},{t:722.95,x:"But I suspect my trying will be imperfect, because I am not smart enough to"},{t:728.52,x:"contain a Carissa; I am one."},{t:730.68,x:"I think a Count in this position would give his daughter a headband.\""},{t:735.32,x:"This is what always happens when she tries to explain to her fellow mortals why"},{t:740.14,x:"they need to be easier to steer."},{t:742.39,x:"They start thinking even more complicated thoughts and inventing elaborate ways to be easier to"},{t:748.12,x:"steer that would involve doing even more things, pursuing goals,"},{t:752.75,x:"and even, in this case, increasing their intelligence."},{t:757.42,x:"Aspexia is not even angry anymore. She is just numb."},{t:760.89,x:"\"I believe we are approaching the point where our putative Count would find the heiress's"},{t:765.71,x:"insistence to be less adorable, Sevar. The senior officer at this installation would be an"},{t:771.05,x:"appropriate audience for any assertions by you that a headband would be necessary to your"},{t:777.5,x:"work -\""},{t:778.25,x:"Aspexia Rugatonn speaks out loud for the first time."},{t:782.12,x:"\"Hold,\" she says in a clear cold voice."},{t:785.43,x:"\"I have received a message. The Lawful Neutral god who bestowed two oracle circles has"},{t:791.67,x:"been identified. It is Otolmens. Have you been told who that is,"},{t:796,x:"Sevar?\""},{t:796.33,x:"\"Goddess of - keeping the world intact -\""},{t:798.53,x:"\"I would, under other circumstances, regret having just completed this Forbiddance here,"},{t:804.88,x:"which would make it more difficult and expensive to move this project to the other"},{t:811.7,x:"side of Golarion from Cheliax. However, any matter which merits Otolmens's attention is one which"},{t:818.22,x:"you cannot escape that easily, and requires getting at least off the local plane.\""},{t:824.36,x:"\"If this project had not been the subject of two direct interventions by Asmodeus,"},{t:829.45,x:"and been created as a result of Asmodeus's intervention, I would order the deaths of"},{t:835.5,x:"every person here except for Otolmens's oracle, and hope that this had been sufficient.\""},{t:842.32,x:"\"It is a sufficiently severe matter that I am now stating directly,"},{t:848,x:"though still without direct threat or consequence otherwise, that if you know anything I should"},{t:853.19,x:"know about this, before I offer Asmodeus a further costly opportunity to guide me,"},{t:858.64,x:"I believe that not only Asmodeus but every Lawful god and most non-Lawful gods would"},{t:865.59,x:"prefer that you share it with me.\""},{t:868.26,x:"Aspexia guesses, though it's a less certain guess than usual,"},{t:871.91,x:"that if Asmodeus wanted her to not ask questions about a fucking Otolmens event then"},{t:878.76,x:"Asmodeus would have used His limited communications budget to communicate that to her directly."},{t:883.75,x:"\"It's got to be about Keltham. Am I the only person who has read his"},{t:888.12,x:"mind or did someone else get in on that before he got clericed and it"},{t:892.36,x:"became risky - or have you got an expensive way to do it anyway,"},{t:896,x:"I think it's worth it -\""},{t:897.84,x:"\"Ignore any channels you think I may have for receiving information about Keltham other than"},{t:903.35,x:"yourself, including your own past reports. Speak to me as if I'd never heard of"},{t:908.57,x:"the man, explain to me why Otolmens is acting.\""},{t:911.86,x:"\"Keltham is from a world with an average intelligence of 18 and a billion people,"},{t:918.29,x:"well-coordinated. They are richer than us and have invented many things we haven't which should"},{t:923.81,x:"nonetheless function in our world, some underlying laws being the same."},{t:927.62,x:"He has patterns of thought that I'm pretty sure don't occur on Golarion at all"},{t:932.82,x:"- he's just better at thinking, he's not smarter than me but it's like he's half"},{t:938.29,x:"overcome the curse of having a mortal brain through deliberate practice,"},{t:941.82,x:"and he thinks of himself as very weak at it,"},{t:945.04,x:"compared to a dath ilani with an aptitude, and he's trying to teach us."},{t:950.05,x:"They have dangerous ideas and dangerous inventions which aren't known to Keltham,"},{t:954.56,x:"held by Keepers, but probably possible to derive independently, and Keltham doesn't know how they"},{t:960.4,x:"handle people who derive them or which things he shouldn't reinvent."},{t:964.8,x:"Lrilatha warned him about that. They screened off their entire history because there was something"},{t:971,x:"dangerous in it.\""},{t:972.29,x:"Aspexia thinks. The more thoughts of her own she has,"},{t:976.57,x:"so long as she holds them lightly, the easier it will be for Asmodeus to"},{t:981.08,x:"point to any of them, if any of them are correct."},{t:984.57,x:"If, indeed, this matter merits Asmodeus's attention at all."},{t:989.71,x:"It - could be that Nethys and Otolmens have some rivalry after the fashion of more"},{t:996.89,x:"ordinary gods? Nethys dropping two oracle circles, followed by Otolmens responding with two oracle circles,"},{t:1002.8,x:"is suggestive of that. It could be that there is some more ordinary divine game"},{t:1008.14,x:"going on and not the world ending."},{t:1011,x:"Asmodeus isn't acting like the world is ending, and Abadar shouldn't be dropping four cleric"},{t:1016.6,x:"circles on somebody who's going to end it."},{t:1019.16,x:"Aspexia spares a moment of frustration for how it is impossible for consecrations,"},{t:1023.7,x:"forbiddances, wardings, or literally anything else, to keep Nethys out of anything."},{t:1031.26,x:"Ordering Nethys's oracle killed and maledicted would be an obvious tactic,"},{t:1036.32,x:"but Nethys's oracle seems like she might be harder than usual to maledict,"},{t:1041.27,x:"or even take out of her library."},{t:1043.82,x:"Which means that Nethys was thinking about Chelish responses, not just being insane."},{t:1049.5,x:"And if they kill Ione Sala and Nethys's clerics resurrect her,"},{t:1055,x:"then Nethys's clerics may find out what's going on here with Keltham,"},{t:1059.18,x:"if they don't already know. \"I will soon pray to Asmodeus."},{t:1062.68,x:"My default intention, which Asmodeus may choose not to correct,"},{t:1067.5,x:"will be to equip Otolmens's oracle with invisibility items and a weapon and permit him"},{t:1074,x:"to monitor and intervene in events in this facility as he wishes."},{t:1078,x:"He will have pointed out to him Keltham and Ione Sala -"},{t:1081.88,x:"she is now, allegedly against her own will, an oracle of Nethys,"},{t:1086.38,x:"if you had not been informed of that - as possible objects of his attention."},{t:1092.5,x:"Do you, Sevar, wish to offer any corrections, however slight,"},{t:1097.14,x:"to my default plan?\""},{t:1098.67,x:"\"I think Keltham would agree to put all his teaching on hold indefinitely,"},{t:1103.62,x:"if you told him Otolmens oracled someone, which you could do in addition to empowering"},{t:1109,x:"the oracle, if you expect to have better options to present Asmodeus later.\""},{t:1113.72,x:"Aspexia does not scream at Sevar about how causing every single intervention of a god"},{t:1119.39,x:"to have lots and lots of different effects is not always helpful to that god."},{t:1124.61,x:"It's not that Aspexia would balk at screaming this repeatedly at somebody while burning off"},{t:1130.23,x:"their fingers and healing them back, it's that she's found doing so doesn't help."},{t:1135.8,x:"\"Otolmens's existence is considered a secret because of how we do not wish to direct"},{t:1141.09,x:"more attention to Her domain. It is more in accord with usual policy surrounding Otolmens,"},{t:1146.58,x:"to not call this matter to Keltham's attention and potentially turn his thoughts in that"},{t:1152.26,x:"direction.\" \"This policy is not mostly about the chance that Keltham will act deliberately,"},{t:1158.16,x:"Sevar. The problem lies in turning people's thoughts in a direction,"},{t:1162.5,x:"calling their attention to the harmful thing."},{t:1165.22,x:"If you tell someone that Otolmens worries they might destroy the world,"},{t:1169.5,x:"they may ask themselves how they'd do that or ask themselves why they'd do that."},{t:1174.74,x:"I would, ordinarily, just kill and maledict him, but Asmodeus told us not to do"},{t:1180.3,x:"that, and also Abadar has made the man His cleric."},{t:1183.78,x:"It is a frustrating situation to be in, and in those situations,"},{t:1187.96,x:"it is often wiser to do less than to do more,"},{t:1192.2,x:"if you have not been instructed otherwise.\""},{t:1195,x:"Says the three-year-old in the dungeon, and lives a little longer."},{t:1200.2,x:"\"With that said, would you recommend moderately strongly, especially if your recommendation is based on"},{t:1207,x:"information not known to me, that I come before Asmodeus with a default policy of"},{t:1212.5,x:"warning Keltham explicitly?\""},{t:1214,x:"\"No.\" Maybe dath ilan has categorically adequate training in how to take that information and"},{t:1221.29,x:"not make things worse with it, not think about all the implications or the likely"},{t:1225.57,x:"mechanisms. It would not be surprising if dath ilan did."},{t:1228.6,x:"But Keltham hasn't directly said it does, and her argument seems obviously true of Golarion"},{t:1234.6,x:"people, who are worse."},{t:1236.26,x:"\"If you come across any further information on this Otolmens event which you think is"},{t:1242.58,x:"relevant, standard protocols call for you to report it separately to the highest priest and"},{t:1248.48,x:"senior military officer of this installation, to be separately reported to myself and Her Infernal"},{t:1254.4,x:"Majestrix. You are not to assume that any such information has been reported by other"},{t:1260.39,x:"channels; duplicate it. Follow these instructions unless you are quite sure that your other instructions"},{t:1266.22,x:"from Hell or Asmodeus supersede them.\""},{t:1269.05,x:"\"I understand.\""},{t:1269.86,x:"\"I'm going to go talk to Otolmens's oracle, then pray."},{t:1274.36,x:"Do you consider it necessary to insert yourself into that discussion?\""},{t:1278.8,x:"What kind of person - no, broader than that - what kind of mind of any kind"},{t:1284.82,x:"would answer 'yes' to that question. \"No, Priestess.\""},{t:1288.12,x:"Aspexia flies off toward the villa at speeds only slightly visually distinguishable from teleportation."},{t:1294.27,x:"\"I believe I shall see myself out,\" says Paraduke Rathus Ratarion."},{t:1298.91,x:"\"Enjoy your date. Though that wasn't an order - you know,"},{t:1301.96,x:"I think I should just go.\" He gives Sevar a cheerful wave,"},{t:1305.78,x:"walks just outside the Forbiddance, and vanishes."},{t:1308.5,x:"she's not just being stubborn and childish about the headband,"},{t:1312.35,x:"she actually thinks that she is not capable enough to function at the level required"},{t:1317.54,x:"for survival in her current situation and she doesn't really have a plan B -"},{t:1322.47,x:"well. Plan B is to become as good at thinking as Keltham,"},{t:1326.89,x:"who is not smarter than her. But it'll take time that it's not at all"},{t:1332.7,x:"obvious she has. She stands up. Walks back inside."},{t:1336.22,x:"Tries to contemplate the odds that Asmodeus will, after all,"},{t:1341.5,x:"tell Aspexia Rugatonn 'sure, kill them all' -"},{t:1345.5,x:"Halfling slave #958245 \"Broom\" has never heard of Otolmens, which was obviously going to be"},{t:1354.95,x:"true in retrospect, and doesn't know what this whole project is about,"},{t:1359.27,x:"which was also obviously going to be true in retrospect,"},{t:1362.45,x:"and doesn't have much of an education, of course, and has not received any helpful"},{t:1367.45,x:"revelations from a primordial inevitable who would have a harder time talking to him than"},{t:1372.67,x:"even Asmodeus would, of course, and is having a hard time understanding what is even"},{t:1377.67,x:"going on at all, of course, let alone why the Grand High Priestess of Asmodeus"},{t:1382.96,x:"would be trying to have a plainly spoken discussion with him,"},{t:1387.04,x:"of course, and Aspexia could no doubt have foreseen this herself if she'd spent an"},{t:1392.45,x:"additional minute thinking about it in advance, of course."},{t:1395.6,x:"Aspexia keeps her temper under absolute control."},{t:1398.04,x:"When she gets home for the day - if, indeed, she ever does get home for"},{t:1403.26,x:"the day - she's going to order a dozen slaves sent to her,"},{t:1407.86,x:"bask in their understandable fears for a while, and then set all of them on"},{t:1414,x:"fire. Why. Why did Otolmens pick him."},{t:1418.9,x:"Why halfling slave #958245? ...because Broom is a simple predictable mortal,"},{t:1424.37,x:"who will do something predictable in the future, if Aspexia had to guess."},{t:1430,x:"All right. Aspexia will not modify her predictable initial plans unless Asmodeus tells her to."},{t:1437.8,x:"Broom gets a greater invisibility ring and a dagger of assassination;"},{t:1442.75,x:"and what Aspexia hopes is exactly the right level of gentle suggestion not to kill"},{t:1448.08,x:"random Asmodeans without a reason, and that the reason is supposed to have something to"},{t:1453,x:"do with his new god and Her purposes, not just Broom's previous grudges..."},{t:1458.09,x:"Aspexia is glad that she doesn't have to work on this project or live in"},{t:1463.46,x:"this villa, but, in fact, she doesn't have to work on this project or live"},{t:1467.83,x:"in this villa, so everything is fine."},{t:1470.29,x:"Awww, Asmodeus's favoritest pet squirrel in all of Golarion has been spooked by Otolmens hanging"},{t:1476.78,x:"around! To be fair to His pet squirrel, this is literally among the most reasonable"},{t:1483.39,x:"possible reasons for a pet squirrel to become spooked."},{t:1486.91,x:"His pet squirrel is probably not deducing the context about how Otolmens freaks out every"},{t:1493.04,x:"time the laws of physics do something She thinks they shouldn't,"},{t:1496.85,x:"like throwing out the anomaly-squirrel, and now She is hanging around Golarion being upset about"},{t:1502.89,x:"that. He sends a faint nonsemantic touch of reassurance."},{t:1507.16,x:"Gods are allowed to do this to their clerics without it being very costly from"},{t:1512.86,x:"the intervention budget, so long as they don't do it often enough or reliably enough"},{t:1517.88,x:"that it starts to form a signaling code."},{t:1521.38,x:"The part about making Otolmens's new oracle be invisible is weird and unpredicted,"},{t:1527.43,x:"but Asmodeus doesn't have time to pay much attention and His pet squirrel probably knows"},{t:1534.14,x:"what it's doing. It's not worth an intervention, almost certainly."},{t:1544.27,x:"Broom has spent a long lifetime looking and sounding, and in some cases thinking,"},{t:1550,x:"exactly as wise and intelligent as will not get a slave punished under a variety"},{t:1554.82,x:"of circumstances. This usually does not call for very much apparent wisdom and intelligence;"},{t:1559.27,x:"it is better to let your masters look down on you,"},{t:1562.2,x:"when that does not give them a reason to punish you."},{t:1565.13,x:"When the Grand High Priestess of Asmodeus explains matters to Broom using carefully dumbed-down clauses"},{t:1569.48,x:"- about how he's been chosen by the goddess of preventing the world from ending,"},{t:1573.71,x:"and he's allowed to kill an Asmodean if he thinks it stops the world ending"},{t:1578.2,x:"but shouldn't do so otherwise, except that if he feels a very strong impulse to"},{t:1582.7,x:"do anything he should probably do that whether or not it involves killing someone -"},{t:1588.47,x:"Broom displays exactly the level of apparent wisdom and intelligence that makes him look like"},{t:1593.67,x:"a gruff old halfling sweeper who was in fact able to grasp all that and"},{t:1598.11,x:"will do it reliably. He thinks he understands, mistress; some people might make a world-threatening"},{t:1603.8,x:"mess that destroys not just Cheliax but all of Golarion,"},{t:1607.8,x:"and if it looks like they're going to do that,"},{t:1610.75,x:"Broom will clean it up. Broom does not plan to do this as a masquerade,"},{t:1614.5,x:"or think any worded thoughts about it; it's just a reflex by now."},{t:1618.06,x:"Like so many others in Cheliax, Broom has become not a very distinguishable person from"},{t:1623.31,x:"his mask, even to himself. It may not occur to Broom for a while yet"},{t:1627.92,x:"that he is now allowed to be wiser or more intelligent than he previously needed"},{t:1632.59,x:"to look to his masters. This, too, is mortal nature,"},{t:1635.77,x:"if you put someone in a position where they are not allowed to look too"},{t:1640.33,x:"intelligent or wise, and then take them out of it."},{t:1643.25,x:"There is momentum, but a finite momentum, and it is hard to guess how far"},{t:1647.74,x:"that momentum will last."},{t:1648.96,x:"Keltham has now guessed, and then been shown, what happens when he tries to touch"},{t:1653.73,x:"magic, on four different occasions. He's burned his remaining Greater Detect Magic for the day"},{t:1658.92,x:"on watching what happens when other people interact with spells above scaffolds,"},{t:1663.57,x:"though he can't hold his concentration on Greater Detect Magic while trying his own magical"},{t:1670,x:"manipulations; and before his spell ran out he also took another look at people catching"},{t:1676.43,x:"cantrips. He's not forming solid perceptual generalizations about what does what."},{t:1681.06,x:"But he's ever played hyperdimensional arcade games with lots of hidden information and subtlety."},{t:1686.8,x:"\"I get the impression that Detect Magic is not showing all of the -"},{t:1692,x:"latent information, hidden facts - about what goes on with magical structures."},{t:1695.92,x:"Like, two magical configurations that looked the same to me,"},{t:1699.12,x:"in the illusion you're showing me, could have other different facts about them,"},{t:1703.33,x:"not visible in the illusion, not visible in the detection spell,"},{t:1707,x:"which would change how the spell reacted when I touched it."},{t:1710.67,x:"In particular, I touched it what I thought was the same way twice,"},{t:1714.72,x:"and even though it seemed to have reset to the same starting point both times,"},{t:1719.38,x:"it reacted pretty differently. Maybe I touched it differently, which could be true,"},{t:1724.53,x:"obviously, but going on general behaviors and my intuitive sense of the pattern,"},{t:1729.8,x:"I think that - something changed in the hidden background."},{t:1733.4,x:"Does that sound right?\""},{t:1734.8,x:"\"- maybe?\" says Meritxell. \"Magic is deterministic, but the illusion probably isn't conveying enough to fully"},{t:1742,x:"determine it - if I touch it it'll do what I want every time,"},{t:1745.59,x:"for something as simple as a cantrip, but I don't know what additional features of"},{t:1749.72,x:"the situation I might be paying attention to that I'm not properly putting in the"},{t:1754.45,x:"illusion. For the kind of spell where it won't do what I want every time,"},{t:1759.43,x:"I'd be failing to pay attention to its momentum properly,"},{t:1762.91,x:"or failing to pay attention to the viscosity it gets from having been recently manipulated,"},{t:1768.27,x:"or failing to track an interaction it's having with other nearby magic,"},{t:1772.64,x:"but cantrips are so easy that you don't have to account for all of that.\""},{t:1778.33,x:"\"Deterministic and fully-visible are different concepts and I maybe shouldn't have asked about them together."},{t:1783.48,x:"Even if the parts I can't see are the same,"},{t:1786.24,x:"and I actually am touching them differently, or those other parts are just reacting to"},{t:1790.48,x:"changing things like viscosity - are there parts I can't see,"},{t:1793.44,x:"in the information here? I mean, even changes of viscosity from having been recently manipulated"},{t:1798.04,x:"implies there's a current-viscosity state that isn't being shown, are there a lot of other"},{t:1804.11,x:"- facts-that-can-be-true-about-it, hidden-information,\" he uses the Baseline term because he just can't stand it,"},{t:1810.97,x:"\"latentvariables, that I'm not seeing?\""},{t:1813,x:"\"There are parts you can't see, yes."},{t:1815.33,x:"You have to infer their state, though for a cantrip you don't have to infer"},{t:1820.33,x:"it very precisely.\""},{t:1821.31,x:"Keltham is a very self-disciplined person who would not set anything on fire right now"},{t:1825.92,x:"even if he had the economicmagic to do that without buying a flamethrower."},{t:1830.28,x:"\"I realize this may not be the usual order in which these things are taught"},{t:1835.08,x:"to children, but can I just have a quick review of all the known equations"},{t:1840,x:"or even rules-of-thumb governing all the properties that magic actually has?"},{t:1844.3,x:"Has any progress been made on getting a copy of any of the books like"},{t:1848.72,x:"- Principles of Spell Design, I think was one of them -"},{t:1852.08,x:"that would have information like that?\""},{t:1854.06,x:"- they can try but all the known rules of thumb are not quick and all"},{t:1859.64,x:"the equations are not known. Principles of Spell Design lays out all of the heuristics"},{t:1864.9,x:"you can use but you still usually fail, when designing spells with all of those"},{t:1870.6,x:"in mind; it's speculated that gods can see all the hidden properties exactly as clearly"},{t:1876.6,x:"as the visible properties and that's why it's not hard for gods to design spells."},{t:1882.6,x:"They launch into all the known rules of thumb, usually with the caveat that casting"},{t:1887.83,x:"cantrips doesn't actually require this. You can think of one aspect of magic as lagging"},{t:1893,x:"the visible aspects like so, requiring more energy to move and moving more slowly when"},{t:1898.14,x:"it does but also requiring more energy to stop; you can think of another as"},{t:1903.86,x:"reacting badly to close contact with itself, and resisting spell structures like such or such,"},{t:1909.8,x:"which is why no spells have structures like that; you can think of this other"},{t:1915.13,x:"thing as possible to tug into alignment only by sort of jiggling the spell,"},{t:1919.39,x:"and you can tell you've got it when you don't get any reverberations when you"},{t:1924.88,x:"do this - And people have, of course, tried hyperdimensional representations that capture all that,"},{t:1930.11,x:"but it's hard, and usually less useful to learn than the heuristics if you aren't"},{t:1935.63,x:"specifically doing spell design, and none of them have arrived at equations that if solved"},{t:1941.33,x:"for let you invent spells, despite having headbands and plenty of motivation."},{t:1946.22,x:"It's understood that the number of ways magic interacts with itself is just very very"},{t:1953.14,x:"large, for high circle spells, and it's not reducible complexity."},{t:1958.86,x:"It is, someone ventures, sort of like the thing Keltham said,"},{t:1962.86,x:"about how knowing how objects move doesn't let you catch them in the air."},{t:1967.36,x:"No one has found Principles of Spell Design yet."},{t:1970.64,x:"Ione Sala has now realized two things."},{t:1973.18,x:"First, she knows where there's a copy - several copies, in fact -"},{t:1977.84,x:"of 'Principles of Spell Design' in the Ostenso wizard academy's library."},{t:1983.05,x:"Second, her oracle's curse allows her to borrow copies of nonmagical books in general circulation,"},{t:1989.85,x:"from libraries Ione has already visited and spent time reading inside,"},{t:1994.33,x:"if she's been inside the part of the library that has those books."},{t:1998.67,x:"Though it's not teleportation, and she can't use it to write messages back;"},{t:2003.24,x:"the books just temporarily disappear from their current libraries, and temporary copies of them get"},{t:2009.33,x:"created in her own library. She thinks she can do five books per day at"},{t:2014.33,x:"the current power - circle? is it a thing that has circles?"},{t:2017.97,x:"- of her oracle's curse, and a borrow lasts for a day unless she expends one"},{t:2024,x:"use on renewing it. Ione has the best curse ever."},{t:2027.35,x:"It's tempting to imagine that Nethys did that because she would have wanted it."},{t:2031.73,x:"But that's pathetic; Nethys isn't a Good god who would be thinking like that,"},{t:2036.82,x:"even if Good's own propaganda was true."},{t:2039.33,x:"If she has this curse, she's meant to use it for Nethys's benefit;"},{t:2043.67,x:"which, so far as Ione can possibly guess, means using it to push Keltham's research"},{t:2049.18,x:"forwards. This is... also going to make her a lot harder to replace with an"},{t:2054.64,x:"imposter that can fool Keltham. But that is not why she is doing this,"},{t:2059.52,x:"she is not trying to make Chelish security's life more difficult for her own benefit."},{t:2064.61,x:"Her god has given her an ability which is clearly meant to be used for"},{t:2069.43,x:"the benefit of this important Chelish project that Cheliax is spending lots of money on,"},{t:2074.46,x:"and she is only going to use it for that."},{t:2077.54,x:"She is completely not going to argue if Cheliax tells her to pretend that a"},{t:2082.56,x:"book isn't there or can't be retrieved."},{t:2084.8,x:"In fact, she's going to lie to Keltham and say there's sometimes unpredictable exceptions in"},{t:2089.8,x:"which books she can get, specifically so Cheliax can order her not to get something"},{t:2095.56,x:"and she'll have an excuse. She is a very good and obedient oracle of Nethys"},{t:2100.83,x:"who doesn't want Chelish security to gouge her eye out again,"},{t:2104.65,x:"it was very unpleasant, and Ione definitely feels very scared and threatened by that (even"},{t:2110.4,x:"if they can't destroy her the way Nethys can)."},{t:2113.64,x:"Even Nethys is clearly being somewhat cooperative, since the inability to write any messages back"},{t:2119.73,x:"is probably there to reassure Chelish security against information leaking out that way."},{t:2124.88,x:"But it also wouldn't be the best possible service to Nethys to ask Chelish security's"},{t:2130.5,x:"permission to reveal this ability; they might say no, and that is clearly not Nethys's"},{t:2137.13,x:"will here. \"Keltham, wait a second,\" Ione says out loud,"},{t:2141.72,x:"\"let me write you a note about something.\""},{t:2144.83,x:"She starts to scribble: I have a secret ability to borrow up to five ordinary"},{t:2149.65,x:"books, for a day each unless renewed, if they're in a part of a library"},{t:2154.6,x:"that I've been to. Though they're just temporary copies, you can't write things in them"},{t:2160.6,x:"permanently, and there are weird exceptions about which books it works on."},{t:2164.67,x:"I think for a project this important, I'll accept if the other girls get suspicious"},{t:2169.36,x:"I can do it, or even if you just want me to announce outright that"},{t:2173.45,x:"I had a secret like that. Do you want me to get you Principles of"},{t:2177.9,x:"Spell Design from the Ostenso academy library?"},{t:2181.05,x:"Is security stopping her? She's really sorry about talking to Keltham first like that,"},{t:2186.9,x:"she really is, she didn't do it to make their lives harder,"},{t:2190.2,x:"but she doesn't believe that Nethys would want her to offer Chelish security a veto"},{t:2194.7,x:"on using her powers to help this important Chelish project at all,"},{t:2198.67,x:"which is how Nethys obviously intends them to be used,"},{t:2202,x:"for Cheliax's benefit, Nethys even made it not involve real teleportation,"},{t:2206.32,x:"there could be a pact about this between Nethys and Asmodeus for all they know,"},{t:2211.67,x:"Nethys obviously has an interest in Asmodeus succeeding here, and she's very happy to not"},{t:2216.67,x:"retrieve particular books in the future if Chelish security says so,"},{t:2220.4,x:"and she even lied to Keltham about that like a good obedient Nethys oracle should,"},{t:2225.65,x:"without anybody needing to tell her that, please don't hurt her."},{t:2230.36,x:""}];
+const BEATS=[{t:0,s:'chamber',v:'narrator'},{t:24,s:'chamber',v:'paraduke'},{t:62,s:'asmodeus',v:'paraduke'},{t:115,s:'chamber',v:'paraduke'},{t:144,s:'chamber',v:'aspexia'},{t:178,s:'dath_ilan',v:'carissa'},{t:203,s:'chamber',v:'paraduke'},{t:228,s:'bond',v:'aspexia'},{t:251,s:'chamber',v:'aspexia'},{t:343,s:'order',v:'aspexia'},{t:358,s:'goals',v:'aspexia'},{t:415,s:'dungeon',v:'aspexia'},{t:475,s:'goals',v:'aspexia'},{t:546,s:'asmodeus',v:'aspexia'},{t:555,s:'chamber',v:'paraduke'},{t:642,s:'simulacrum',v:'carissa'},{t:726,s:'headband',v:'carissa'},{t:735,s:'goals',v:'aspexia'},{t:758,s:'headband',v:'paraduke'},{t:782,s:'otolmens',v:'aspexia'},{t:791,s:'otolmens',v:'carissa'},{t:798,s:'otolmens',v:'aspexia'},{t:882,s:'dath_ilan',v:'carissa'},{t:896,s:'otolmens',v:'aspexia'},{t:911,s:'dath_ilan',v:'carissa'},{t:968,s:'gods',v:'aspexia'},{t:1056,s:'asmodeus',v:'aspexia'},{t:1096,s:'dath_ilan',v:'carissa'},{t:1111,s:'goals',v:'aspexia'},{t:1136,s:'otolmens',v:'aspexia'},{t:1189,s:'dungeon',v:'aspexia'},{t:1197,s:'chamber',v:'aspexia'},{t:1212,s:'dath_ilan',v:'carissa'},{t:1235,s:'chamber',v:'aspexia'},{t:1276,s:'chamber',v:'carissa'},{t:1284,s:'departure',v:'narrator'},{t:1291,s:'departure',v:'paraduke'},{t:1305,s:'scream',v:'carissa'},{t:1344,s:'broom',v:'narrator'},{t:1469,s:'asmodeus',v:'asmodeus'},{t:1541,s:'broom',v:'broom'},{t:1652,s:'magic',v:'keltham'},{t:1735,s:'magic',v:'meritxell'},{t:1773,s:'magic',v:'keltham'},{t:1813,s:'magic',v:'meritxell'},{t:1821,s:'magic',v:'keltham'},{t:1851,s:'magic',v:'meritxell'},{t:1883,s:'magic',v:'narrator'},{t:1967,s:'library',v:'ione'},{t:2233,s:'dath_ilan',v:'keltham'},{t:2297,s:'library',v:'ione'},{t:2327,s:'chamber',v:'carissa'},{t:2351,s:'magic',v:'meritxell'},{t:2359,s:'library',v:'carissa'},{t:2385,s:'library',v:'ione'},{t:2433,s:'magic',v:'narrator'},{t:2483,s:'library',v:'ione'},{t:2521,s:'chamber',v:'narrator'}];
+
+/* ===================== ASH / EMBERS ===================== */
+const cv=document.getElementById('ash'), ctx=cv.getContext('2d');
+let parts=[], W=0,H=0, accent={r:216,g:162,b:74};
+function size(){ const r=cv.getBoundingClientRect(); W=cv.width=r.width; H=cv.height=r.height; }
+addEventListener('resize',size); size();
+function spawn(){ return {x:Math.random()*W, y:H+10, vy:-(0.2+Math.random()*0.55), vx:(Math.random()-0.5)*0.2, r:Math.random()*1.7+0.4, life:0, max:H*(0.5+Math.random()*0.6), tw:Math.random()*6}; }
+for(let i=0;i<60;i++){ const p=spawn(); p.y=Math.random()*H; parts.push(p); }
+let ashPaused=false;
+function ash(t){
+  if(!ashPaused){
+    ctx.clearRect(0,0,W,H);
+    for(const p of parts){
+      p.y+=p.vy; p.x+=p.vx+Math.sin(t/1000+p.tw)*0.14; p.life++;
+      const k=1-p.life/p.max;
+      if(p.life>p.max||p.y<-10){ Object.assign(p,spawn()); continue; }
+      const a=Math.max(0,k)*0.8*(0.6+0.4*Math.sin(t/300+p.tw));
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7);
+      ctx.fillStyle=`rgba(${accent.r},${accent.g},${accent.b},${a})`; ctx.shadowBlur=8; ctx.shadowColor=ctx.fillStyle; ctx.fill();
+    }
+    ctx.shadowBlur=0;
+  }
+  requestAnimationFrame(ash);
+}
+requestAnimationFrame(ash);
+function hexRgb(h){const m=h.replace('#','');return {r:parseInt(m.slice(0,2),16),g:parseInt(m.slice(2,4),16),b:parseInt(m.slice(4,6),16)};}
+
+/* ===================== DOM ===================== */
+const SPEEDS=[1,1.25,1.5,0.75];
+let speed=1, curScene=null, curCue=-1, curBeat=-1, capsOn=true;
+const frame=document.getElementById('frame');
+const introEl=document.getElementById('intro');
+const capEl=document.getElementById('cap');
+const labelEl=document.getElementById('label');
+const knameEl=document.getElementById('kname');
+const ttlEl=document.getElementById('ttl');
+const ksigUse=document.getElementById('ksig-use');
+const barEl=document.getElementById('bar');
+const beatEl=document.getElementById('beat');
+const playIcon=document.getElementById('playicon');
+const ccBtn=document.getElementById('cc');
+const audio=document.getElementById('player');
+const dropZone=document.getElementById('drop');
+const audioInput=document.getElementById('audiofile');
+const loadedBox=document.getElementById('loaded');
+const fnameEl=document.getElementById('fname');
+const durEl=document.getElementById('dur');
+const beginBtn=document.getElementById('begin');
+
+/* scene crossfade (Stardust-style) — beatEl shows the clock, so setScene only writes the title */
+function setScene(name){
+  if(name===curScene) return;
+  curScene=name;
+  document.querySelectorAll('.scene').forEach(el=>el.classList.remove('active','go'));
+  const el=document.querySelector(`.scene[data-scene="${name}"]`);
+  if(el){ el.classList.add('active'); requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add('go'))); }
+  ttlEl.textContent=SCENE_TITLES[name]||'';
+}
+function setSpeaker(v){
+  const c=CHARS[v]; if(!c) return;
+  knameEl.textContent=c.name; ksigUse.setAttribute('href','#'+c.sigil);
+  document.documentElement.style.setProperty('--accent', c.color); accent=hexRgb(c.color);
+}
+/* caption: blank text hides it; honours the CC toggle */
+function setCaption(text){
+  if(!capsOn || !text){ capEl.classList.remove('show'); return; }
+  capEl.classList.remove('show');
+  setTimeout(()=>{ if(!capsOn) return; capEl.textContent=text; capEl.classList.add('show'); },170);
+}
+function applyCaps(){ const c=CUES[curCue]; setCaption(c?c.x:''); }
+function setIcon(p){ playIcon.innerHTML = p?'<path d="M6 5h4v14H6zM14 5h4v14h-4z"></path>':'<path d="M8 5v14l11-7z"></path>'; }
+
+/* ===================== CLOCK + SYNC ===================== */
+function fmt(s){ if(!isFinite(s)||s<0) s=0; s=Math.floor(s); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+function findIdx(arr,time){ let lo=0,hi=arr.length-1,res=0; while(lo<=hi){ const m=(lo+hi)>>1; if(arr[m].t<=time){res=m;lo=m+1;} else hi=m-1; } return res; }
+function sync(){
+  const ct=audio.currentTime||0, d=audio.duration;
+  const bi=findIdx(BEATS,ct);
+  if(bi!==curBeat){ curBeat=bi; setScene(BEATS[bi].s); setSpeaker(BEATS[bi].v); }
+  const ci=findIdx(CUES,ct);
+  if(ci!==curCue){ curCue=ci; setCaption(CUES[ci].x); }
+  if(d){ barEl.style.width=Math.min(100,(ct/d*100))+'%'; }
+  beatEl.textContent=fmt(ct)+(d?(' / '+fmt(d)):'');
+}
+let rafId=0;
+function loop(){ if(audio.paused) return; sync(); rafId=requestAnimationFrame(loop); }
+
+/* ===================== AUDIO EVENTS ===================== */
+audio.addEventListener('timeupdate', sync);
+audio.addEventListener('seeked', ()=>{ curCue=-1; sync(); });
+audio.addEventListener('loadedmetadata', ()=>{ durEl.textContent='· '+fmt(audio.duration); beatEl.textContent='0:00 / '+fmt(audio.duration); });
+audio.addEventListener('play', ()=>{ frame.classList.add('playing'); document.body.classList.remove('paused'); ashPaused=false; setIcon(true); labelEl.classList.add('show'); sync(); loop(); });
+audio.addEventListener('pause', ()=>{ setIcon(false); document.body.classList.add('paused'); ashPaused=true; });
+audio.addEventListener('ended', finish);
+
+/* ===================== UPLOAD ===================== */
+const AUDIO_EXT=/\.(mp3|m4a|wav|ogg|oga|aac|flac|opus|weba|mp4)$/i;
+function loadAudioFile(file){
+  if(!file) return false;
+  if(file.type && !file.type.startsWith('audio/') && !AUDIO_EXT.test(file.name)) return false;
+  try{ if(audio.src) URL.revokeObjectURL(audio.src); }catch(_){}
+  audio.src=URL.createObjectURL(file); audio.playbackRate=speed; audio.load();
+  fnameEl.textContent=file.name; durEl.textContent='';
+  loadedBox.classList.add('show'); dropZone.classList.add('has');
+  beginBtn.disabled=false;
+  return true;
+}
+audioInput.addEventListener('change', e=>{ loadAudioFile(e.target.files[0]); });
+dropZone.addEventListener('click', ()=>audioInput.click());
+['dragenter','dragover'].forEach(ev=>dropZone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); dropZone.classList.add('drag'); }));
+['dragleave','dragend','drop'].forEach(ev=>dropZone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); if(ev!=='dragover') dropZone.classList.remove('drag'); }));
+dropZone.addEventListener('drop', e=>{
+  const files=[...(e.dataTransfer?e.dataTransfer.files:[])];
+  const aud=files.find(f=>f.type.startsWith('audio/')||AUDIO_EXT.test(f.name));
+  if(aud) loadAudioFile(aud);
+});
+
+/* ===================== PLAYBACK CONTROL ===================== */
+function startPlayback(){
+  if(!audio.src){ dropZone.classList.add('drag'); setTimeout(()=>dropZone.classList.remove('drag'),650); return; }
+  introEl.classList.remove('ended'); introEl.classList.add('gone');
+  if(audio.ended || (audio.duration && audio.currentTime>=audio.duration-0.05)){ audio.currentTime=0; curCue=-1; curBeat=-1; }
+  const p=audio.play(); if(p&&p.catch) p.catch(()=>{});
+}
+function finish(){
+  frame.classList.remove('playing'); setIcon(false);
+  introEl.classList.add('ended'); introEl.classList.remove('gone');
+}
+function seekToBeat(idx){ idx=Math.max(0,Math.min(BEATS.length-1,idx)); audio.currentTime=Math.max(0,BEATS[idx].t)+0.02; curCue=-1; sync(); }
+function nextBeat(){ seekToBeat(findIdx(BEATS,audio.currentTime)+1); }
+function prevBeat(){ const ci=findIdx(BEATS,audio.currentTime); seekToBeat((audio.currentTime-BEATS[ci].t>1.4)?ci:ci-1); }
+function togglePlay(){ if(audio.paused) audio.play().catch(()=>{}); else audio.pause(); }
+function toggleCaps(){ capsOn=!capsOn; ccBtn.classList.toggle('off',!capsOn); ccBtn.setAttribute('aria-pressed',String(capsOn)); applyCaps(); }
+
+beginBtn.addEventListener('click', startPlayback);
+document.getElementById('play').addEventListener('click', ()=>{ if(!introEl.classList.contains('gone')){ startPlayback(); return; } togglePlay(); });
+document.getElementById('next').addEventListener('click', nextBeat);
+document.getElementById('prev').addEventListener('click', prevBeat);
+document.getElementById('restart').addEventListener('click', ()=>{ audio.currentTime=0; curCue=-1; curBeat=-1; sync(); if(audio.paused) audio.play().catch(()=>{}); });
+document.getElementById('speed').addEventListener('click', e=>{ speed=SPEEDS[(SPEEDS.indexOf(speed)+1)%SPEEDS.length]; audio.playbackRate=speed; e.currentTarget.textContent=String(speed)+'×'; });
+ccBtn.addEventListener('click', toggleCaps);
+document.getElementById('prog').addEventListener('click', e=>{ if(!audio.duration) return; const r=e.currentTarget.getBoundingClientRect(); const frac=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)); audio.currentTime=frac*audio.duration; curCue=-1; sync(); });
+addEventListener('keydown', e=>{ if(!introEl.classList.contains('gone')) return;
+  if(e.code==='Space'){ e.preventDefault(); togglePlay(); }
+  else if(e.code==='ArrowRight'){ e.preventDefault(); nextBeat(); }
+  else if(e.code==='ArrowLeft'){ e.preventDefault(); prevBeat(); }
+  else if(e.key==='c'||e.key==='C'){ e.preventDefault(); toggleCaps(); } });
+addEventListener('beforeunload', ()=>{ try{ if(audio.src) URL.revokeObjectURL(audio.src); }catch(_){} });
+
+/* cast list */
+(function(){ const cast=document.getElementById('cast'); if(!cast) return;
+  for(const key of ['narrator','carissa','aspexia','paraduke','asmodeus','keltham','ione','meritxell','broom']){
+    const c=CHARS[key], d=document.createElement('div'); d.className='c';
+    d.innerHTML=`<div class="ic" style="color:${c.color}"><svg><use href="#${c.sigil}"/></svg></div><div><div class="nm">${c.name.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div><div class="tg">${c.tag}</div></div>`;
+    cast.appendChild(d);
+  } })();
+
+/* initial backdrop + idle state */
+document.getElementById('speed').textContent='1×';
+setScene(BEATS[0].s); setSpeaker(BEATS[0].v); setIcon(false);
+beatEl.textContent='0:00';
+</script>
+</body>
+</html>

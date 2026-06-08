@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planecrash — Corrigibility · an animated reading</title>
+<meta name="description" content="An animated, audio-synced reading of the Corrigibility arc of Planecrash (Project Lawful). Choose an episode.">
+<meta property="og:title" content="Planecrash — Corrigibility · an animated reading">
+<meta property="og:description" content="Choose an episode of the animated, audio-synced reading.">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Spectral:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0608; --ink:#f0e6d8; --muted:#9a8a84;
+  --accent:#d8a24a; --gold:#d8a24a; --blood:#c2152f; --ember:#ff8a3c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  min-height:100%;
+  background:radial-gradient(120% 90% at 50% 4%, #1a0c10 0%, var(--bg) 52%, #050304 100%) fixed;
+  color:var(--ink); font-family:"Spectral",Georgia,serif;
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+}
+
+/* ---------- ash / ember canvas ---------- */
+#ash{position:fixed; inset:0; z-index:0; pointer-events:none}
+
+/* faint vignette over everything */
+#vignette{position:fixed; inset:0; z-index:1; pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 38%, transparent 54%, rgba(5,3,4,.6) 100%)}
+
+main{position:relative; z-index:2; max-width:1180px; margin:0 auto; padding:clamp(48px,8vh,120px) 6vw 14vh}
+
+/* ---------- masthead ---------- */
+.mast{text-align:center; display:flex; flex-direction:column; align-items:center; gap:1.6vh;
+  opacity:0; animation:rise 1.1s .1s ease forwards}
+.sigil{width:clamp(54px,8vw,78px); height:clamp(54px,8vw,78px); color:var(--accent);
+  filter:drop-shadow(0 0 26px rgba(216,162,74,.4))}
+.sigil svg{width:100%;height:100%}
+.eyebrow{font-family:"Cinzel",serif; font-size:clamp(9px,1.05vw,13px); letter-spacing:.5em;
+  text-transform:uppercase; color:var(--gold)}
+h1{font-family:"Cinzel",serif; font-weight:700; letter-spacing:.02em;
+  font-size:clamp(52px,12vw,140px); line-height:.9;
+  background:linear-gradient(180deg,#fff 0%, #e9c277 52%, #b3122b 130%);
+  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 8px 50px rgba(179,18,43,.32))}
+.arc{font-family:"Cinzel",serif; font-weight:500; letter-spacing:.34em; text-transform:uppercase;
+  font-size:clamp(12px,1.7vw,18px); color:#cbb9a9; margin-top:-.2vh}
+.lede{font-size:clamp(13px,1.55vw,18px); font-style:italic; color:#cbb9a9;
+  max-width:50ch; line-height:1.6; font-weight:300}
+.rule{width:min(380px,70%); height:1px; margin:1.4vh 0 .4vh;
+  background:linear-gradient(90deg,transparent,rgba(216,162,74,.55),transparent)}
+
+/* ---------- episode grid ---------- */
+.grid{margin-top:clamp(40px,7vh,80px);
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:20px}
+
+.ep{position:relative; display:block; text-decoration:none; color:inherit;
+  padding:26px 26px 24px; border:1px solid rgba(216,162,74,.16); border-radius:14px;
+  background:linear-gradient(180deg, rgba(255,255,255,.018), rgba(255,255,255,.004));
+  overflow:hidden; isolation:isolate;
+  transition:transform .3s cubic-bezier(.2,.7,.2,1), border-color .3s, box-shadow .3s;
+  opacity:0; transform:translateY(22px); animation:rise .9s ease forwards}
+.ep::before{content:""; position:absolute; inset:0; z-index:-1; opacity:0;
+  background:radial-gradient(130% 100% at 0% 0%, rgba(216,162,74,.14), transparent 60%);
+  transition:opacity .35s ease}
+.ep::after{content:""; position:absolute; left:0; top:0; bottom:0; width:2px;
+  background:linear-gradient(180deg,var(--ember),var(--blood)); opacity:.55; transition:opacity .35s}
+.ep:hover{transform:translateY(-5px); border-color:rgba(216,162,74,.5);
+  box-shadow:0 22px 60px rgba(0,0,0,.55), 0 0 0 1px rgba(216,162,74,.12)}
+.ep:hover::before{opacity:1}
+.ep:hover::after{opacity:1}
+.ep:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+
+.ep .top{display:flex; align-items:baseline; justify-content:space-between; gap:14px; margin-bottom:12px}
+.ep .num{font-family:"Cinzel",serif; font-weight:600; letter-spacing:.16em; text-transform:uppercase;
+  font-size:11px; color:var(--accent)}
+.ep .tag{font-style:italic; font-size:11px; color:var(--muted)}
+.ep h2{font-family:"Cinzel",serif; font-weight:700; line-height:1.08;
+  font-size:clamp(22px,2.4vw,28px); color:#fff; margin-bottom:11px}
+.ep p{font-size:14.5px; line-height:1.58; color:#c7b8ac; font-weight:300}
+.ep .go{margin-top:16px; display:inline-flex; align-items:center; gap:.55em;
+  font-family:"Cinzel",serif; font-weight:600; font-size:11.5px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--accent)}
+.ep .go .tri{width:0;height:0;border-left:8px solid var(--accent);
+  border-top:5px solid transparent;border-bottom:5px solid transparent; transition:transform .3s}
+.ep:hover .go .tri{transform:translateX(4px)}
+
+/* ---------- footer ---------- */
+footer{margin-top:clamp(56px,9vh,100px); text-align:center; display:flex; flex-direction:column;
+  align-items:center; gap:14px; opacity:0; animation:rise 1s .5s ease forwards}
+footer .frule{width:min(260px,60%); height:1px;
+  background:linear-gradient(90deg,transparent,rgba(216,162,74,.4),transparent)}
+footer p{font-size:12.5px; line-height:1.7; color:#6a5a56; max-width:62ch}
+footer a{color:#9a8a84; text-decoration:none; border-bottom:1px solid rgba(154,138,132,.4)}
+footer a:hover{color:var(--accent); border-color:var(--accent)}
+
+/* loading skeletons + status */
+.skel{position:relative; border:1px solid rgba(216,162,74,.1); border-radius:14px;
+  min-height:150px; padding:26px; overflow:hidden;
+  background:linear-gradient(180deg, rgba(255,255,255,.014), rgba(255,255,255,.003))}
+.skel::after{content:""; position:absolute; inset:0;
+  background:linear-gradient(100deg, transparent 20%, rgba(216,162,74,.07) 50%, transparent 80%);
+  transform:translateX(-100%); animation:shimmer 1.3s infinite}
+@keyframes shimmer{to{transform:translateX(100%)}}
+#status{grid-column:1/-1; text-align:center; margin-top:24px;
+  font-style:italic; color:var(--muted); font-size:14px}
+#status a{color:var(--accent); text-decoration:none; border-bottom:1px solid rgba(216,162,74,.4)}
+
+/* lazily-loaded blurb placeholder */
+.blurb{display:block}
+.blurb .ln{display:block; height:11px; border-radius:6px; margin:10px 0;
+  background:linear-gradient(100deg, rgba(216,162,74,.05) 30%, rgba(216,162,74,.16) 50%, rgba(216,162,74,.05) 70%);
+  background-size:220% 100%; animation:shimmerln 1.3s infinite linear}
+.blurb .ln.short{width:62%}
+@keyframes shimmerln{to{background-position:-220% 0}}
+
+@keyframes rise{to{opacity:1; transform:none}}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none !important}
+  .mast,.ep,footer{opacity:1; transform:none}
+}
+</style>
+</head>
+<body>
+<canvas id="ash"></canvas>
+<div id="vignette"></div>
+
+<main>
+  <header class="mast">
+    <div class="sigil" aria-hidden="true">
+      <svg viewBox="0 0 100 100" fill="none">
+        <circle cx="50" cy="50" r="46" stroke="currentColor" stroke-width="1.4" opacity=".5"/>
+        <circle cx="50" cy="50" r="38" stroke="currentColor" stroke-width="1" opacity=".28"/>
+        <!-- watching eye -->
+        <path d="M14 50 Q50 22 86 50 Q50 78 14 50 Z" stroke="currentColor" stroke-width="1.8" fill="none"/>
+        <circle cx="50" cy="50" r="13" fill="url(#irisGrad)"/>
+        <circle cx="50" cy="50" r="13" stroke="currentColor" stroke-width="1.4"/>
+        <circle cx="50" cy="50" r="4.5" fill="#0a0608"/>
+        <!-- rays -->
+        <g stroke="currentColor" stroke-width="1.2" opacity=".55">
+          <line x1="50" y1="2" x2="50" y2="11"/>
+          <line x1="50" y1="89" x2="50" y2="98"/>
+          <line x1="2" y1="50" x2="11" y2="50"/>
+          <line x1="89" y1="50" x2="98" y2="50"/>
+        </g>
+        <defs>
+          <radialGradient id="irisGrad" cx="50%" cy="42%" r="60%">
+            <stop offset="0%" stop-color="#ff9a3c"/>
+            <stop offset="70%" stop-color="#c2152f" stop-opacity=".7"/>
+            <stop offset="100%" stop-color="#c2152f" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+      </svg>
+    </div>
+    <div class="eyebrow">an animated reading</div>
+    <h1>Planecrash</h1>
+    <div class="arc">The Corrigibility Arc</div>
+    <div class="rule"></div>
+    <p class="lede">An audio-synced, illustrated reading. Pick an episode, load the AskWhoCasts narration, and the animation follows along — captioned with the original text.</p>
+  </header>
+
+  <section class="grid" id="grid" aria-label="Episodes" aria-busy="true"></section>
+  <div id="status" role="status"></div>
+
+  <footer>
+    <div class="frule"></div>
+    <p>A fan-made animated reading of the <i>Corrigibility</i> arc from <b>Planecrash</b> (Project Lawful), by Eliezer Yudkowsky &amp; Lintamande. Narration by the AskWhoCasts AI reading. Each episode lets you load the audio locally; nothing is uploaded.</p>
+    <p>Original work at <a href="https://www.projectlawful.com" rel="noopener">projectlawful.com</a>.</p>
+  </footer>
+</main>
+
+<script>
+// ---- ash / ember drift ----
+(function(){
+  const c = document.getElementById('ash');
+  const ctx = c.getContext('2d');
+  let w, h, dpr, parts;
+  const N = 70;
+  function resize(){
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    w = c.width = innerWidth * dpr;
+    h = c.height = innerHeight * dpr;
+    c.style.width = innerWidth + 'px';
+    c.style.height = innerHeight + 'px';
+  }
+  function mk(){
+    return {
+      x: Math.random()*w,
+      y: Math.random()*h,
+      r: (Math.random()*1.6 + .4)*dpr,
+      vy: (Math.random()*.25 + .06)*dpr,
+      vx: (Math.random()-.5)*.18*dpr,
+      a: Math.random()*.5 + .12,
+      tw: Math.random()*Math.PI*2,
+      ember: Math.random() < .14
+    };
+  }
+  function init(){ resize(); parts = Array.from({length:N}, mk); }
+  function tick(){
+    ctx.clearRect(0,0,w,h);
+    for(const p of parts){
+      p.y -= p.vy; p.x += p.vx; p.tw += .03;
+      if(p.y < -10){ p.y = h + 10; p.x = Math.random()*w; }
+      const fl = (Math.sin(p.tw)*.3 + .7);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      if(p.ember){
+        ctx.fillStyle = 'rgba(255,138,60,'+(p.a*fl)+')';
+        ctx.shadowColor = 'rgba(255,138,60,.8)';
+        ctx.shadowBlur = 6*dpr;
+      } else {
+        ctx.fillStyle = 'rgba(216,200,180,'+(p.a*fl*.5)+')';
+        ctx.shadowBlur = 0;
+      }
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+    requestAnimationFrame(tick);
+  }
+  if(!matchMedia('(prefers-reduced-motion: reduce)').matches){
+    init(); tick();
+    addEventListener('resize', () => { resize(); parts = Array.from({length:N}, mk); });
+  }
+})();
+
+// ---- auto-discover episodes ----
+// Drop a new episode-N.html into the repo and it appears here on its own.
+// Step 1 (fast): a binary search with tiny HEAD requests finds the highest
+//   episode number, so the cards + working links paint almost immediately.
+// Step 2 (lazy): each episode's blurb streams in afterwards.
+// No need to touch this file — UNLESS you want the optional touches below.
+const FIRST_EPISODE = 18;   // lowest episode number present (episode-18.html)
+const CONCURRENCY   = 5;     // how many blurbs to fetch at once
+
+// OPTIONAL polish — purely cosmetic, safe to leave empty.
+// Any episode without a TITLES entry just shows "Episode N".
+const TITLES = {
+  18:"The Evil Version", 19:"Told No", 20:"On Corrigibility",
+  21:"Eagle's Splendor", 22:"Dath Ilan", 23:"The Villa"
+};
+const TAGS = { 20:"interlude" }; // default tag is "audio-synced"
+
+const grid = document.getElementById('grid');
+const statusEl = document.getElementById('status');
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// does episode-N.html exist? cheap HEAD request, no body downloaded.
+async function exists(n){
+  const url = `episode-${n}.html`;
+  for(let attempt=0; attempt<2; attempt++){
+    try{
+      let r = await fetch(url, {method:'HEAD', cache:'no-cache'});
+      if(r.status === 405) r = await fetch(url, {method:'GET', cache:'no-cache'}); // host w/o HEAD
+      return r.ok;
+    }catch{ /* transient network error → retry once */ }
+  }
+  return false;
+}
+
+// binary search for the highest existing episode number (assumes contiguous numbering)
+async function findLast(){
+  if(!(await exists(FIRST_EPISODE))) return null;
+  let lo = FIRST_EPISODE, step = 1, hi = lo + step;
+  while(await exists(hi)){ lo = hi; step *= 2; hi = lo + step; }  // gallop to an upper bound
+  while(lo + 1 < hi){                                            // then narrow it down
+    const mid = (lo + hi) >> 1;
+    if(await exists(mid)) lo = mid; else hi = mid;
+  }
+  return lo;
+}
+
+// keep only <i>/<em> from the episode's own blurb; drop everything else
+function cleanDesc(node){
+  if(!node) return '';
+  let out = '';
+  node.childNodes.forEach(n => {
+    if(n.nodeType === 3){ out += esc(n.textContent); }
+    else if(n.nodeType === 1 && /^(I|EM)$/.test(n.tagName)){ out += '<i>'+esc(n.textContent)+'</i>'; }
+    else if(n.nodeType === 1){ out += esc(n.textContent); }
+  });
+  // trim the "This plays the AskWhoCasts…" boilerplate that ends every blurb
+  return out.replace(/\s*This plays\b[\s\S]*$/i, '').trim();
+}
+
+// paint a card right away — number, title, tag and link are known instantly
+function makeCard(n, i){
+  const a = document.createElement('a');
+  a.className = 'ep';
+  a.href = `episode-${n}.html`;
+  a.style.animationDelay = (0.04 + i * 0.05) + 's';
+  a.innerHTML =
+    `<div class="top"><span class="num">Episode ${n}</span><span class="tag">${esc(TAGS[n]||'audio-synced')}</span></div>` +
+    `<h2>${esc(TITLES[n] || ('Episode ' + n))}</h2>` +
+    `<p class="blurb"><span class="ln"></span><span class="ln short"></span></p>` +
+    `<span class="go">Watch<span class="tri"></span></span>`;
+  grid.appendChild(a);
+  return a;
+}
+
+// fetch the full episode just for its blurb, then swap it into the card
+async function fillCard(card, n){
+  const ph = card.querySelector('.blurb');
+  let res;
+  try{ res = await fetch(`episode-${n}.html`, {cache:'no-cache'}); }
+  catch{ ph && ph.remove(); return; }
+  if(res.status === 404){ card.remove(); return; }   // a hole inside the range — drop it
+  if(!res.ok){ ph && ph.remove(); return; }
+  const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+  const desc = cleanDesc(doc.querySelector('.sub'));
+  if(!ph) return;
+  if(desc){ ph.classList.remove('blurb'); ph.innerHTML = desc; }
+  else ph.remove();
+}
+
+async function run(){
+  // brief skeletons while the (fast) binary search runs
+  for(let k=0;k<3;k++){ const s=document.createElement('div'); s.className='skel'; grid.appendChild(s); }
+
+  const last = await findLast();
+
+  grid.querySelectorAll('.skel').forEach(s => s.remove());
+  grid.setAttribute('aria-busy','false');
+
+  if(last === null){
+    statusEl.innerHTML = `No episodes found yet. Add an <code>episode-${FIRST_EPISODE}.html</code> file to get started.`;
+    return;
+  }
+
+  // step 1: paint every card immediately (links already work)
+  const jobs = [];
+  for(let n = FIRST_EPISODE, i = 0; n <= last; n++, i++){
+    jobs.push([makeCard(n, i), n]);
+  }
+
+  // step 2: stream blurbs in, a few at a time
+  let idx = 0;
+  const worker = async () => { while(idx < jobs.length){ const [c, n] = jobs[idx++]; await fillCard(c, n); } };
+  await Promise.all(Array.from({length: Math.min(CONCURRENCY, jobs.length)}, worker));
+}
+
+run();
+</script>
+</body>
+</html>

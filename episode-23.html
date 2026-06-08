@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planecrash — Corrigibility · an animated reading</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Spectral:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0608; --ink:#f0e6d8; --muted:#9a8a84;
+  --accent:#d8a24a; --gold:#d8a24a; --blood:#c2152f; --ember:#ff8a3c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:radial-gradient(120% 90% at 50% 6%, #1a0c10 0%, var(--bg) 55%, #050304 100%);
+  color:var(--ink); font-family:"Spectral",Georgia,serif; overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+.paused .anim, .paused .scene *{animation-play-state:paused !important}
+
+/* ---------- cinematic stage ---------- */
+#stage{position:fixed; inset:0; display:flex; align-items:center; justify-content:center}
+.frame{
+  position:relative; width:min(100vw,177.7vh); height:min(100vh,56.25vw);
+  overflow:hidden; background:#06040a; box-shadow:0 0 140px rgba(0,0,0,.8) inset, 0 30px 90px rgba(0,0,0,.6);
+}
+#ash{position:absolute; inset:0; z-index:1; pointer-events:none}
+
+.scene{position:absolute; inset:0; z-index:2; opacity:0; transition:opacity 1.5s ease; pointer-events:none}
+.scene.active{opacity:1}
+.scene svg{position:absolute; inset:0; width:100%; height:100%}
+/* a soft vignette over scenes */
+#vignette{position:absolute; inset:0; z-index:4; pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 42%, transparent 52%, rgba(5,3,4,.55) 100%);}
+
+/* ---------- speaker / beat label ---------- */
+#label{position:absolute; left:4.4%; top:7.5%; z-index:6; opacity:0; transform:translateY(8px);
+  transition:opacity .8s ease, transform .8s ease; max-width:54%}
+#label.show{opacity:1; transform:none}
+#label .kicker{display:flex; align-items:center; gap:9px; margin-bottom:5px}
+#label .ksig{width:26px; height:26px; color:var(--accent); transition:color .6s ease; flex:0 0 auto}
+#label .ksig svg{width:100%;height:100%}
+#label .kname{font-family:"Cinzel",serif; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
+  font-size:clamp(9px,1.05vw,13px); color:var(--accent); transition:color .6s ease}
+#label .ttl{font-family:"Cinzel",serif; font-weight:700; line-height:1.04; letter-spacing:.005em;
+  font-size:clamp(20px,3.4vw,50px); color:#fff; text-shadow:0 2px 26px rgba(0,0,0,.7)}
+
+/* ---------- caption ---------- */
+#cap-wrap{position:absolute; left:0; right:0; bottom:8.5%; z-index:6; display:flex; justify-content:center;
+  padding:0 6%; pointer-events:none}
+#cap{position:relative; max-width:min(1080px,90%); text-align:center;
+  font-size:clamp(14px,1.85vw,25px); line-height:1.45; font-weight:400; letter-spacing:.004em; color:var(--ink);
+  text-shadow:0 2px 20px rgba(0,0,0,.95), 0 0 60px rgba(0,0,0,.85);
+  opacity:0; transform:translateY(10px); transition:opacity .5s ease, transform .5s ease}
+#cap.show{opacity:1; transform:none}
+#cap.dlg{font-style:italic}
+#cap::before{content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:135%; height:340%; z-index:-1; pointer-events:none;
+  background:radial-gradient(closest-side, rgba(6,4,6,.82), rgba(6,4,6,.4) 60%, transparent 100%)}
+
+/* ---------- intro ---------- */
+#intro{position:absolute; inset:0; z-index:20; overflow-y:auto;
+  background:radial-gradient(80% 80% at 50% 40%, rgba(26,12,16,.55), rgba(4,3,4,.95));
+  transition:opacity 1.1s ease}
+#intro.gone{opacity:0; pointer-events:none}
+.intro-in{min-height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; gap:2.2vh; padding:5vh 7vw 7vh}
+#intro .eyebrow{font-family:"Cinzel",serif; font-size:clamp(9px,1.05vw,13px); letter-spacing:.5em; text-transform:uppercase; color:var(--gold)}
+#intro h1{font-family:"Cinzel",serif; font-weight:700; letter-spacing:.02em; font-size:clamp(40px,9vw,118px); line-height:.92;
+  background:linear-gradient(180deg,#fff 0%, #e9c277 52%, #b3122b 132%); -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent; filter:drop-shadow(0 8px 50px rgba(179,18,43,.32))}
+#intro .sub{font-size:clamp(13px,1.55vw,19px); font-style:italic; color:#cbb9a9; max-width:44ch; line-height:1.55; font-weight:300}
+.cast{display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:11px 18px; width:100%; max-width:760px; margin-top:1vh}
+.cast .c{display:flex; align-items:center; gap:11px; text-align:left; padding:7px 10px; border:1px solid rgba(216,162,74,.13); border-radius:9px; background:rgba(255,255,255,.012)}
+.cast .ic{width:32px;height:32px;flex:0 0 auto} .cast .ic svg{width:100%;height:100%}
+.cast .nm{font-family:"Cinzel",serif; font-size:12px; letter-spacing:.02em; line-height:1.15}
+.cast .tg{font-style:italic; font-size:11px; color:var(--muted); margin-top:1px}
+#begin{margin-top:1vh; display:inline-flex; align-items:center; gap:.7em; font-family:"Cinzel",serif; font-weight:600;
+  font-size:clamp(14px,1.5vw,17px); letter-spacing:.06em; color:#1a0c0a; padding:.85em 2.1em; border:none; border-radius:100px;
+  cursor:pointer; background:linear-gradient(180deg,#f0cd86,#d8a24a);
+  box-shadow:0 12px 44px rgba(216,162,74,.34), inset 0 0 0 1px rgba(255,255,255,.25); transition:transform .25s, box-shadow .25s}
+#begin:hover{transform:translateY(-2px) scale(1.02); box-shadow:0 18px 56px rgba(216,162,74,.5)}
+#begin .tri{width:0;height:0;border-left:11px solid #1a0c0a;border-top:7px solid transparent;border-bottom:7px solid transparent}
+#intro .note{font-size:11px;color:#6a5a56;letter-spacing:.03em}
+#intro .src{font-size:11px;color:#5e4f4b;max-width:52ch;line-height:1.6}
+
+/* ---------- controls ---------- */
+#controls{position:absolute; left:0; right:0; bottom:0; z-index:30; display:flex; align-items:center; gap:13px;
+  padding:13px 4.4%; background:linear-gradient(0deg, rgba(5,3,5,.85), transparent);
+  opacity:0; transition:opacity .4s ease; pointer-events:none}
+.frame.playing #controls{opacity:1; pointer-events:auto}
+.btn{background:rgba(240,230,216,.05); border:1px solid rgba(216,162,74,.28); color:var(--ink); border-radius:50%;
+  cursor:pointer; flex:0 0 auto; display:grid; place-items:center; transition:background .2s,border-color .2s,transform .15s}
+.btn:hover{background:rgba(216,162,74,.16); border-color:var(--accent)} .btn:active{transform:scale(.94)}
+.btn svg{fill:var(--ink)}
+.btn.lg{width:46px;height:46px} .btn.lg svg{width:18px;height:18px}
+.btn.sm{width:38px;height:38px} .btn.sm svg{width:14px;height:14px}
+#speed{width:auto;min-width:46px;height:38px;border-radius:20px;padding:0 12px;font-family:"Spectral",serif;font-style:italic;font-size:13px}
+#prog{flex:1; height:3px; border-radius:3px; background:rgba(240,230,216,.13); position:relative; cursor:pointer}
+#bar{position:absolute; left:0;top:0;bottom:0; width:0; background:linear-gradient(90deg,var(--accent),var(--blood)); border-radius:3px; transition:width .5s ease, background .8s ease}
+#beat{font-family:"Cinzel",serif; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); min-width:120px; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:24%}
+
+/* ---------- shared animation helpers ---------- */
+.spin{transform-origin:center;animation:spin 60s linear infinite}
+.spin-s{transform-origin:center;animation:spin 120s linear infinite}
+.spin-r{transform-origin:center;animation:spin 80s linear infinite reverse}
+.spin-f{transform-origin:center;animation:spin 9s linear infinite}
+.spin-vf{transform-origin:center;animation:spin 2.4s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.breathe{transform-origin:center;animation:breathe 6s ease-in-out infinite}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.flick{transform-origin:bottom center;animation:flick 1.4s ease-in-out infinite}
+@keyframes flick{0%,100%{opacity:.9;transform:scaleY(1) scaleX(1)}40%{opacity:1;transform:scaleY(1.1) scaleX(.94)}70%{opacity:.85;transform:scaleY(.96) scaleX(1.04)}}
+.sway{transform-origin:top center;animation:sway 4s ease-in-out infinite}
+@keyframes sway{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+.tw{animation:tw 3s ease-in-out infinite}
+@keyframes tw{0%,100%{opacity:.2}50%{opacity:1}}
+.pulse{animation:pulse 3.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.25}50%{opacity:.95}}
+.pulse-f{animation:pulse 1.6s ease-in-out infinite}
+.drift{animation:drift 26s ease-in-out infinite}
+@keyframes drift{0%{transform:translate(0,0)}50%{transform:translate(2.4%,-2%)}100%{transform:translate(0,0)}}
+@keyframes floatUp{0%{transform:translateY(34px);opacity:0}16%{opacity:.9}100%{transform:translateY(-58px);opacity:0}}
+.flow{stroke-dasharray:8 16; animation:flow 2.2s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-48}}
+.draw{stroke-dasharray:600; stroke-dashoffset:600; animation:draw 5s ease-in-out infinite alternate}
+@keyframes draw{to{stroke-dashoffset:0}}
+.beam{animation:beam 1.7s ease-in-out infinite}
+@keyframes beam{0%,100%{opacity:.12}50%{opacity:.6}}
+
+/* one-shot scene-entry effects (fire when scene gets .go) */
+.flash{opacity:0}
+.scene.active.go .flash{animation:flashK 1.7s ease-out .3s forwards}
+@keyframes flashK{0%{opacity:0}12%{opacity:.85}100%{opacity:0}}
+.burst{opacity:0;transform-origin:center}
+.scene.active.go .burst{animation:burstK 3s cubic-bezier(.1,.7,.3,1) .3s forwards}
+@keyframes burstK{0%{opacity:0;transform:scale(.08)}14%{opacity:1}100%{opacity:0;transform:scale(4.2)}}
+.stamp{opacity:0;transform-origin:center}
+.scene.active.go .stamp{animation:stampK 1.2s cubic-bezier(.2,1.4,.4,1) .4s forwards}
+@keyframes stampK{0%{opacity:0;transform:scale(2.4) rotate(-12deg)}60%{opacity:1;transform:scale(1) rotate(0)}100%{opacity:1;transform:scale(1)}}
+.fall{opacity:0;transform-origin:center}
+.scene.active.go .fall{animation:fallK 3.4s ease-in 1s forwards}
+@keyframes fallK{0%{opacity:0;transform:translateY(-260px) scale(.6)}20%{opacity:1}82%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(10px) scale(2.2)}}
+.rise{transform-origin:center;animation:rise 7s ease-in-out infinite alternate}
+@keyframes rise{from{transform:translateY(8px)}to{transform:translateY(-8px)}}
+
+@media (max-width:640px){ #beat{display:none} #label{max-width:78%} }
+
+/* ---- audio upload UI ---- */
+#drop{margin:1.6vh auto .2vh;width:min(560px,90%);border:1.6px dashed rgba(216,162,74,.42);border-radius:14px;padding:24px 20px 20px;cursor:pointer;background:rgba(255,255,255,.015);transition:border-color .2s, background .2s, transform .2s}
+#drop:hover{border-color:var(--gold);background:rgba(216,162,74,.06)}
+#drop.drag{border-color:var(--gold);background:rgba(216,162,74,.14);transform:scale(1.012)}
+#drop.has{border-style:solid;border-color:rgba(79,230,205,.5);background:rgba(79,230,205,.05)}
+#drop .dz-ic{width:30px;height:30px;color:var(--gold);opacity:.9;margin-bottom:6px}
+#drop.has .dz-ic{color:#4fe6cd}
+#drop .dz-msg{font-family:"Spectral",serif;font-style:italic;font-size:15px;color:#e9dcc8;letter-spacing:.01em}
+#drop .dz-sub{font-size:11px;color:#7c6a64;margin-top:7px;letter-spacing:.02em}
+#loaded{display:none;align-items:center;justify-content:center;gap:9px;margin:11px auto 2px;font-size:12.5px;color:#cbb9a9}
+#loaded.show{display:flex}
+#loaded .ck{color:#4fe6cd;font-weight:700}
+#loaded .fn{font-family:"Cinzel",serif;letter-spacing:.02em;color:#f0e6d8;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#loaded #dur{color:#7c6a64}
+#begin[disabled]{opacity:.38;cursor:not-allowed;filter:grayscale(.45);box-shadow:none}
+#begin[disabled]:hover{transform:none}
+#intro.ended #drop, #intro.ended #loaded, #intro.ended .cast{display:none}
+audio{display:none}
+/* captions toggle */
+#cc{font-family:"Cinzel",serif;font-weight:600;letter-spacing:.06em;font-size:12px;position:relative}
+#cc.off{opacity:.5}
+#cc.off::after{content:"";position:absolute;left:18%;right:18%;top:50%;height:1.5px;background:currentColor;transform:rotate(-12deg);opacity:.85}
+</style>
+</head>
+<body>
+<div id="stage"><div class="frame" id="frame">
+  <canvas id="ash"></canvas>
+
+  <!-- ===================== SHARED DEFS ===================== -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <radialGradient id="gEmber" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff2cf"/><stop offset="34%" stop-color="#ff9a3c"/>
+      <stop offset="72%" stop-color="#c2152f" stop-opacity=".55"/><stop offset="100%" stop-color="#3a0810" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gGold" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff"/><stop offset="45%" stop-color="#f2cd7e"/><stop offset="100%" stop-color="#d8a24a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gBlood" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff6a72"/><stop offset="46%" stop-color="#b3122b" stop-opacity=".7"/><stop offset="100%" stop-color="#b3122b" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gWhite" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff"/><stop offset="55%" stop-color="#dfeaf2" stop-opacity=".9"/><stop offset="100%" stop-color="#a9c2d6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gCyan" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#eafcff"/><stop offset="48%" stop-color="#46c6ff" stop-opacity=".8"/><stop offset="100%" stop-color="#1d6fb0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gTeal" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#dffff6"/><stop offset="50%" stop-color="#3fd9c0" stop-opacity=".8"/><stop offset="100%" stop-color="#1f8f88" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gFloor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1c0e12"/><stop offset="100%" stop-color="#06040a"/>
+    </linearGradient>
+    <linearGradient id="gBeam" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#cfe fff" stop-opacity="0"/><stop offset="50%" stop-color="#aee6ff" stop-opacity=".5"/><stop offset="100%" stop-color="#aee6ff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="soft2"><feGaussianBlur stdDeviation="16"/></filter>
+
+    <!-- speaker sigils -->
+    <symbol id="sg-book" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M24 12c-5-4-12-4-16-2v26c4-2 11-2 16 2 5-4 12-4 16-2V10c-4-2-11-2-16 2z"/><path d="M24 12v28"/></symbol>
+    <symbol id="sg-mask" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M10 6c2 4 1 8-1 10M38 6c-2 4-1 8 1 10"/><path d="M9 16c3-3 9-4 15-4s12 1 15 4c1 9-4 22-15 26C13 38 8 25 9 16z"/><path d="M17 22l5 3M31 22l-5 3M21 33c2 1 4 1 6 0"/></symbol>
+    <symbol id="sg-flame" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M24 4c2 8-6 11-6 18 0 0-4-2-4-7-5 5-7 11-7 16a17 17 0 0034 0c0-9-6-16-11-20-1 4-4 5-6 3 3-4 6-9 6-13z"/></symbol>
+    <symbol id="sg-eye" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M4 24c6-9 13-13 20-13s14 4 20 13c-6 9-13 13-20 13S10 33 4 24z"/><circle cx="24" cy="24" r="6"/><path d="M40 30c4 2 5 6 4 9"/></symbol>
+    <symbol id="sg-penta" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><circle cx="24" cy="24" r="20"/><polygon points="24,7 33.5,38 8.4,18.8 39.6,18.8 14.5,38"/></symbol>
+    <symbol id="sg-broom" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M30 6L18 30"/><path d="M12 42c0-8 3-12 8-13 5-1 9 1 11 4-3 6-10 10-19 9z"/><path d="M22 28l6 4"/></symbol>
+    <symbol id="sg-hex" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><polygon points="24,5 40,14 40,34 24,43 8,34 8,14"/><circle cx="24" cy="24" r="3" fill="currentColor"/><path d="M24 8v8M40 16l-7 4M40 32l-7-4M24 40v-8M8 32l7-4M8 16l7 4"/></symbol>
+    <symbol id="sg-gem" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M14 8h20l8 11-18 21L6 19z"/><path d="M6 19h36M14 8l10 11 10-11M24 19v21"/></symbol>
+    <symbol id="sg-oracle" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><circle cx="24" cy="24" r="7"/><path d="M24 4v6M24 38v6M4 24h6M38 24h6M10 10l4 4M34 34l4 4M38 10l-4 4M10 38l4-4"/></symbol>
+
+    <!-- a reusable robed-figure -->
+    <symbol id="figure" viewBox="0 0 120 200"><path d="M60 18a20 20 0 0 1 20 20c0 9-4 13-4 20l14 120c1 8-9 14-30 14s-31-6-30-14L44 58c0-7-4-11-4-20a20 20 0 0 1 20-20z"/></symbol>
+    <symbol id="child" viewBox="0 0 80 120"><circle cx="40" cy="22" r="16"/><path d="M40 40c14 0 22 8 22 20l4 46c0 8-12 12-26 12s-26-4-26-12l4-46c0-12 8-20 22-20z"/></symbol>
+  </defs></svg>
+
+  <!-- ===================== SCENES ===================== -->
+
+  <!-- chamber : the Forbiddance -->
+    <!-- SCENES (episode 23) -->
+
+  <!-- wonders : two hundred layers of living space -->
+  <div class="scene" data-scene="wonders">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#070c12"/>
+      <ellipse cx="800" cy="200" rx="640" ry="280" fill="url(#gCyan)" opacity=".1" filter="url(#soft2)"/>
+      <!-- towers reaching up -->
+      <g>
+        <rect x="240" y="120" width="150" height="780" fill="#0d1622"/><rect x="700" y="40" width="180" height="860" fill="#0e1826"/><rect x="980" y="180" width="150" height="720" fill="#0d1622"/><rect x="1220" y="100" width="160" height="800" fill="#0e1826"/>
+      </g>
+      <!-- lit windows -->
+      <g fill="#5fd0ff" opacity=".55">
+        <g class="tw"><rect x="260" y="160" width="22" height="14"/><rect x="300" y="160" width="22" height="14"/><rect x="340" y="200" width="22" height="14"/></g>
+        <g class="tw" style="animation-delay:-1s"><rect x="720" y="90" width="26" height="16"/><rect x="770" y="90" width="26" height="16"/><rect x="820" y="140" width="26" height="16"/><rect x="720" y="200" width="26" height="16"/></g>
+        <g class="tw" style="animation-delay:-2s"><rect x="1000" y="220" width="22" height="14"/><rect x="1050" y="260" width="22" height="14"/><rect x="1240" y="160" width="24" height="14"/><rect x="1300" y="200" width="24" height="14"/></g>
+        <g opacity=".3"><rect x="262" y="220" width="22" height="14"/><rect x="722" y="260" width="26" height="16"/><rect x="1002" y="320" width="22" height="14"/><rect x="1242" y="280" width="24" height="14"/><rect x="302" y="340" width="22" height="14"/><rect x="772" y="380" width="26" height="16"/></g>
+      </g>
+      <!-- carriages between towers -->
+      <circle r="4" fill="#bfeafa"><animateMotion dur="6s" repeatCount="indefinite" path="M420 400L680 360"/></circle>
+      <circle r="4" fill="#bfeafa"><animateMotion dur="7s" repeatCount="indefinite" path="M900 520L960 480"/></circle>
+      <!-- tiny figures looking up -->
+      <g fill="#16283a"><use href="#figure" x="560" y="780" width="44" height="74"/><use href="#figure" x="610" y="780" width="44" height="74"/></g>
+    </svg>
+  </div>
+
+  <!-- underground : roads far enough underground -->
+  <div class="scene" data-scene="underground">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#070b0e"/>
+      <!-- surface: forest with hidden houses -->
+      <rect width="1600" height="380" fill="#0a1410"/>
+      <g fill="#13241a"><path d="M200 380c0-70 30-120 60-120s60 50 60 120z"/><path d="M340 380c0-60 26-104 52-104s52 44 52 104z"/><path d="M1180 380c0-70 30-120 60-120s60 50 60 120z"/><path d="M1320 380c0-60 26-104 52-104s52 44 52 104z"/></g>
+      <g fill="none" stroke="#2a3a2e" stroke-width="2" opacity=".5"><rect x="700" y="300" width="80" height="80"/><path d="M700 300l40 -30 40 30"/></g>
+      <!-- ground line -->
+      <rect y="380" width="1600" height="14" fill="#1a1410"/>
+      <!-- underground tunnel -->
+      <rect y="394" width="1600" height="506" fill="#06080a"/>
+      <rect x="0" y="520" width="1600" height="140" rx="0" fill="#0d1118"/>
+      <line x1="0" y1="590" x2="1600" y2="590" stroke="#2a3a44" stroke-width="2" stroke-dasharray="30 30" class="flow"/>
+      <!-- the high-velocity carriage -->
+      <g><rect x="-120" y="556" width="160" height="56" rx="28" fill="#16283a" stroke="#5fd0ff" stroke-width="2"/><animateTransform attributeName="transform" type="translate" values="0,0;1760,0" dur="2.4s" repeatCount="indefinite"/></g>
+      <g stroke="#5fd0ff" stroke-width="2" stroke-opacity=".4"><path d="M200 584h120M360 584h120"/></g>
+    </svg>
+  </div>
+
+  <!-- machines : machines do the work -->
+  <div class="scene" data-scene="machines">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#090b0e"/>
+      <rect y="560" width="1600" height="340" fill="#0c0e12"/>
+      <!-- the tunneling machine -->
+      <g transform="translate(520 460)">
+        <rect x="-220" y="0" width="280" height="160" rx="14" fill="#16202a" stroke="#3a4a5a" stroke-width="2"/>
+        <!-- drill head -->
+        <g transform="translate(60 80)"><polygon points="0,-80 90,0 0,80" fill="#1a2c3a" stroke="#5fd0ff" stroke-width="2"/><g class="spin-f" style="animation-duration:1.2s"><path d="M0 -60L0 60M-30 -52L30 52M-30 52L30 -52" stroke="#5fd0ff" stroke-width="3"/></g></g>
+        <circle cx="-160" cy="170" r="30" fill="#0e1620" stroke="#3a4a5a" stroke-width="3" class="spin"/><circle cx="-80" cy="170" r="30" fill="#0e1620" stroke="#3a4a5a" stroke-width="3" class="spin"/>
+      </g>
+      <!-- automatic hauler -->
+      <g><g transform="translate(1100 600)"><rect x="-90" y="-70" width="180" height="70" rx="8" fill="#16202a" stroke="#3a4a5a" stroke-width="2"/><rect x="-70" y="-110" width="140" height="44" rx="6" fill="#1a2c3a"/><circle cx="-50" cy="10" r="24" fill="#0e1620" stroke="#3a4a5a" stroke-width="3" class="spin"/><circle cx="50" cy="10" r="24" fill="#0e1620" stroke="#3a4a5a" stroke-width="3" class="spin"/></g><animateTransform attributeName="transform" type="translate" values="0,0;-360,0;0,0" dur="9s" repeatCount="indefinite"/></g>
+      <!-- excavated earth / spoil -->
+      <g fill="#1a1410"><ellipse cx="720" cy="700" rx="120" ry="30"/></g>
+      <g fill="#5fd0ff" opacity=".4"><circle cx="640" cy="520" r="3" class="tw"/></g>
+    </svg>
+  </div>
+
+  <!-- disease : one giant sweep -->
+  <div class="scene" data-scene="disease">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#08090e"/>
+      <!-- a grid of people -->
+      <g fill="#1a2838">
+        <g id="row"></g>
+      </g>
+      <g fill="#1a2838">
+        <circle cx="300" cy="280" r="14"/><circle cx="420" cy="280" r="14"/><circle cx="540" cy="280" r="14"/><circle cx="660" cy="280" r="14"/><circle cx="780" cy="280" r="14"/><circle cx="900" cy="280" r="14"/><circle cx="1020" cy="280" r="14"/><circle cx="1140" cy="280" r="14"/><circle cx="1260" cy="280" r="14"/>
+        <circle cx="300" cy="400" r="14"/><circle cx="420" cy="400" r="14"/><circle cx="540" cy="400" r="14"/><circle cx="660" cy="400" r="14"/><circle cx="780" cy="400" r="14"/><circle cx="900" cy="400" r="14"/><circle cx="1020" cy="400" r="14"/><circle cx="1140" cy="400" r="14"/><circle cx="1260" cy="400" r="14"/>
+        <circle cx="300" cy="520" r="14"/><circle cx="420" cy="520" r="14"/><circle cx="540" cy="520" r="14"/><circle cx="660" cy="520" r="14"/><circle cx="780" cy="520" r="14"/><circle cx="900" cy="520" r="14"/><circle cx="1020" cy="520" r="14"/><circle cx="1140" cy="520" r="14"/><circle cx="1260" cy="520" r="14"/>
+        <circle cx="300" cy="640" r="14"/><circle cx="420" cy="640" r="14"/><circle cx="540" cy="640" r="14"/><circle cx="660" cy="640" r="14"/><circle cx="780" cy="640" r="14"/><circle cx="900" cy="640" r="14"/><circle cx="1020" cy="640" r="14"/><circle cx="1140" cy="640" r="14"/><circle cx="1260" cy="640" r="14"/>
+      </g>
+      <!-- the flagged (diseased) few -->
+      <g fill="#b98cff"><circle cx="540" cy="400" r="14" class="pulse-f"/><circle cx="1020" cy="520" r="14" class="pulse-f" style="animation-delay:-.5s"/><circle cx="780" cy="640" r="14" class="pulse-f" style="animation-delay:-1s"/></g>
+      <!-- the sweeping scan wave -->
+      <g class="sweep23"><rect x="-40" y="220" width="60" height="500" fill="url(#gCyan)" opacity=".5"/><line x1="20" y1="220" x2="20" y2="720" stroke="#bfeafa" stroke-width="3"/></g>
+      <style>
+        @keyframes sweep23{0%{transform:translateX(260px)}100%{transform:translateX(1280px)}}
+        [data-scene="disease"] .sweep23{animation:sweep23 4s linear infinite}
+      </style>
+    </svg>
+  </div>
+
+  <!-- sexwork_econ : each side in equilibrium -->
+  <div class="scene" data-scene="sexwork_econ">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0a08"/>
+      <ellipse cx="800" cy="450" rx="420" ry="300" fill="url(#gGold)" opacity=".06" filter="url(#soft2)"/>
+      <!-- axes -->
+      <g stroke="#5a5240" stroke-width="2"><line x1="440" y1="720" x2="1160" y2="720"/><line x1="440" y1="720" x2="440" y2="200"/></g>
+      <!-- supply (rising) + demand (falling) curves -->
+      <path d="M460 700C620 600 900 360 1140 240" fill="none" stroke="#5fd0ff" stroke-width="3" class="draw"/>
+      <path d="M460 260C620 360 900 600 1140 700" fill="none" stroke="#ffd27a" stroke-width="3" class="draw" style="animation-delay:-1s"/>
+      <!-- equilibrium point -->
+      <circle cx="800" cy="478" r="12" fill="url(#gWhite)" class="pulse-f"/>
+      <circle cx="800" cy="478" r="46" fill="none" stroke="#bfeafa" stroke-width="1.5" stroke-opacity=".5" class="pulse"/>
+      <g stroke="#bfeafa" stroke-width="1.4" stroke-dasharray="5 8" stroke-opacity=".5"><line x1="800" y1="478" x2="440" y2="478"/><line x1="800" y1="478" x2="800" y2="720"/></g>
+    </svg>
+  </div>
+
+  <!-- exotic : appealing in its own right -->
+  <div class="scene" data-scene="exotic">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0608"/>
+      <!-- spotlight -->
+      <polygon points="700,0 900,0 1020,640 580,640" fill="url(#gGold)" opacity=".14"/>
+      <circle cx="800" cy="460" r="220" fill="url(#gBlood)" opacity=".18" filter="url(#soft2)" class="breathe"/>
+      <!-- Carissa, singled out -->
+      <use href="#figure" x="740" y="420" width="120" height="200" fill="#1a0d10"/>
+      <!-- gazes turned toward her from the dark -->
+      <g fill="none" stroke="#caa86a" stroke-width="2" stroke-opacity=".4">
+        <g transform="translate(200 300)"><ellipse rx="30" ry="14"/><circle r="5" fill="#caa86a"/></g>
+        <g transform="translate(260 600)"><ellipse rx="28" ry="13"/><circle r="5" fill="#caa86a"/></g>
+        <g transform="translate(1360 320)"><ellipse rx="30" ry="14"/><circle r="5" fill="#caa86a"/></g>
+        <g transform="translate(1320 620)"><ellipse rx="28" ry="13"/><circle r="5" fill="#caa86a"/></g>
+      </g>
+      <g stroke="#caa86a" stroke-width="1.4" stroke-opacity=".3" class="pulse"><path d="M240 308L740 480M300 600L740 500M1330 328L860 480M1290 612L860 500"/></g>
+    </svg>
+  </div>
+
+  <!-- pharaoh : the memory of a pharaoh -->
+  <div class="scene" data-scene="pharaoh">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0706"/>
+      <ellipse cx="800" cy="420" rx="420" ry="300" fill="url(#gEmber)" opacity=".12" filter="url(#soft2)"/>
+      <!-- the pyramid of power -->
+      <polygon points="800,180 1120,700 480,700" fill="#1a120c" stroke="#6a4e2a" stroke-width="2"/>
+      <g stroke="#6a4e2a" stroke-width="1.4" stroke-opacity=".5"><path d="M640 460h320M560 580h480"/></g>
+      <!-- the Pharaoh at the apex -->
+      <g transform="translate(800 230)"><circle r="22" fill="#241810"/><path d="M-20 -16l8 -22 8 14 8 -14 8 22z" fill="url(#gGold)"/><circle r="22" fill="none" stroke="#ffd27a" stroke-width="2" class="pulse"/></g>
+      <!-- rows of subjects below -->
+      <g fill="#3a2a1c"><circle cx="660" cy="640" r="9"/><circle cx="710" cy="640" r="9"/><circle cx="760" cy="640" r="9"/><circle cx="810" cy="640" r="9"/><circle cx="860" cy="640" r="9"/><circle cx="910" cy="640" r="9"/><circle cx="960" cy="640" r="9"/></g>
+      <!-- recursion loop -->
+      <g transform="translate(800 420)" class="spin-s" opacity=".4"><path d="M0 -120A120 120 0 1 1 -84 -84" fill="none" stroke="#ffb877" stroke-width="2"/><polygon points="-84,-84 -96,-64 -68,-66" fill="#ffb877"/></g>
+    </svg>
+  </div>
+
+  <!-- schelling : ten percent yell now -->
+  <div class="scene" data-scene="schelling">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0608"/>
+      <!-- the crowd -->
+      <g fill="#241418">
+        <circle cx="360" cy="300" r="12"/><circle cx="460" cy="300" r="12"/><circle cx="560" cy="300" r="12"/><circle cx="660" cy="300" r="12"/><circle cx="760" cy="300" r="12"/><circle cx="860" cy="300" r="12"/><circle cx="960" cy="300" r="12"/><circle cx="1060" cy="300" r="12"/><circle cx="1160" cy="300" r="12"/><circle cx="1260" cy="300" r="12"/>
+        <circle cx="360" cy="420" r="12"/><circle cx="460" cy="420" r="12"/><circle cx="560" cy="420" r="12"/><circle cx="660" cy="420" r="12"/><circle cx="760" cy="420" r="12"/><circle cx="860" cy="420" r="12"/><circle cx="960" cy="420" r="12"/><circle cx="1060" cy="420" r="12"/><circle cx="1160" cy="420" r="12"/><circle cx="1260" cy="420" r="12"/>
+        <circle cx="360" cy="540" r="12"/><circle cx="460" cy="540" r="12"/><circle cx="560" cy="540" r="12"/><circle cx="660" cy="540" r="12"/><circle cx="760" cy="540" r="12"/><circle cx="860" cy="540" r="12"/><circle cx="960" cy="540" r="12"/><circle cx="1060" cy="540" r="12"/><circle cx="1160" cy="540" r="12"/><circle cx="1260" cy="540" r="12"/>
+        <circle cx="360" cy="660" r="12"/><circle cx="460" cy="660" r="12"/><circle cx="560" cy="660" r="12"/><circle cx="660" cy="660" r="12"/><circle cx="760" cy="660" r="12"/><circle cx="860" cy="660" r="12"/><circle cx="960" cy="660" r="12"/><circle cx="1060" cy="660" r="12"/><circle cx="1160" cy="660" r="12"/><circle cx="1260" cy="660" r="12"/>
+      </g>
+      <!-- the cascade: a few light first, then all -->
+      <g fill="#ff8a3c">
+        <circle cx="760" cy="420" r="13"><animate attributeName="opacity" values="0;1" dur="4s" repeatCount="indefinite" begin="0s"/></circle>
+        <circle cx="860" cy="540" r="13"><animate attributeName="opacity" values="0;1" dur="4s" repeatCount="indefinite" begin="0.2s"/></circle>
+        <circle cx="560" cy="300" r="13"><animate attributeName="opacity" values="0;1" dur="4s" repeatCount="indefinite" begin="0.4s"/></circle>
+        <circle cx="1060" cy="660" r="13"><animate attributeName="opacity" values="0;1" dur="4s" repeatCount="indefinite" begin="1.2s"/></circle>
+        <circle cx="360" cy="540" r="13"><animate attributeName="opacity" values="0;1" dur="4s" repeatCount="indefinite" begin="1.5s"/></circle>
+        <circle cx="960" cy="300" r="13"><animate attributeName="opacity" values="0;1" dur="4s" repeatCount="indefinite" begin="1.7s"/></circle>
+        <circle cx="660" cy="660" r="13"><animate attributeName="opacity" values="0;1" dur="4s" repeatCount="indefinite" begin="1.9s"/></circle>
+        <circle cx="1160" cy="420" r="13"><animate attributeName="opacity" values="0;1" dur="4s" repeatCount="indefinite" begin="2.1s"/></circle>
+        <circle cx="460" cy="420" r="13"><animate attributeName="opacity" values="0;1" dur="4s" repeatCount="indefinite" begin="2.3s"/></circle>
+        <circle cx="1260" cy="540" r="13"><animate attributeName="opacity" values="0;1" dur="4s" repeatCount="indefinite" begin="2.5s"/></circle>
+      </g>
+    </svg>
+  </div>
+
+  <!-- sticky : extremely hard to overthrow -->
+  <div class="scene" data-scene="sticky">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0709"/>
+      <!-- the immovable monument of power -->
+      <rect x="600" y="240" width="400" height="420" rx="6" fill="#171318" stroke="#3a323a" stroke-width="3"/>
+      <polygon points="600,240 800,140 1000,240" fill="#1d171e" stroke="#3a323a" stroke-width="3"/>
+      <circle cx="800" cy="430" r="60" fill="url(#gBlood)" opacity=".4" class="breathe"/>
+      <use href="#sg-penta" x="752" y="382" width="96" height="96" color="#ff7a3c" class="spin-s" opacity=".6"/>
+      <!-- anchoring struts -->
+      <g stroke="#3a323a" stroke-width="8" stroke-linecap="round"><path d="M600 660L480 800M1000 660L1120 800"/></g>
+      <!-- people straining to push it, failing -->
+      <g fill="#1a0d10">
+        <g transform="translate(470 700)"><circle cx="0" cy="-30" r="20"/><path d="M-16 -10C-16 30 16 30 16 -10z"/><path d="M16 -16C60 -20 100 -8 120 -30" stroke="#1a0d10" stroke-width="14" fill="none" stroke-linecap="round"/></g>
+        <g transform="translate(1130 700) scale(-1,1)"><circle cx="0" cy="-30" r="20"/><path d="M-16 -10C-16 30 16 30 16 -10z"/><path d="M16 -16C60 -20 100 -8 120 -30" stroke="#1a0d10" stroke-width="14" fill="none" stroke-linecap="round"/></g>
+      </g>
+      <!-- strain marks -->
+      <g stroke="#ff5560" stroke-width="2" stroke-opacity=".5" class="pulse-f"><path d="M560 640l-30 -20M1040 640l30 -20"/></g>
+    </svg>
+  </div>
+
+  <!-- lives : twenty million lives -->
+  <div class="scene" data-scene="lives">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#08060a"/>
+      <!-- a vast field of tiny lives -->
+      <g fill="#ffcaa0">
+        <g class="tw"><circle cx="180" cy="220" r="3"/><circle cx="320" cy="180" r="3"/><circle cx="500" cy="240" r="3"/><circle cx="700" cy="200" r="3"/><circle cx="900" cy="230" r="3"/><circle cx="1120" cy="190" r="3"/><circle cx="1320" cy="240" r="3"/><circle cx="1440" cy="200" r="3"/></g>
+        <g class="tw" style="animation-delay:-1s"><circle cx="240" cy="320" r="3"/><circle cx="440" cy="340" r="3"/><circle cx="640" cy="300" r="3"/><circle cx="840" cy="340" r="3"/><circle cx="1040" cy="310" r="3"/><circle cx="1240" cy="340" r="3"/><circle cx="1400" cy="300" r="3"/></g>
+        <g class="tw" style="animation-delay:-2s"><circle cx="160" cy="420" r="3"/><circle cx="380" cy="440" r="3"/><circle cx="560" cy="410" r="3"/><circle cx="760" cy="440" r="3"/><circle cx="980" cy="410" r="3"/><circle cx="1180" cy="440" r="3"/><circle cx="1360" cy="410" r="3"/></g>
+      </g>
+      <!-- the chasm opening below them -->
+      <path d="M0 900L0 640C300 580 500 700 800 660 1100 620 1320 720 1600 660L1600 900z" fill="#03040a"/>
+      <path d="M0 640C300 580 500 700 800 660 1100 620 1320 720 1600 660" fill="none" stroke="#c2152f" stroke-width="2" stroke-opacity=".5" class="pulse"/>
+      <g fill="#ff5560" opacity=".5"><circle cx="500" cy="690" r="3" style="animation:floatUp 5s ease-in infinite reverse"/><circle cx="900" cy="660" r="3" style="animation:floatUp 5s ease-in infinite reverse; animation-delay:-2.5s"/></g>
+    </svg>
+  </div>
+
+  <!-- law_indifferent : indifferent to the effect -->
+  <div class="scene" data-scene="law_indifferent">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0b0c0e"/>
+      <ellipse cx="800" cy="440" rx="360" ry="300" fill="url(#gWhite)" opacity=".04" filter="url(#soft2)"/>
+      <!-- a cold, blindfolded figure of law -->
+      <g transform="translate(800 300)">
+        <circle cx="0" cy="0" r="40" fill="#1a1c20" stroke="#4a4e56" stroke-width="2"/>
+        <rect x="-44" y="-10" width="88" height="18" rx="4" fill="#3a3e46"/>
+        <path d="M-70 60C-50 36 50 36 70 60L100 340 -100 340z" fill="#15171a" stroke="#3a3e46" stroke-width="2"/>
+      </g>
+      <!-- the level, indifferent scale -->
+      <g transform="translate(800 330)" stroke="#6a6e76" stroke-width="3">
+        <line x1="-200" y1="40" x2="200" y2="40"/>
+        <g transform="translate(-200 40)"><path d="M-40 0a40 18 0 0 0 80 0z" fill="none"/></g>
+        <g transform="translate(200 40)"><path d="M-40 0a40 18 0 0 0 80 0z" fill="none"/></g>
+      </g>
+      <!-- mechanical gears (indifference) -->
+      <g transform="translate(800 700)" fill="none" stroke="#3a3e46" stroke-width="3"><circle r="50" class="spin"/><g class="spin"><path d="M0 -50v-12M0 50v12M-50 0h-12M50 0h12M-35 -35l-8 -8M35 35l8 8M-35 35l-8 8M35 -35l8 -8"/></g><circle r="14"/></g>
+    </svg>
+  </div>
+
+  <!-- gods_law : to what extent gods -->
+  <div class="scene" data-scene="gods_law">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#09060e"/>
+      <!-- divine sigils above -->
+      <g transform="translate(540 220)"><circle r="80" fill="url(#gEmber)" opacity=".3" filter="url(#soft2)" class="breathe"/><use href="#sg-penta" x="-54" y="-54" width="108" height="108" color="#ff8a3c" class="spin-s"/></g>
+      <g transform="translate(1060 200)"><circle r="64" fill="url(#gWhite)" opacity=".18" filter="url(#soft2)" class="breathe" style="animation-delay:-2s"/><use href="#sg-eye" x="-44" y="-44" width="88" height="88" color="#b98cff" class="pulse"/></g>
+      <!-- the society below -->
+      <g fill="#1a1620"><rect x="500" y="640" width="600" height="160" rx="8"/><circle cx="600" cy="720" r="14"/><circle cx="700" cy="720" r="14"/><circle cx="800" cy="720" r="14"/><circle cx="900" cy="720" r="14"/><circle cx="1000" cy="720" r="14"/></g>
+      <!-- strings from gods to society -->
+      <g stroke="#ff8a3c" stroke-width="1.6" stroke-opacity=".4" class="flow" fill="none"><path d="M540 300L600 706M560 300L800 706M560 300L1000 706"/></g>
+      <g stroke="#b98cff" stroke-width="1.6" stroke-opacity=".4" class="flow" fill="none"><path d="M1060 264L900 706M1040 264L700 706"/></g>
+    </svg>
+  </div>
+
+  <!-- kink : what exactly is whipping -->
+  <div class="scene" data-scene="kink">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a070c"/>
+      <!-- Nidal's shadow, faint in the corner -->
+      <ellipse cx="1340" cy="700" rx="320" ry="280" fill="#1a0810" opacity=".5" filter="url(#soft2)"/>
+      <!-- Keltham, puzzled -->
+      <use href="#figure" x="560" y="440" width="120" height="200" fill="#16203a"/>
+      <!-- a closed, locked tome of knowledge he lacks -->
+      <g transform="translate(900 420)">
+        <rect width="200" height="260" rx="10" fill="#1a1220" stroke="#5a4a6a" stroke-width="2"/>
+        <rect x="-8" y="0" width="20" height="260" rx="6" fill="#241830"/>
+        <circle cx="100" cy="130" r="34" fill="none" stroke="#b98cff" stroke-width="3"/>
+        <path d="M100 112v36M82 130h36" stroke="#b98cff" stroke-width="4" stroke-linecap="round"/>
+        <!-- a small lock -->
+        <g transform="translate(100 200)"><rect x="-16" y="0" width="32" height="24" rx="4" fill="#5a4a6a"/><path d="M-10 0v-10a10 10 0 0 1 20 0v10" fill="none" stroke="#5a4a6a" stroke-width="3"/></g>
+      </g>
+      <!-- floating question marks -->
+      <g fill="#cbb0ff" font-family="Cinzel,serif" opacity=".6">
+        <text x="700" y="380" font-size="48" class="tw">?</text>
+        <text x="640" y="320" font-size="32" class="tw" style="animation-delay:-1.2s">?</text>
+        <text x="760" y="340" font-size="38" class="tw" style="animation-delay:-2s">?</text>
+      </g>
+    </svg>
+  </div>
+
+  <!-- money_taboo : never naming amounts -->
+  <div class="scene" data-scene="money_taboo">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0a08"/>
+      <ellipse cx="800" cy="440" rx="380" ry="280" fill="url(#gGold)" opacity=".07" filter="url(#soft2)"/>
+      <!-- coins with redacted values -->
+      <g>
+        <g transform="translate(560 380)"><circle r="80" fill="#241c10" stroke="#caa86a" stroke-width="3"/><rect x="-50" y="-16" width="100" height="32" rx="4" fill="#0a0a08"/></g>
+        <g transform="translate(860 460)"><circle r="96" fill="#241c10" stroke="#caa86a" stroke-width="3"/><rect x="-60" y="-18" width="120" height="36" rx="4" fill="#0a0a08"/></g>
+        <g transform="translate(1060 360)"><circle r="64" fill="#241c10" stroke="#caa86a" stroke-width="3"/><rect x="-40" y="-13" width="80" height="26" rx="4" fill="#0a0a08"/></g>
+      </g>
+      <!-- a banknote with a censor bar -->
+      <g transform="translate(640 600)"><rect width="320" height="140" rx="10" fill="#1c2218" stroke="#7a8a5a" stroke-width="2"/><circle cx="70" cy="70" r="40" fill="none" stroke="#7a8a5a" stroke-width="2"/><rect x="140" y="48" width="150" height="44" rx="4" fill="#0a0a08"/><g fill="#3a4a2e"><rect x="148" y="100" width="60" height="10" rx="3"/><rect x="216" y="100" width="40" height="10" rx="3"/></g></g>
+      <g fill="#caa86a" opacity=".5"><circle cx="500" cy="540" r="3" class="tw"/><circle cx="1080" cy="560" r="3" class="tw" style="animation-delay:-1.4s"/></g>
+    </svg>
+  </div>
+
+  <!-- seeing : the seeing of keltham by keltham -->
+  <div class="scene" data-scene="seeing">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#080b0e"/>
+      <ellipse cx="800" cy="440" rx="380" ry="300" fill="url(#gCyan)" opacity=".08" filter="url(#soft2)"/>
+      <!-- Carissa, observing -->
+      <use href="#figure" x="320" y="450" width="110" height="186" fill="#1a0d10"/>
+      <!-- the model of Keltham, resolving from blur to sharp -->
+      <g transform="translate(880 440)">
+        <use href="#figure" x="-60" y="-100" width="120" height="200" fill="#16283a" opacity=".5" filter="url(#soft2)"/>
+        <use href="#figure" x="-60" y="-100" width="120" height="200" fill="none"/>
+        <!-- refining rings -->
+        <circle r="150" fill="none" stroke="#5fd0ff" stroke-width="1.5" stroke-opacity=".3" class="breathe"/>
+        <circle r="110" fill="none" stroke="#bfeafa" stroke-width="1.5" stroke-dasharray="6 10" class="spin-f" style="animation-duration:12s"/>
+        <!-- crisp detail lines appearing on one half -->
+        <g stroke="#bfeafa" stroke-width="1.4" stroke-opacity=".6" class="draw"><path d="M0 -80v160M-30 -40h60M-30 40h60"/></g>
+      </g>
+      <!-- sightline -->
+      <g stroke="#bfeafa" stroke-width="1.4" stroke-dasharray="6 10" stroke-opacity=".5" class="flow" fill="none"><path d="M430 520L800 480"/></g>
+      <g fill="#bfeafa" opacity=".5"><circle cx="700" cy="320" r="3" class="tw"/></g>
+    </svg>
+  </div>
+
+  <!-- villa : a duke's villa -->
+  <div class="scene" data-scene="villa">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0b0a08"/>
+      <!-- grand hall -->
+      <rect width="1600" height="900" fill="#100d0c"/>
+      <!-- columns -->
+      <g fill="#1a1612"><rect x="180" y="120" width="70" height="640" rx="6"/><rect x="400" y="120" width="70" height="640" rx="6"/><rect x="1130" y="120" width="70" height="640" rx="6"/><rect x="1350" y="120" width="70" height="640" rx="6"/></g>
+      <g fill="#241c14"><rect x="160" y="110" width="110" height="20"/><rect x="380" y="110" width="110" height="20"/><rect x="1110" y="110" width="110" height="20"/><rect x="1330" y="110" width="110" height="20"/></g>
+      <!-- floor -->
+      <rect y="760" width="1600" height="140" fill="url(#gFloor)" opacity=".6"/>
+      <!-- chandelier -->
+      <g transform="translate(800 120)"><path d="M0 0v60" stroke="#6a5230" stroke-width="2"/><g transform="translate(0 60)"><ellipse rx="70" ry="20" fill="none" stroke="#caa86a" stroke-width="2"/><circle cx="-60" r="6" fill="url(#gGold)" class="flick"/><circle cx="-20" r="6" fill="url(#gGold)" class="flick" style="animation-delay:-.4s"/><circle cx="20" r="6" fill="url(#gGold)" class="flick" style="animation-delay:-.8s"/><circle cx="60" r="6" fill="url(#gGold)" class="flick" style="animation-delay:-1.2s"/></g></g>
+      <!-- doorway to garden light -->
+      <rect x="700" y="300" width="200" height="460" rx="10" fill="url(#gGold)" opacity=".22"/>
+      <rect x="700" y="300" width="200" height="460" rx="10" fill="none" stroke="#caa86a" stroke-width="3"/>
+      <rect x="724" y="330" width="152" height="410" rx="8" fill="url(#gCyan)" opacity=".18" class="breathe"/>
+      <!-- the two, setting off -->
+      <use href="#figure" x="560" y="560" width="104" height="174" fill="#16283a"/>
+      <use href="#figure" x="660" y="560" width="104" height="174" fill="#1a0d10"/>
+      <g fill="#ffd9a0" opacity=".5"><circle cx="800" cy="500" r="3" class="tw"/><circle cx="840" cy="560" r="2.6" class="tw" style="animation-delay:-1.4s"/></g>
+    </svg>
+  </div>
+
+  <!-- /SCENES -->
+
+  <div id="vignette"></div>
+
+  <div id="label">
+    <div class="kicker"><svg class="ksig"><use id="ksig-use" href="#sg-book"/></svg><span class="kname" id="kname">The Reading</span></div>
+    <div class="ttl" id="ttl">Corrigibility</div>
+  </div>
+
+  <div id="cap-wrap"><div id="cap"></div></div>
+
+  <!-- intro -->
+  <div id="intro">
+    <div class="intro-in">
+      <div class="eyebrow">an animated reading · episode 23</div>
+      <h1>Planecrash</h1>
+      <div class="sub">Keltham and Carissa talk through what <i>dath ilan</i> is actually like — its machines and money, its public health and its unoverthrowable governments — and then set off to explore the villa. This plays the <b>AskWhoCasts AI</b> reading — load the audio and the animation follows it, captioned with the original text.</div>
+      <div id="drop">
+        <svg class="dz-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L8 8m4-4 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <div class="dz-msg">Drop the episode 23 audio here, or click to choose</div>
+        <div class="dz-sub">mp3 · m4a · wav · ogg — stays on your device, nothing is uploaded</div>
+        <input type="file" id="audiofile" accept="audio/*" hidden>
+      </div>
+      <div id="loaded"><span class="ck">✓</span> <span class="fn" id="fname"></span> <span id="dur"></span></div>
+      <button id="begin" disabled><span class="tri"></span> Play</button>
+      <div class="cast" id="cast"></div>
+      <div class="note">Sound from your file · seek, speed (1× / 1.25× / 1.5× / 0.75×), captions (CC / press “c”) and ← → arrows all work</div>
+      <div class="src">Reading &amp; audio by <b>AskWhoCasts AI</b> — support it at patreon.com/askwhocastsai. Episode 23 of “mad investor chaos and the woman of asmodeus” (Planecrash) by Iarwain &amp; lintamande.</div>
+    </div>
+  </div>
+  <audio id="player" preload="metadata"></audio>
+
+  <!-- controls -->
+  <div id="controls">
+    <button class="btn sm" id="prev" title="Previous passage" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M7 5h2v14H7zM20 5v14l-9-7z"/></svg></button>
+    <button class="btn lg" id="play" title="Play / Pause" aria-label="Play"><svg id="playicon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
+    <button class="btn sm" id="next" title="Next passage" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M15 5h2v14h-2zM4 5l9 7-9 7z"/></svg></button>
+    <button class="btn sm" id="restart" title="Restart" aria-label="Restart"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg></button>
+    <div id="prog"><div id="bar"></div></div>
+    <button class="btn" id="cc" title="Captions on/off (c)" aria-pressed="true">CC</button>
+    <button class="btn" id="speed" title="Reading speed">1.0×</button>
+    <div id="beat">The Forbiddance</div>
+  </div>
+
+</div></div>
+
+<script>
+
+/* ===================== CHARACTERS ===================== */
+const CHARS = {
+  narrator: {name:'Narrator',      tag:'the tale itself',       color:'#d8c39a', sigil:'sg-book'},
+  keltham:  {name:'Keltham',       tag:'a mind from dath ilan', color:'#5fd0ff', sigil:'sg-hex'},
+  carissa:  {name:'Carissa Sevar', tag:'to-let-you-in',         color:'#ff5d6c', sigil:'sg-flame'},
+};
+const SCENE_TITLES = {
+  wonders:'Two Hundred Layers of Living Space', underground:'Roads Far Enough Underground', machines:'Machines Do the Work',
+  disease:'One Giant Sweep', sexwork_econ:'Each Side in Equilibrium', exotic:'Appealing in Its Own Right',
+  pharaoh:'The Memory of a Pharaoh', schelling:'Ten Percent Yell Now', sticky:'Extremely Hard to Overthrow',
+  lives:'Twenty Million Lives', law_indifferent:'Indifferent to the Effect', gods_law:'To What Extent Gods',
+  kink:'What Exactly Is Whipping', money_taboo:'Never Naming Amounts', seeing:'The Seeing of Keltham by Keltham',
+  villa:"A Duke's Villa"
+};
+
+/* ===================== CAPTIONS + SCENE/SPEAKER BEATS ===================== */
+/* CUES: the VERBATIM glowfic text, aligned to the audio's timeline {t: startSeconds, x: text}.
+   Empty x clears the caption (intro credits, and the tail the source doesn't cover).
+   BEATS: which scene + speaker is on screen at each time {t, s:scene, v:speaker}. */
+const CUES=[{t:0,x:""},{t:24.35,x:"\"Oh, good prioritizing of topics. Anybody who wants that to be a romantic conversation should"},{t:29.6,x:"probably get that in with me during the first week or two,"},{t:33.29,x:"before I get especially nostalgic or sad about something I didn't realize I'd miss."},{t:37.29,x:"Yeah, it's about as fantastic as you'd expect from a billion people with high intelligence"},{t:42.12,x:"and enough money to spend on making stuff be diverse and pretty."},{t:46.27,x:"Enormous buildings that go up into the sky for two hundred layers of living space?"},{t:51,x:"We've got those. Endless forests with houses you'd never notice,"},{t:54.33,x:"where all the roads are far enough underground that you can't even hear a murmur"},{t:59.33,x:"from the high-velocity automatic carriages moving people around at a mile a minute to their"},{t:64.73,x:"workplace or their friends' houses? Got that."},{t:67.27,x:"Wind pits a hundred meters on a side so people can fly around using small"},{t:72.32,x:"wings? Got them. Giant supershop that's fifty of these villas in radius,"},{t:76.45,x:"which ended up as the de facto selling point for everything in Civilization that's in"},{t:81.8,x:"common enough demand to need an exhibit and rare enough to not need many of"},{t:87.8,x:"them? Got that. Entire cities of actors that do nothing but play out unending elaborate"},{t:93.8,x:"fantasies that people can pay to wander into for a day or a year,"},{t:99.12,x:"complete with sex workers? Got them. It's basically what it seems to me you should"},{t:104.61,x:"expect from people with way more money and knowledge, and zero magic or gods."},{t:108.87,x:"Given the premise, I don't know what if any of that you'd find surprising.\""},{t:114.08,x:"- longing sigh. \"I don't know that I'm - surprised by any of those things exactly,"},{t:120.38,x:"they all sound like things people might want if they were very rich -"},{t:125.33,x:"I guess I'm confused about, if everyone's very rich, who does all the unpleasant work"},{t:130.67,x:"of digging the tunnels and hauling the garbage and being the sex workers...\""},{t:135,x:"\"Machines. One person can dig a tunnel faster if they have a shovel."},{t:139.33,x:"Now imagine, it's like that, but there's a crew of a hundred people and eighty"},{t:144.22,x:"tunneling machines who show up and dig all the tunnels for the city you're going"},{t:148.78,x:"to build, over the course of a week."},{t:151.35,x:"Garbage gets tossed down a self-cleaning chute where it lands in containers that get carried"},{t:155.38,x:"away by vehicles that travel around automatically without any humans operating them.\""},{t:160,x:"\"Sex workers aren't scalable that way because, like, Civilization has made a decision not to"},{t:167,x:"scale orgasm production? But I don't know why you'd consider that an unpleasant job -"},{t:171.67,x:"anyone who sells sex is going to sell it at a price that makes them"},{t:175.48,x:"glad to trade it, right, and people who'd need huge prices to be happy aren't"},{t:178.87,x:"going to be the most competitive sex workers?"},{t:180.87,x:"Wait this is going to be awful Golarion news and I should be trying to"},{t:185.23,x:"guess it before you say it but I find that I don't actually want to.\""},{t:189.58,x:"\"Do you want me to not say it, Cheliax isn't one of the countries where"},{t:193.96,x:"women don't have rights so you don't actually need to know.\""},{t:197.19,x:"\"So... somebody picks out the most attractive women, tells them they're sex workers whether they"},{t:201.63,x:"like it or not, and underpays them, because otherwise their country can't fill out those"},{t:206.15,x:"jobs because no woman wants them because of the marriage thing.\""},{t:209.54,x:"\"...you know, I can tell that's still too sensible for Golarion but even having said"},{t:213.96,x:"that, I don't know how to make the answer be crazier.\""},{t:217.04,x:"\"If a girl has had sex while unmarried, in a country where women are supposed"},{t:221.43,x:"to marry as virgins, then no one will marry her,"},{t:224.48,x:"but it's illegal for her to have been educated or gotten a normal job,"},{t:228.88,x:"so she can be a sex worker - that does not translate quite directly to our"},{t:233.68,x:"word - or she can starve, and she will almost definitely get diseases from having sex"},{t:238.9,x:"with lots of strangers, and also eventually one of them will be bad news and"},{t:244.27,x:"strangle her, but I imagined dath ilan having enough Law to solve the latter problem"},{t:249.64,x:"and enough medicine to solve the former and it's still considered a lousy job with"},{t:254.44,x:"those aside, because propensity for it is barely getting selected for at all.\""},{t:259.11,x:"More equilibria that seem weirdly more awful than anything Keltham knows about to explain why."},{t:265.4,x:"\"Why would - you get diseases particularly from having sex with people you didn't know?"},{t:271.4,x:"Is this a magic thing?\""},{t:273.35,x:"\"...no? It's just - well, you get diseases from any kind of close contact with other"},{t:278.57,x:"people, right, and there are a bunch of diseases that you specifically get from sex,"},{t:283.57,x:"and people who haven't had sex won't have those diseases to pass along,"},{t:287.75,x:"and people who have sex with hundreds and hundreds of people will inevitably get the"},{t:292.88,x:"diseases eventually.\""},{t:293.6,x:"\"And here that's much more serious than - the kind of contagious illnesses that we still"},{t:299,x:"have in dath ilan, because we eliminated anything we didn't know how to easily treat,"},{t:303.26,x:"probably long enough ago that it happened before the screen."},{t:306.32,x:"Though - I'm a bit confused about the concept of a disease that's specifically transmitted by"},{t:311.12,x:"sex - you wouldn't think a disease would find its optimal strategy in only,"},{t:315.5,x:"like, infecting genitals or sexual fluids, and making sure it never got transmitted by sneezing"},{t:320.94,x:"- I wonder if there's something I'm missing about how the equilibrium point is different here."},{t:326.2,x:"Is it anything you still have to worry about in the face of fourth-circle cleric"},{t:331,x:"spells?\""},{t:331.43,x:"\"No, Remove Disease is third and will totally handle it,"},{t:335.71,x:"but normal people can't afford that. I don't know enough about why diseases work different"},{t:341.54,x:"ways to guess the answer to your question but doctors do track,"},{t:345.23,x:"like, if you're doctoring someone with smallpox and haven't had it yourself you'll catch it,"},{t:350.24,x:"if you're doctoring someone with syphilis and haven't had it yourself you'll be completely fine,"},{t:355.04,x:"but their wife and mistress will come down with it eventually.\""},{t:358.55,x:"\"I'd guess that - a long, long time ago, in dath ilan -"},{t:362.36,x:"we figured out how to identify everyone with a disease like that,"},{t:365.76,x:"all at once, in one giant sweep through the population,"},{t:368.52,x:"and we isolated all of them until they got better or died,"},{t:372,x:"plus a while longer to be sure, and then the disease didn't exist anymore.\""},{t:376.67,x:"(The concept that you can have a contagious disease forever,"},{t:380,x:"without it either getting better enough not to be contagious,"},{t:383.33,x:"or getting worse until it kills you, has not particularly occurred to Keltham;"},{t:387.8,x:"why would the replication rate in the face of immune counterattack be exactly 1,"},{t:393.4,x:"rather than exploding or vanishing?)"},{t:395.36,x:"Nod. \"I think Cheliax could do that but it'd just get reintroduced from other countries"},{t:401.12,x:"that aren't coordinated enough.\""},{t:402.56,x:"\"Yeah, we wouldn't even have tried until we thought we could pull it off across"},{t:406.75,x:"the whole planet at once, so it can't have been any earlier than that,"},{t:410.25,x:"in our history... I wish I knew whether dath ilan went through a phase like"},{t:414.25,x:"this, or if it's something that happens here entirely because of the gods or a"},{t:418.75,x:"leak in your heritage of intelligence or I don't know what."},{t:422.28,x:"If dath ilan used to look basically like this, minus the gods and magic,"},{t:426.76,x:"it sure would be nice to know exactly how we climbed out of it.\""},{t:430.75,x:"For the first time it occurs to Keltham to wonder if dath ilan used to"},{t:434.25,x:"have gods, and that's what the Great Screen is meant to protect,"},{t:437.28,x:"because if you know the info for gods, you might pray to them..."},{t:440.94,x:"it would take a huge effort to keep not just the phenomenon but the physics"},{t:445.16,x:"behind it out of all the textbooks, but that's the magnitude of effort dath ilan"},{t:450,x:"put in to the Great Screen. And if that's not what's going on,"},{t:454,x:"then there remains the unexplained question of why Keltham does not know any standard speculations"},{t:459.62,x:"about hypothetical superagents, that lots and lots of people could have hypothesized,"},{t:464.45,x:"hypotheses which pose a lot of interesting then-whats once you start looking in that direction."},{t:470.27,x:"\"Anyway. It's interesting to know you can have plenty of sex workers if they're also"},{t:474.59,x:"allowed to do other stuff.\""},{t:475.97,x:"\"I'm not sure there's literally anybody on my planet who's 'not allowed to do other"},{t:480.29,x:"stuff'. Maybe some Keepers, if they're holding infohazards so bad that they all have to"},{t:485.11,x:"stay in the same isolated village somewhere?\""},{t:487.36,x:"(And the people who know the true history, in their own causally isolated bunker."},{t:491.69,x:"But Keltham is now suddenly very unsure he should talk any more about the Screening"},{t:496,x:"of History where gods might hear him."},{t:498.8,x:"If dath ilan's Keepers defeated the gods and eradicated their memory,"},{t:503.2,x:"sometime in the Forgotten, this may not be a good thing to talk about in"},{t:508.88,x:"modern Golarion.) \"Where does the equilibrium balance in Cheliax?\""},{t:512.25,x:"Keltham adds on. \"You didn't think that people who enjoy sex lots would be the"},{t:517.95,x:"natural sellers for sex, so what prevents that here?\""},{t:521.32,x:"\"Well, there's still the diseases and there's still the risk of a dangerous guy,"},{t:525.77,x:"so it's still a job you probably only do if you don't have better options,"},{t:530.67,x:"though in Cheliax that wouldn't be because they're illegal so it'd probably be because you're"},{t:535.67,x:"really bad at working in some way or another."},{t:538.5,x:"And if you are particularly attractive and desirable you probably try to angle that into"},{t:543.41,x:"being a powerful person's mistress rather than working at a brothel,"},{t:547.91,x:"even a high-end one.\" And the gaps are filled by slavery,"},{t:552.39,x:"which she's not going to say."},{t:554.72,x:"\"Oh, in dath ilan it's that sufficiently attractive people who are sufficiently good at sex,"},{t:560.23,x:"have formed - um. A... temporal process with two sides..."},{t:563.91,x:"where each side is composed of people..."},{t:566.77,x:"who each have their own incentives... such that each side is in equilibrium with respect"},{t:572.15,x:"to the incentives given to them by the other side..."},{t:575.62,x:"and on the other side from the very desirable people,"},{t:579.47,x:"are people who are sufficiently cool and have done sufficiently awesome things."},{t:584.38,x:"You can't buy some very hot people with money, you've got to have done something"},{t:590.1,x:"that they think is worthy. And the people who are obviously worthy,"},{t:594,x:"if they're willing to acknowledge you publicly as a fuckbuddy,"},{t:597.71,x:"they're validating to the world that you are that hot and that good at sex,"},{t:602.07,x:"and then you're somebody who gets to decide whether some lesser incredibly rich person is"},{t:606.52,x:"cool enough to meet your standards.\""},{t:608.38,x:"Carissa tries to follow that and when that fails tries to nail down her confusion"},{t:614.1,x:"and when that fails says reluctantly, \"maybe that's the same thing as taking a mistress"},{t:619.89,x:"but I suspect, instead, it's another vast confusing cultural divide.\""},{t:623.57,x:"\"Okay, suppose I asked you who was the hottest woman on the planet."},{t:627.29,x:"The first obvious answer would be whoever gets paid the highest prices for sex."},{t:631.32,x:"But suppose there's somebody even hotter than her, who doesn't accept direct payment for sex"},{t:636.14,x:"at all. How could you tell she was even hotter?"},{t:639.36,x:"How could she prove that to the world?"},{t:642.45,x:"Well, let's say she thinks the big important thing is..."},{t:646.55,x:"research on rats, and suppose somebody incredibly rich goes and builds an entire small city"},{t:651.88,x:"devoted to rat research, and then she screws him."},{t:654.76,x:"Depending on how much money gets spent, especially if she's influencing multiple rich people to"},{t:660,x:"fund rat research, you could make the case that she's getting implicitly paid more than"},{t:665,x:"the most expensive direct sex worker on the planet, even if she's only a small"},{t:669.14,x:"fraction of the reason why anyone funded the rat research city.\""},{t:671.99,x:"\" - this is missing the point but in Golarion you'd check with a spell who had"},{t:676.82,x:"the most Splendour. Uh, I'm not sure that's how I think about sexual desirability working?"},{t:681.9,x:"I don't - think how hot someone is relates very directly to how much I expect"},{t:687.62,x:"to gain from having sex with them and therefore how motivated I am to do"},{t:692.2,x:"it. And I'm also not sure that's the main place where the confusion is.\""},{t:696.4,x:"\"Do people here not have... I don't know, the kind of pride in their own"},{t:700.9,x:"desirability and sexual skill where they want to prove that they're way better at it"},{t:705.4,x:"than most other people? Because you can't just go around saying that,"},{t:709.33,x:"you've got to prove it somehow.\""},{t:711.33,x:"Carissa is pretty sure that the more powerful you are,"},{t:715.38,x:"the less you need skill at sex."},{t:718.71,x:"She's suddenly worried that she shouldn't say that either, though."},{t:723.35,x:"\"...yes but that correlates with not being very powerful or in-demand,"},{t:727.55,x:"and therefore with needing to establish that you're fun to have sex with if you"},{t:732.18,x:"want to get anyone to have sex with you at all?\""},{t:735.18,x:"she says tentatively after a bit of thought."},{t:737.36,x:"Keltham is not sure what the communications obstacle could be here,"},{t:740.9,x:"exactly. \"I mean, it's a two-sided equilibrium containing the hottest people and the worthiest people"},{t:746.62,x:"who mutually judge each other as that, anchored by how hotness and worthiness are also"},{t:751.9,x:"somewhat visible to people outside their ingroups - I have a sense like I'm also missing"},{t:756.57,x:"the point. If you're hot enough that powerful people are competing to sleep with you,"},{t:760.86,x:"you don't need to establish how hot you are anymore,"},{t:764,x:"the outside world has now seen it established.\""},{t:766.67,x:"\"I'm going to talk about some place other than Cheliax,"},{t:770,x:"first, because I keep getting distracted by trying to apply this conversation to our date\""},{t:775,x:"and by worrying about saying something that you'll be incredibly concerned and offended by."},{t:779.82,x:"\"So, Osirion. Osirion has a god-king, a pharaoh, they've had them since ancient times."},{t:785.95,x:"The pharaoh of Osirion has hundreds of concubines."},{t:788.92,x:"If he sees a hot girl in the street, I think he can just order"},{t:793.54,x:"her to become one of them. It's not particularly validating to be chosen by the"},{t:798.25,x:"pharaoh of Osirion, because it just means that you're either in the top couple hundred"},{t:803.07,x:"or that he was tired of the top couple hundred and wanted something new."},{t:807.4,x:"I am absolutely not in the top percentile of hotness for women but if I"},{t:812.2,x:"went to Osirion I'd be a little worried about getting noticed,"},{t:815.48,x:"because I'm exotic, which is sometimes appealing in its own right."},{t:818.74,x:"Does all of that make sense, are we starting to make different predictions at some"},{t:823.1,x:"place after that -\""},{t:823.93,x:"\"I mean you've convinced me that no woman would want to go to Osirion,"},{t:827.79,x:"and if she did, she wouldn't expect to gain positive sexual reputation from being selected"},{t:832.74,x:"by the pharaoh because the pharaoh isn't discriminating enough, but I'm now distracted by the"},{t:838.61,x:"question of why there is such a thing as a pharaoh of Osirion in the"},{t:843.2,x:"first place.\""},{t:843.8,x:"\"...as a question about history the answer is that his grandfather staged a nearly bloodless"},{t:848.35,x:"coup against the satrap of the Kelish Empire, with the churches of Abadar and Sarenrae"},{t:853.95,x:"both backing him, right after Aroden fell when the empire was very distracted,"},{t:858.68,x:"and won Osirion independence and kicked out all the Kelish nobles and ended serfdom and"},{t:864.29,x:"is wildly popular. I am not sure that's the question you were asking,"},{t:869.24,x:"though?\""},{t:869.62,x:"\"Suppose everybody in a dath ilani city woke up one day with the knowledge mysteriously"},{t:873.85,x:"inserted into their heads, that their city had a pharaoh who was entitled to order"},{t:878.33,x:"random women off the street into his - cuddling chambers?"},{t:881.17,x:"- whether they liked that or not. Suppose that they had the false sense that things"},{t:886.24,x:"had always been like this for decades."},{t:888.41,x:"It wouldn't even take until whenever the pharaoh first ordered a woman,"},{t:892.14,x:"for her to go \"Wait why am I obeying this order when I'd rather not"},{t:896.48,x:"obey it?\" Somebody would be thinking about city politics first thing when they woke up"},{t:900.62,x:"in the morning and they'd go \"Wait why we do we have a pharaoh in"},{t:905.2,x:"the first place\" and within an hour, not only would they not have a pharaoh,"},{t:910,x:"they'd have deduced the existence of the memory modification because their previous history would have"},{t:915.22,x:"made no sense, and then the problem would escalate to Exception Handling and half the"},{t:920,x:"Keepers on the planet would arrive to figure out what kind of alien invasion was"},{t:924.29,x:"going on. Is the source of my confusion - at all clear here?\""},{t:928.45,x:"\"You think everyone in dath ilan would just - decide not to follow orders,"},{t:933.36,x:"even though this would get them executed if anyone else in the system continued following"},{t:938.85,x:"orders, on the confident assumption that no person with a correctly configured mind would possibly"},{t:944.09,x:"decide to follow orders under those circumstances?\""},{t:946.52,x:"\"Oh, so we're imagining that people also wake up with the memory that everybody's supposed"},{t:951.41,x:"to kill anyone who talks about removing the pharaoh, and the memory that they're supposed"},{t:955.62,x:"to kill anyone who doesn't kill anyone who talks about removing the pharaoh,"},{t:959.33,x:"and so on through recursion, and they wake up with the memory of everybody else"},{t:964.33,x:"having behaved like that previously. Yeah, that's one of the famous theoretical bad equilibria that"},{t:969.6,x:"we get training in how to -\""},{t:972.24,x:"\"Shit.\""},{t:972.56,x:"\" - confusion resolved now?\""},{t:974.4,x:"\"Just Osirion, or entire planet outside Cheliax?"},{t:977.09,x:"No, it's at least also Nidal.\""},{t:979.27,x:"\"Everywhere has people in charge who do things you wouldn't like and stay in charge"},{t:984.64,x:"because it's illegal to overthrow them and the laws are enforced."},{t:988.18,x:"Exactly how bad the things they do are varies - the pharaoh of Osirion is actually"},{t:993,x:"not considered bad at all - and exactly how the laws against overthrowing the government are"},{t:999.67,x:"enforced varies but - probably even in Cheliax the government has done something dath ilan thinks"},{t:1004.56,x:"would merit overthrowing it.\""},{t:1005.74,x:"But for that to be true in Cheliax - that makes no sense,"},{t:1009.4,x:"in terms of dath ilani common wisdom about how evil aliens would enforce that equilibrium,"},{t:1015.4,x:"they'd require non-dissidents to kill dissidents immediately before the timing info NOW!"},{t:1020.33,x:"can spread at the speed of local speech - maybe they're too dumb here to realize"},{t:1025.28,x:"that? \"If you were supposed to have killed me a few seconds ago,\""},{t:1029.44,x:"Keltham says in a casual tone, not any kind of obvious whisper,"},{t:1032.97,x:"\"and are putting your own life in danger not to do that,"},{t:1035.88,x:"this would be a great time to casually nod your head and then I'll censor"},{t:1039.52,x:"a lot of my curriculum from here on out.\""},{t:1042.58,x:"Carissa is, completely insanely, tempted to casually nod her head,"},{t:1046.26,x:"even though that's not even at all - lots of countries do still have governments and"},{t:1051.85,x:"don't enforce heresy laws and it's clearly one of those they're pretending at being -"},{t:1056.67,x:"\"I think you are imagining that this equilibrium is extremely fragile and that admitting we're"},{t:1061.67,x:"in it is also disallowed? But actually it's extremely sticky."},{t:1066,x:"Overthrowing governments is really really hard and usually the thing that results when you overthrow"},{t:1072.74,x:"a government is much worse. The consequences of overthrowing the Chelish government would be bad"},{t:1077.96,x:"ones. So you don't have to - pretend the government is perfect -"},{t:1081.37,x:"you just have to have a critical mass of people who don't believe that overthrowing"},{t:1085.81,x:"it would produce something better, especially not since the Chelish government is possible to improve"},{t:1092.18,x:"in normal ways by, like, suggesting improvements.\""},{t:1095.33,x:"\"I see,\" Keltham says. \"Because if you toss out the current equilibrium,"},{t:1099.33,x:"it could disrupt a lot of stuff, especially in a place like Golarion where people"},{t:1104,x:"who lose a year's income just starve, no safety margin for anything..."},{t:1107.43,x:"and if the current equilibrium is also doing some good things...\""},{t:1110.8,x:"But it should be REALLY REALLY OBVIOUS that there's an alternative to Osirion which looks"},{t:1116.8,x:"like Osirion WITHOUT THE PHARAOH RAPING PEOPLE and that you could just..."},{t:1121,x:"Well, the people here don't have any training in noticing better equilibria and figuring out"},{t:1126,x:"how to move to them - NO! THAT'S JUST OBJECTIVELY OBVIOUS!"},{t:1130.77,x:"Keltham manages not to yell this out loud, and having now finished internally yelling insults"},{t:1137.86,x:"at reality, continues looking externally thoughtful, grateful for his recent practice with Eagle's Splendour."},{t:1143.67,x:"He is not going to say anything along those lines,"},{t:1147,x:"however obvious, until he has picked up from books whether Cheliax has a pharaoh."},{t:1151.67,x:"Or rather, what kind of pharaoh it has."},{t:1154.33,x:"He is specifically not going to mention that, given a dath ilani training regimen,"},{t:1158.99,x:"ten-year-olds are too smart to get stuck in traps like this;"},{t:1162.5,x:"and would wait until the next solar eclipse or earthquake,"},{t:1165.68,x:"at which point 10% of them would yell \"NOW!\", followed moments later by the other"},{t:1171.09,x:"90%, as is the classic strategy that children spontaneously and independently invent as soon as"},{t:1176.42,x:"prompted by this scenario, so long as they have been previously taught about Schelling points."},{t:1181.62,x:"Has he at any point mentioned out loud dath ilan's annual Oops It's Time To"},{t:1188.5,x:"Overthrow The Government Festival? He doesn't think so."},{t:1192.17,x:"\" - because... okay, so, there are lots of people who benefit from the current system,"},{t:1198.2,x:"right? The pharaoh has personal bodyguards who he personally raised from the dead after they"},{t:1203.55,x:"died in his service. The pharaoh has people who he elevated to high-ranking positions."},{t:1208.37,x:"All of those people would be worse off if the government were overthrown,"},{t:1213.16,x:"so for practical reasons they are going to oppose it."},{t:1216.38,x:"So in order to overthrow the government, you have to kill all those people,"},{t:1220.24,x:"and also any people who are seeking out positions of importance in the government as"},{t:1224.61,x:"a reward for their loyalty in putting down the rebellion,"},{t:1227.82,x:"and also any people who have sworn oaths of loyalty to the current regime...\""},{t:1232.35,x:"\"I see. In dath ilan we'd think that it's hard to get over half of"},{t:1237.22,x:"the military power on your side by bribing it, in a pre-metallic equilibrium where almost"},{t:1242.37,x:"all fighters have about the same military power."},{t:1244.74,x:"And that once you start gaining more knowledge and get more powerful tech,"},{t:1248.78,x:"it's your important duty to also use that knowledge to propagate certain kinds of stable"},{t:1254.65,x:"equilibria to future generations and not others.\""},{t:1257.39,x:"\"But with wizards and clerics and whatever else you have here,"},{t:1262.06,x:"if they're - extraordinary economics, you don't have the word, if they let individuals do big"},{t:1266.96,x:"things without large support networks - you could get half-plus of the military power by appealing"},{t:1271.7,x:"to fewer people. Even while your society's knowledge was much too primitive to produce the"},{t:1276.67,x:"kind of advanced weapons that would make these issues initially appear in nonmagical societies that"},{t:1281.8,x:"have started figuring things out.\" That does make it seem less like the whole thing"},{t:1287.2,x:"is just an Intelligence 10 Phenomenon."},{t:1289.13,x:"\" - yeah, the pharaoh and a hundred high-level personal bodyguards could probably kill practically the entire"},{t:1294.71,x:"rest of the country put together, commoners are pretty useless against high-level wizards and clerics."},{t:1300.71,x:"Certainly more than fifty percent of a country's military power is less than a thousand"},{t:1305.71,x:"people.\""},{t:1306,x:"\"Well, I think I'm starting to understand some of the ways that Golarion diverged from"},{t:1310.29,x:"a human baseline because of the presence of magic."},{t:1312.93,x:"Or I have the illusion of starting to understand at least one of those divergences."},{t:1317.59,x:"It is not, by our standards, pretty, but it sure beats having no idea why"},{t:1322.64,x:"nothing here is making any sense.\" ...if you introduce technology into a Punish-Non-Punishers society with"},{t:1329.59,x:"magic, the situation is no longer stable, it has a possibility of transitioning to the"},{t:1334.9,x:"kind of pharaoh-free Civilization that Keltham is familiar with, if very large supply networks (and"},{t:1341.21,x:"only those) can build weapons powerful enough to kill high-level wizards and clerics."},{t:1346.22,x:"But, yeah, Keltham is going to have to think about how to do that with"},{t:1350.78,x:"a minimum of fuss, and maybe not say a whole lot while he's thinking."},{t:1355.04,x:"Carissa can, in fact, follow the way Keltham might be reasoning,"},{t:1358.39,x:"and she's pretty sure that she screwed up, even though claiming that every single country"},{t:1363.33,x:"except Cheliax was like this would have been ridiculous and even though she's actually pretty"},{t:1368.33,x:"sure that Keltham isn't going to change the calculus of whether it's a good idea"},{t:1373.33,x:"to overthrow the government. \"Anyway, sometimes it does go wrong and someone's power base isn't"},{t:1378.45,x:"secure enough. Like in Tian Xia, the Lung Wa empire which had endured for centuries"},{t:1383.39,x:"collapsed after Aroden's death because there was a massive associated natural disaster and a famine,"},{t:1389.22,x:"and the empire collapsed, and everything is much worse now."},{t:1393.79,x:"I've met Tian adventurers and they tell stories about - ghost cities where everyone just left"},{t:1400.47,x:"or died because trade routes were disrupted and food stopped coming,"},{t:1404.53,x:"an entire country that made a pact with a kraken to be its slaves,"},{t:1409.48,x:"other areas where the civil war still hasn't ended even though there are very few"},{t:1414.75,x:"people left to kill each other. I am sure that the Emperor of Imperial Lung"},{t:1420.12,x:"Wa did some things you'd abhorr but - it'd be monstrous,"},{t:1423.76,x:"to overthrow him, to throw cities and civilizations and twenty million lives into the chasm"},{t:1429.48,x:"of Chaos just to stop a couple dozen people from getting raped -\""},{t:1433.32,x:"(She's doing such a bad job at being more Evil,"},{t:1436.23,x:"she's going to have to set some time aside tomorrow to work on that.)"},{t:1440.35,x:"\"I try not to be the stupid kind of Chaotic."},{t:1443.83,x:"Even Chaos is made almost entirely of Law, remember."},{t:1446.96,x:"If you're doing it correctly. In fact, I'm beginning to think that the top 0.1%"},{t:1452.17,x:"most Chaotic dath ilani on my planet, placed on a scale with one unit of"},{t:1457.71,x:"distance between what you consider 'Lawful' and 'Chaotic', would be located one hundred and forty-four"},{t:1462.86,x:"units further to the Lawful side of what you call Lawful.\""},{t:1467.7,x:"\"That seems probably right. I just - it sounds like you're thinking about goverments as things"},{t:1474.32,x:"that mostly maintain their power by making it too hard for people to correctly overthrow"},{t:1479.12,x:"them, when my impression is that actually most people correctly don't want to overthrow them,"},{t:1484.18,x:"and I can name six countries where I think that's not true so I don't"},{t:1489.64,x:"think I'm just incapable of recognizing it when I see it,"},{t:1493.64,x:"and it's not how I see Cheliax."},{t:1496.18,x:"Or Osirion, for that matter. Though I do think stealing all their women would be"},{t:1501.6,x:"incredibly satisfying and we should do it.\""},{t:1504.12,x:"Stable governments make the expected benefit of overthrowing them look smaller than the expected friction"},{t:1509.88,x:"costs of coordinating and changing the regime, yes."},{t:1513.18,x:"Friction costs are not fixed independently of tech level."},{t:1516.58,x:"\"Where do gods fit into this? There's a Lawful Neutral god that sponsors Osirion,"},{t:1521.74,x:"the same god that took over the planetary banking system."},{t:1525.42,x:"I imagine that god - doesn't care whether people benefit themselves,"},{t:1529.17,x:"or benefit others, it's just completely indifferent to the effect of laws on citizen welfare,"},{t:1535,x:"all it cares about is that there be laws - confirm or more likely deny my"},{t:1540.62,x:"guess?\""},{t:1541,x:"She STILL hasn't been told whether to tell him he's Abadar's,"},{t:1545.33,x:"\"Abadar's not one of the more human gods but I think 'doesn't care whether people"},{t:1550.91,x:"benefit themselves or benefit others' sounds right, and, uh, not exactly indifferent to whether laws"},{t:1558,x:"affect human welfare and more ...deeply concerned with laws along a specific dimension which is"},{t:1564.6,x:"not human welfare, but definitely isn't just 'laws exist' - I bet it matters that they're"},{t:1570.44,x:"possible to consistently enforce and that they're consistently obeyed?"},{t:1573.68,x:"And I bet there are other things that matter which I just don't happen to"},{t:1579.09,x:"know.\""},{t:1579.45,x:"The info he needs is to what extent gods, both including and excluding Asmodeus,"},{t:1584.55,x:"are liable to get pissed if Keltham tries to make their afterlife-feeder be less of"},{t:1590,x:"a shithole. Keltham is aware he can't immediately ask about this,"},{t:1594.67,x:"though it also occurs to him that Carissa may be similarly speculating about Keltham's intentions,"},{t:1599.67,x:"and not saying what she speculates he's thinking."},{t:1602.41,x:"Gosh, Keltham hopes they weren't supposed to be coordinating some kind of immensely meaningful implied"},{t:1608.55,x:"side conversation, while they were talking about this, because if so,"},{t:1613,x:"Keltham has absolutely no idea what they both sidespoke, and that would be embarrassing."},{t:1619,x:"Well, not really his fault because of the enormous cultural gap and hypothetical Carissa should"},{t:1625.32,x:"have known better, but still. \"Wanna go back to talking sex work in dath ilan?\""},{t:1632.25,x:"Keltham offers."},{t:1633.12,x:"\"Sure. Do women pay for it? They don't, in Golarion;"},{t:1636.56,x:"it's not hard to find someone who'll have sex with you for free.\""},{t:1641.04,x:"\"Some women do? I should also mention that there's a difference between,"},{t:1644.45,x:"like... slipping some normal man or woman a private note saying that you realize you've"},{t:1648.55,x:"failed at flirting with them but you still want them enough that you'd pay thirty"},{t:1653.33,x:"unskilled-labor-hours to fuck them anyways, versus paying much higher prices to extremely attractive people who"},{t:1658.95,x:"are extremely good at sex. The second thing is more of a case of -"},{t:1663.41,x:"something you do when you're older, richer, can afford it on a regular basis if"},{t:1668.1,x:"you don't want to go back to less expert sex,"},{t:1671.21,x:"and aren't concerned about it messing up your regular relationships."},{t:1674.38,x:"I've resorted to bribery six times and been bribed twice,"},{t:1678.19,x:"but the total money flow ratio is more like, twenty to one,"},{t:1682.41,x:"not three to one.\""},{t:1682.96,x:"\" - that with normal non-professionals is not a thing in Cheliax and I suppose it could"},{t:1689.32,x:"be, I don't actually know why it isn't."},{t:1691.89,x:"I guess since no one does it, offering would be extremely weird and therefore a"},{t:1696.71,x:"negative signal about the traits of the person who offered?\""},{t:1700.08,x:"It'd read as a bizarre threat, is what it'd read as."},{t:1704.08,x:"\"I'd be cautious about doing that here, not that I expect you'll need to.\""},{t:1708.74,x:"\"Thanks for the warning. Anything else I shouldn't offer people money to do?\""},{t:1712.7,x:"\"Huh, good question. I'm not immediately thinking of anything else.\""},{t:1716.13,x:"\"Normally I would say you shouldn't offer people money to overthrow the government,"},{t:1720.65,x:"that actually is illegal, but what with it being you I think it's probably better"},{t:1726.25,x:"if your controlling constraint isn't - believing yourself to have necessarily incomplete information about the merits"},{t:1731.94,x:"of overthrowing governments.\""},{t:1732.98,x:"\" - and now we're back on serious topics, sorry."},{t:1736.61,x:"What sorts of things do you do in a whole city of sex workers -"},{t:1740.71,x:"do you pretend to be the pharaoh of Osirion -\""},{t:1743.29,x:"\"You mean, and then the women overthrow him and take sexual revenge on him?"},{t:1747.56,x:"Or played straight rather than subverted - I mean, I'm sure somebody has played Perverted Alien"},{t:1752.36,x:"Dictator of Civilization and probably a hundred thousand variations on it -"},{t:1756.2,x:"I don't know, myself, very much of what goes on in there."},{t:1761,x:"There's a standard wisdom of, play the simple sex games first,"},{t:1764.14,x:"wait to get bored naturally before you start making sex more complicated,"},{t:1767.57,x:"don't rush ahead to the weirdest sex Civilization has developed.\""},{t:1770.33,x:"\"It's considered - the kind of info-hazard that isn't going to drive you insane,"},{t:1773.8,x:"but can make you miss out on a lot of fun,"},{t:1776.73,x:"by making you bored before you would've been bored?"},{t:1779.77,x:"Like telling somebody how a book ends when they just started reading it?"},{t:1783.77,x:"We have whole Civilizational structures around avoiding that class of lesser infohazards,"},{t:1789,x:"spoilers they're called. With, for example, simple codes you only memorize after you pass a"},{t:1794.83,x:"competence check for a threshold level of sexual experience, so newspapers can print sentences that"},{t:1799.7,x:"only sufficiently perverted people would be able to read without making a deliberate effort.\""},{t:1804.17,x:"\"- huh. I guess that's fair enough. Does this mean that you should not be doing"},{t:1809.32,x:"kinkiness challenges, because Golarion doesn't have such a norm and adventurers tend to tell stories"},{t:1814.05,x:"about what they've gotten up to.\""},{t:1816.12,x:"\"Eh. New planet. I'll get used to what's normal here."},{t:1819.48,x:"Maybe don't spring it on me all at once and leave some for next time.\""},{t:1824.45,x:"\"Actually, I'm not quite sure what kind of perversion kinky is,"},{t:1828.45,x:"I can tell it's, like, sexual diversity but the word doesn't directly translate."},{t:1832.91,x:"Surprising me is fine, to be clear.\""},{t:1835.14,x:"\"I mean, it's sort of a general word for everything that's not,"},{t:1839.04,x:"you know, one man and one woman with no implements and no magic.\""},{t:1843.57,x:"\"That covers an awful lot of space by itself, I would've said,"},{t:1847.45,x:"but maybe I'm naive about how much more people get up to in their forties"},{t:1851.07,x:"once they can afford nicer things and more participants.\""},{t:1853.35,x:"\"I mean, I think people who tend to like tying people up also tend to"},{t:1858.57,x:"like whipping them also tend to like dripping candle wax on them also tend to"},{t:1863.24,x:"like having two of 'em you can get to do things with each other and"},{t:1867.44,x:"also tend to like using control spells on them, so it forms a sort of"},{t:1873.83,x:"- natural category?\" Shrug. \"Maybe the category is just general the thing you are calling 'perversion'.\""},{t:1880.11,x:"Keltham:"},{t:1880.32,x:"\"Okay, haven't done any of that and if it ever got mentioned in the newspapers"},{t:1886.09,x:"it was encrypted.\" Wait WHAT."},{t:1888.17,x:"\"It'd have to go awfully wrong to get mentioned in the newspapers.\""},{t:1892.37,x:"\"Under other circumstances I'd say 'surprise me' but - what exactly is whipping?"},{t:1896.79,x:"What's a candle? I can't quite make things out through this translation spell,"},{t:1901.42,x:"but whipping sounds like pain and candles sound like fire."},{t:1904.88,x:"I feel obliged to check that these activities won't require that we pay to resurrect"},{t:1910.61,x:"each other afterwards.\""},{t:1911.91,x:"\"Whipping is painful but, like, in a sexy way, not in a deadly way."},{t:1918,x:"Candles are a tiny bit of fire, people who don't have magic use them for"},{t:1921.91,x:"lighting, and their wax melts at a low temperature so they're also painful but a"},{t:1926.95,x:"sexy amount not an injurious amount. We're - not even talking about things you'd need healing"},{t:1933.09,x:"for, though people do in fact get into things you'd need healing for.\""},{t:1937.82,x:"\"Okay, and the concept is that you and I hire a member of some non-human"},{t:1942.48,x:"species that... doesn't mind having it done to them?\""},{t:1944.78,x:"Carissa Sevar:"},{t:1944.97,x:"\"It's going to be so fascinating to settle some bets among your research group."},{t:1948.82,x:"Uh. Humans, are often into being hurt, in the context of sex,"},{t:1953.73,x:"because pain is an intense experience and with the right surrounding context can be fun.\""},{t:1958.7,x:"\"...okay I checked in with my inner self and if there's some later stage of"},{t:1962.33,x:"my life where I would want to be tied up and hurt in a sexual"},{t:1966.24,x:"context, I haven't at all gone down the path that leads there."},{t:1969.97,x:"In fact my self seems to be - sort of weirdly violently against that happening to"},{t:1974.28,x:"me, to a degree greater than I'd expect from small amounts of pain?"},{t:1978.14,x:"I've paid pain costs in nonsexual contexts, but this was just like a very loud"},{t:1982.31,x:"inner NOPE. I hope that's not too disappointing.\""},{t:1984.79,x:"\"Men are more often the other way around, if anything,"},{t:1987.9,x:"and it's the other way around we've got a betting pool on."},{t:1991.73,x:"Whether you like inflicting pain on interested parties in a sexual context."},{t:1996.09,x:"I have no idea how 'you were not aware that was a thing' cashes out,"},{t:2001.15,x:"for that.\""},{t:2001.77,x:"\"I... don't see why men or women would want to be hurt,"},{t:2005.46,x:"in terms of the human mind design and the reproductive pressures producing it that I'm"},{t:2010.21,x:"familiar with... pain is the damage signal, it's the sum of what we avoid so"},{t:2015.04,x:"that we won't die and fail to have children..."},{t:2018.35,x:"are you someone who enjoys pain inflicted on you in a sexual context?\""},{t:2023.17,x:"\" - point of theology, Cheliax conceives of pain as significantly more than just a -"},{t:2028.86,x:"damage signal, not that being sexually into pain is limited to Cheliax or people who"},{t:2035.14,x:"share our theology, or is even significantly more common here,"},{t:2038.95,x:"I suspect it's innate. I have enjoyed pain in the context of sex,"},{t:2043.67,x:"though the atmosphere matters a lot, you'd, ah, have to be good at it.\""},{t:2048.33,x:"\"Okay, let me check in with what my brain thinks of pulling your hair in"},{t:2052.26,x:"a sexual context if you enjoyed that in a sexual way and YEP somebody just"},{t:2055.65,x:"won their bets on me alright.\""},{t:2057.43,x:"\"Oh, good.\""},{t:2058.3,x:"\"Huh.\" \"I'm reasonably sure that dath ilan never wanted me to notice that about myself.\""},{t:2064.83,x:"\"...huh. I guess dath ilan's really Good but that seems like one of the context"},{t:2070.14,x:"where Good's just obnoxious.\""},{t:2071.29,x:"\"Stuff in dath ilan doesn't happen without a reason."},{t:2073.86,x:"It's not Golarion. Let me think about this.\""},{t:2076.44,x:"Point one: If the desire to inflict pain in a sexual context is sufficiently a"},{t:2081.84,x:"human universal and sufficiently common that somebody on this plane of existence can spot the"},{t:2086.79,x:"signs in Keltham before he knows them himself, the Keepers know about this already."},{t:2091.14,x:"The probability of this need not be evaluated; it's a flat fact."},{t:2094.75,x:"Point two: Not only has Keltham not been told about this,"},{t:2097.96,x:"Keltham has never been exposed to any sexual education or priming which would cause him"},{t:2102.48,x:"to think, if he did notice this fact about himself,"},{t:2105.59,x:"that it was a good idea to pursue that thought further."},{t:2109,x:"People don't want to be hurt; that is sort of what hurting is."},{t:2112.59,x:"Having a strong sexual desire to inflict pain, according to everything that dath ilan has"},{t:2116.72,x:"taught Keltham about the world, would mean that any attempt to satisfy this desire would"},{t:2121.5,x:"involve an unusually mentally resilient sex worker being paid a lot of money to put"},{t:2126.31,x:"up with a sexual experience that she didn't like."},{t:2129.1,x:"If he got addicted, if his whole sexuality turned into that,"},{t:2132.52,x:"the rest of his romantic life would suck really hard and probably never be truly"},{t:2137.33,x:"satisfying again. That would have been the obvious prediction, going on the obvious-intuitive reasoning Keltham"},{t:2142.67,x:"would have done from everything Civilization ever taught him."},{t:2145.15,x:"The thought that the world was full of other people who were the complements of"},{t:2149.19,x:"that desire, who wanted to be sexily hurt, would just straightforwardly have never occurred to"},{t:2153.56,x:"Keltham at all, if he'd spotted that desire in himself."},{t:2156.52,x:"That makes the answer obvious, doesn't it."},{t:2158.73,x:"All he needs to do is guess, first, that Civilization prefers not to lie,"},{t:2163.82,x:"and second, that natural selection in dath ilan worked the way it obviously-intuitively should."},{t:2169.15,x:"By default, organisms don't like pain, and pain is what they don't like."},{t:2173.53,x:"\"Dath ilan has people who want to inflict pain sexually."},{t:2176.5,x:"It doesn't have the people who want to be sexily hurt."},{t:2180,x:"I'm not sure why they exist in Golarion, but whatever that reason was,"},{t:2184.16,x:"it didn't operate in dath ilan. That's why I was never supposed to notice.\""},{t:2188.17,x:"\" - huh. You know, that - actually sort of follows - one explanation I've seen for enjoying pain"},{t:2195.8,x:"being more common in women is that it improves the odds of surviving rape and"},{t:2201.8,x:"sexual slavery, and then the - thing you talked about in class,"},{t:2206.37,x:"about who has more children -\" Carissa is having the somewhat upsetting realization that maybe it"},{t:2212.38,x:"would be bad for dath ilani people if they went to Hell?"},{t:2216.19,x:"if they've just completely eradicated the mechanism by which their brains translate pain into something"},{t:2222.06,x:"more complex than just suffering?"},{t:2224.12,x:"\"I could wish these congratulations came under nicer circumstances, but congratulations anyways,"},{t:2229.06,x:"you're learning to operate the theory validly.\""},{t:2231.94,x:"\"I mean, I already knew about the bad stuff, I just didn't know we were"},{t:2237.48,x:"getting anything good out of it. And - I think we are."},{t:2241.3,x:"Getting something good out of it, that is, something I'd definitely arrange for heredity-optimization to"},{t:2247.6,x:"keep having - wow, I bet in Nidal it's everyone -\""},{t:2250.96,x:"\"I hope you're right about everyone in Nidal enjoying it,"},{t:2254.18,x:"but even I'm starting to notice that sounds a little optimistic for Golarion.\""},{t:2258.36,x:"\"Oh, Nidal is horrible and I bet everyone there is miserable,"},{t:2262.43,x:"but I also bet that they have near-universal sex-related pain-enjoyment -"},{t:2267.85,x:"sex-related pain-enjoyment doesn't give you context-free enjoyment of all pain,"},{t:2272.89,x:"I did not enjoy getting punished for bad grades, and I've had sex with a"},{t:2277.8,x:"girl who was into hurting me more than I could handle and that wasn't fun"},{t:2282,x:"either.\""},{t:2282.3,x:"Blue and orange, Keltham thinks, as he notices it explicitly this time,"},{t:2285.85,x:"how there's an alien reality here that doesn't make sense and his brain is trying"},{t:2290.24,x:"to force it. But he doesn't know the thread to pull to unravel this whole"},{t:2293.76,x:"knot, all he can do is wibble the fringes of it."},{t:2296.35,x:"\"If you don't have money flows to make up for relationships that would be imbalanced"},{t:2299.93,x:"like that - is there some class of things okay to trade,"},{t:2302.59,x:"that aren't money, that you were getting out of that relationship instead?\""},{t:2306.27,x:"\"Yes, people trade - favors, protection, in that specific case a spell I really really wanted."},{t:2314.09,x:"It's not that people don't have sex for - reasons located outside the sex,"},{t:2318.61,x:"they do that all the time, it's just culturally rather unheard of,"},{t:2322.91,x:"to name a specific amount of money as a bid,"},{t:2326.55,x:"and it's also traditional for it to be a bit ambiguous how much you are"},{t:2330.84,x:"doing for what reasons.\""},{t:2331.87,x:"He's going to wait until later, in case it's somehow wrong and wronger if done"},{t:2335.74,x:"in public, to ask Carissa how much hair-pulling he can trade for how much explanation"},{t:2340.38,x:"of how the ass the flirting norms here actually work."},{t:2343.35,x:"\"Yeah, dath ilan has all kinds of dating ambiguity and mindgames,"},{t:2347.15,x:"like you'd imagine from people with high intelligence and a lot more spare time,"},{t:2352,x:"but the concept of never naming specific amounts of money -"},{t:2355.18,x:"it's so not dath ilan, I can't easily convey it."},{t:2358.36,x:"Anything worth anything is worth money. Not just money in general,"},{t:2361.86,x:"a specific amount of money. It's 'the unit of caring' in our parlance.\""},{t:2366,x:"\"Yes, I am not surprised that dath ilan prefers forthrightness on the value-transfer elements of"},{t:2373.58,x:"sex and flirting even if they like ambiguity elsewhere."},{t:2376.68,x:"I can see how you'd get used to it, even."},{t:2379.48,x:"But I think if you do it here you'll just confuse people terribly.\""},{t:2383.23,x:"\"Is it literally just money or do I have to be careful not to offer"},{t:2387.85,x:"anybody anything such that it would have a well-defined resale value...\""},{t:2392.29,x:"\"That is definitely sometimes done - spells have a resale value -"},{t:2398,x:"but there are nuances and I might recommend running it by someone else first.\""},{t:2402.9,x:"\"Is such conversation also bad on the metalevel?"},{t:2405.78,x:"If I asked everyone who'd be the best person to ask about which sexual offers"},{t:2409.67,x:"are and aren't offensive, is that question itself even more offensive?\""},{t:2412.8,x:"Keltham has noticed that Golarion can sometimes be effectively predicted by asking himself how he"},{t:2418.8,x:"would design a social protocol as badly as possible."},{t:2422.39,x:"\"This conversation is fine. That question is fine."},{t:2425.5,x:"I promise we are not entirely made of impossibilities.\""},{t:2429.27,x:"Well, congratulations to Golarion on passing the bar that he set literally as low as"},{t:2433.31,x:"he could imagine on short notice, but it's sure an improvement on undershooting it,"},{t:2437.39,x:"so he'll take what he can get."},{t:2439.83,x:"\"I think I'm pretty much done with my dinner, myself."},{t:2443.3,x:"You?\""},{t:2443.65,x:"\"I'm done. Up to the rooftops? Or have you rediscovered your sex drive in the"},{t:2449.16,x:"course of this conversation?\""},{t:2450.63,x:"Good question. Keltham turns his attention inward, not quite able to stop himself from thinking"},{t:2455.67,x:"how much clearer that perception was under Owl's Wisdom, how much easier and fuller the"},{t:2460.5,x:"seeing of Keltham by Keltham. \"It sure is more there than it was when I"},{t:2465,x:"walked in, maybe half from time passing and half from discovering high-payoff sexual options I"},{t:2469.93,x:"never imagined possible. Still, I think I want to start off the evening a little"},{t:2474.75,x:"slower, and spending at least some time on the rooftop sounds good.\""},{t:2479,x:"Are people in dath ilan just that candid and self-aware all the time."},{t:2484.17,x:"How do they live. \"Rooftop it is."},{t:2486.89,x:"Assuming we can find it. Do you want to ask security right away or go"},{t:2492.58,x:"exploring ourselves.\" Normally the second would be a stunningly dangerous thing to do but security"},{t:2498.26,x:"isn't going to let Keltham get exploded by a stray internal defensive measure."},{t:2503.74,x:"\"Let's explore! Though I'm trusting you that misguided exploration is either knowably not fatal,"},{t:2508.52,x:"or that they'd resurrect us without too much fuss.\""},{t:2511.4,x:"Oh okay she'd been worried that 'this sort of thing is dangerous' is something that'd"},{t:2516.81,x:"have him all shocked and appalled about what societies outside dath ilan are like but"},{t:2521.65,x:"apparently it's allowed - \"I expect this place has defenses that might in fact be fatal"},{t:2526.87,x:"if triggered but that they have been very thoroughly disabled,"},{t:2530.3,x:"Chelish security's not stupid and they don't want you to die."},{t:2533.96,x:"And if you did they'd resurrect you but I'm not relying too much on that"},{t:2538.36,x:"because I'll be in lots of trouble if I get you killed,"},{t:2541.64,x:"even though it'll take all of ten minutes to fix.\""},{t:2544.36,x:"Keltham rises from the table. \"Shall we?\""},{t:2546.33,x:"\"Yeah! You know, I figured I would live my whole life without getting to poke"},{t:2551.33,x:"around a Duke's villa, I am very excited.\""},{t:2554,x:"\"Your lead, then.\""},{t:2557.5,x:""}];
+const BEATS=[{t:0,s:'wonders',v:'narrator'},{t:24,s:'wonders',v:'keltham'},{t:55,s:'underground',v:'keltham'},{t:104,s:'wonders',v:'keltham'},{t:157,s:'machines',v:'keltham'},{t:212,s:'machines',v:'keltham'},{t:265,s:'disease',v:'carissa'},{t:314,s:'disease',v:'keltham'},{t:363,s:'disease',v:'keltham'},{t:412,s:'disease',v:'carissa'},{t:463,s:'disease',v:'keltham'},{t:513,s:'sexwork_econ',v:'keltham'},{t:568,s:'sexwork_econ',v:'keltham'},{t:616,s:'sexwork_econ',v:'carissa'},{t:665,s:'exotic',v:'carissa'},{t:713,s:'exotic',v:'carissa'},{t:762,s:'exotic',v:'carissa'},{t:814,s:'exotic',v:'carissa'},{t:862,s:'sexwork_econ',v:'keltham'},{t:910,s:'pharaoh',v:'keltham'},{t:959,s:'pharaoh',v:'keltham'},{t:1009,s:'pharaoh',v:'keltham'},{t:1063,s:'sticky',v:'keltham'},{t:1118,s:'sticky',v:'keltham'},{t:1166,s:'schelling',v:'keltham'},{t:1215,s:'schelling',v:'keltham'},{t:1264,s:'sticky',v:'keltham'},{t:1312,s:'sticky',v:'carissa'},{t:1367,s:'lives',v:'carissa'},{t:1423,s:'lives',v:'carissa'},{t:1474,s:'sticky',v:'keltham'},{t:1528,s:'law_indifferent',v:'keltham'},{t:1578,s:'gods_law',v:'carissa'},{t:1627,s:'sexwork_econ',v:'keltham'},{t:1682,s:'sexwork_econ',v:'carissa'},{t:1730,s:'sexwork_econ',v:'keltham'},{t:1785,s:'sexwork_econ',v:'keltham'},{t:1838,s:'kink',v:'keltham'},{t:1892,s:'kink',v:'keltham'},{t:1940,s:'kink',v:'keltham'},{t:1991,s:'kink',v:'carissa'},{t:2042,s:'kink',v:'keltham'},{t:2093,s:'kink',v:'keltham'},{t:2143,s:'kink',v:'keltham'},{t:2195,s:'kink',v:'keltham'},{t:2250,s:'kink',v:'carissa'},{t:2298,s:'kink',v:'keltham'},{t:2352,s:'money_taboo',v:'keltham'},{t:2405,s:'money_taboo',v:'keltham'},{t:2459,s:'seeing',v:'carissa'},{t:2513,s:'seeing',v:'carissa'},{t:2537,s:'villa',v:'keltham'},{t:2546,s:'villa',v:'keltham'},{t:2554,s:'villa',v:'keltham'},{t:2563,s:'villa',v:'narrator'}];
+
+/* ===================== ASH / EMBERS ===================== */
+const cv=document.getElementById('ash'), ctx=cv.getContext('2d');
+let parts=[], W=0,H=0, accent={r:216,g:162,b:74};
+function size(){ const r=cv.getBoundingClientRect(); W=cv.width=r.width; H=cv.height=r.height; }
+addEventListener('resize',size); size();
+function spawn(){ return {x:Math.random()*W, y:H+10, vy:-(0.2+Math.random()*0.55), vx:(Math.random()-0.5)*0.2, r:Math.random()*1.7+0.4, life:0, max:H*(0.5+Math.random()*0.6), tw:Math.random()*6}; }
+for(let i=0;i<60;i++){ const p=spawn(); p.y=Math.random()*H; parts.push(p); }
+let ashPaused=false;
+function ash(t){
+  if(!ashPaused){
+    ctx.clearRect(0,0,W,H);
+    for(const p of parts){
+      p.y+=p.vy; p.x+=p.vx+Math.sin(t/1000+p.tw)*0.14; p.life++;
+      const k=1-p.life/p.max;
+      if(p.life>p.max||p.y<-10){ Object.assign(p,spawn()); continue; }
+      const a=Math.max(0,k)*0.8*(0.6+0.4*Math.sin(t/300+p.tw));
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7);
+      ctx.fillStyle=`rgba(${accent.r},${accent.g},${accent.b},${a})`; ctx.shadowBlur=8; ctx.shadowColor=ctx.fillStyle; ctx.fill();
+    }
+    ctx.shadowBlur=0;
+  }
+  requestAnimationFrame(ash);
+}
+requestAnimationFrame(ash);
+function hexRgb(h){const m=h.replace('#','');return {r:parseInt(m.slice(0,2),16),g:parseInt(m.slice(2,4),16),b:parseInt(m.slice(4,6),16)};}
+
+/* ===================== DOM ===================== */
+const SPEEDS=[1,1.25,1.5,0.75];
+let speed=1, curScene=null, curCue=-1, curBeat=-1, capsOn=true;
+const frame=document.getElementById('frame');
+const introEl=document.getElementById('intro');
+const capEl=document.getElementById('cap');
+const labelEl=document.getElementById('label');
+const knameEl=document.getElementById('kname');
+const ttlEl=document.getElementById('ttl');
+const ksigUse=document.getElementById('ksig-use');
+const barEl=document.getElementById('bar');
+const beatEl=document.getElementById('beat');
+const playIcon=document.getElementById('playicon');
+const ccBtn=document.getElementById('cc');
+const audio=document.getElementById('player');
+const dropZone=document.getElementById('drop');
+const audioInput=document.getElementById('audiofile');
+const loadedBox=document.getElementById('loaded');
+const fnameEl=document.getElementById('fname');
+const durEl=document.getElementById('dur');
+const beginBtn=document.getElementById('begin');
+
+/* scene crossfade (Stardust-style) — beatEl shows the clock, so setScene only writes the title */
+function setScene(name){
+  if(name===curScene) return;
+  curScene=name;
+  document.querySelectorAll('.scene').forEach(el=>el.classList.remove('active','go'));
+  const el=document.querySelector(`.scene[data-scene="${name}"]`);
+  if(el){ el.classList.add('active'); requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add('go'))); }
+  ttlEl.textContent=SCENE_TITLES[name]||'';
+}
+function setSpeaker(v){
+  const c=CHARS[v]; if(!c) return;
+  knameEl.textContent=c.name; ksigUse.setAttribute('href','#'+c.sigil);
+  document.documentElement.style.setProperty('--accent', c.color); accent=hexRgb(c.color);
+}
+/* caption: blank text hides it; honours the CC toggle */
+function setCaption(text){
+  if(!capsOn || !text){ capEl.classList.remove('show'); return; }
+  capEl.classList.remove('show');
+  setTimeout(()=>{ if(!capsOn) return; capEl.textContent=text; capEl.classList.add('show'); },170);
+}
+function applyCaps(){ const c=CUES[curCue]; setCaption(c?c.x:''); }
+function setIcon(p){ playIcon.innerHTML = p?'<path d="M6 5h4v14H6zM14 5h4v14h-4z"></path>':'<path d="M8 5v14l11-7z"></path>'; }
+
+/* ===================== CLOCK + SYNC ===================== */
+function fmt(s){ if(!isFinite(s)||s<0) s=0; s=Math.floor(s); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+function findIdx(arr,time){ let lo=0,hi=arr.length-1,res=0; while(lo<=hi){ const m=(lo+hi)>>1; if(arr[m].t<=time){res=m;lo=m+1;} else hi=m-1; } return res; }
+function sync(){
+  const ct=audio.currentTime||0, d=audio.duration;
+  const bi=findIdx(BEATS,ct);
+  if(bi!==curBeat){ curBeat=bi; setScene(BEATS[bi].s); setSpeaker(BEATS[bi].v); }
+  const ci=findIdx(CUES,ct);
+  if(ci!==curCue){ curCue=ci; setCaption(CUES[ci].x); }
+  if(d){ barEl.style.width=Math.min(100,(ct/d*100))+'%'; }
+  beatEl.textContent=fmt(ct)+(d?(' / '+fmt(d)):'');
+}
+let rafId=0;
+function loop(){ if(audio.paused) return; sync(); rafId=requestAnimationFrame(loop); }
+
+/* ===================== AUDIO EVENTS ===================== */
+audio.addEventListener('timeupdate', sync);
+audio.addEventListener('seeked', ()=>{ curCue=-1; sync(); });
+audio.addEventListener('loadedmetadata', ()=>{ durEl.textContent='· '+fmt(audio.duration); beatEl.textContent='0:00 / '+fmt(audio.duration); });
+audio.addEventListener('play', ()=>{ frame.classList.add('playing'); document.body.classList.remove('paused'); ashPaused=false; setIcon(true); labelEl.classList.add('show'); sync(); loop(); });
+audio.addEventListener('pause', ()=>{ setIcon(false); document.body.classList.add('paused'); ashPaused=true; });
+audio.addEventListener('ended', finish);
+
+/* ===================== UPLOAD ===================== */
+const AUDIO_EXT=/\.(mp3|m4a|wav|ogg|oga|aac|flac|opus|weba|mp4)$/i;
+function loadAudioFile(file){
+  if(!file) return false;
+  if(file.type && !file.type.startsWith('audio/') && !AUDIO_EXT.test(file.name)) return false;
+  try{ if(audio.src) URL.revokeObjectURL(audio.src); }catch(_){}
+  audio.src=URL.createObjectURL(file); audio.playbackRate=speed; audio.load();
+  fnameEl.textContent=file.name; durEl.textContent='';
+  loadedBox.classList.add('show'); dropZone.classList.add('has');
+  beginBtn.disabled=false;
+  return true;
+}
+audioInput.addEventListener('change', e=>{ loadAudioFile(e.target.files[0]); });
+dropZone.addEventListener('click', ()=>audioInput.click());
+['dragenter','dragover'].forEach(ev=>dropZone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); dropZone.classList.add('drag'); }));
+['dragleave','dragend','drop'].forEach(ev=>dropZone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); if(ev!=='dragover') dropZone.classList.remove('drag'); }));
+dropZone.addEventListener('drop', e=>{
+  const files=[...(e.dataTransfer?e.dataTransfer.files:[])];
+  const aud=files.find(f=>f.type.startsWith('audio/')||AUDIO_EXT.test(f.name));
+  if(aud) loadAudioFile(aud);
+});
+
+/* ===================== PLAYBACK CONTROL ===================== */
+function startPlayback(){
+  if(!audio.src){ dropZone.classList.add('drag'); setTimeout(()=>dropZone.classList.remove('drag'),650); return; }
+  introEl.classList.remove('ended'); introEl.classList.add('gone');
+  if(audio.ended || (audio.duration && audio.currentTime>=audio.duration-0.05)){ audio.currentTime=0; curCue=-1; curBeat=-1; }
+  const p=audio.play(); if(p&&p.catch) p.catch(()=>{});
+}
+function finish(){
+  frame.classList.remove('playing'); setIcon(false);
+  introEl.classList.add('ended'); introEl.classList.remove('gone');
+}
+function seekToBeat(idx){ idx=Math.max(0,Math.min(BEATS.length-1,idx)); audio.currentTime=Math.max(0,BEATS[idx].t)+0.02; curCue=-1; sync(); }
+function nextBeat(){ seekToBeat(findIdx(BEATS,audio.currentTime)+1); }
+function prevBeat(){ const ci=findIdx(BEATS,audio.currentTime); seekToBeat((audio.currentTime-BEATS[ci].t>1.4)?ci:ci-1); }
+function togglePlay(){ if(audio.paused) audio.play().catch(()=>{}); else audio.pause(); }
+function toggleCaps(){ capsOn=!capsOn; ccBtn.classList.toggle('off',!capsOn); ccBtn.setAttribute('aria-pressed',String(capsOn)); applyCaps(); }
+
+beginBtn.addEventListener('click', startPlayback);
+document.getElementById('play').addEventListener('click', ()=>{ if(!introEl.classList.contains('gone')){ startPlayback(); return; } togglePlay(); });
+document.getElementById('next').addEventListener('click', nextBeat);
+document.getElementById('prev').addEventListener('click', prevBeat);
+document.getElementById('restart').addEventListener('click', ()=>{ audio.currentTime=0; curCue=-1; curBeat=-1; sync(); if(audio.paused) audio.play().catch(()=>{}); });
+document.getElementById('speed').addEventListener('click', e=>{ speed=SPEEDS[(SPEEDS.indexOf(speed)+1)%SPEEDS.length]; audio.playbackRate=speed; e.currentTarget.textContent=String(speed)+'×'; });
+ccBtn.addEventListener('click', toggleCaps);
+document.getElementById('prog').addEventListener('click', e=>{ if(!audio.duration) return; const r=e.currentTarget.getBoundingClientRect(); const frac=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)); audio.currentTime=frac*audio.duration; curCue=-1; sync(); });
+addEventListener('keydown', e=>{ if(!introEl.classList.contains('gone')) return;
+  if(e.code==='Space'){ e.preventDefault(); togglePlay(); }
+  else if(e.code==='ArrowRight'){ e.preventDefault(); nextBeat(); }
+  else if(e.code==='ArrowLeft'){ e.preventDefault(); prevBeat(); }
+  else if(e.key==='c'||e.key==='C'){ e.preventDefault(); toggleCaps(); } });
+addEventListener('beforeunload', ()=>{ try{ if(audio.src) URL.revokeObjectURL(audio.src); }catch(_){} });
+
+/* cast list */
+(function(){ const cast=document.getElementById('cast'); if(!cast) return;
+  for(const key of ['narrator','keltham','carissa']){
+    const c=CHARS[key], d=document.createElement('div'); d.className='c';
+    d.innerHTML=`<div class="ic" style="color:${c.color}"><svg><use href="#${c.sigil}"/></svg></div><div><div class="nm">${c.name.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div><div class="tg">${c.tag}</div></div>`;
+    cast.appendChild(d);
+  } })();
+
+/* initial backdrop + idle state */
+document.getElementById('speed').textContent='1×';
+setScene(BEATS[0].s); setSpeaker(BEATS[0].v); setIcon(false);
+beatEl.textContent='0:00';
+
+</script>
+</body>
+</html>
