@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planecrash — Corrigibility · an animated reading</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Spectral:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0608; --ink:#f0e6d8; --muted:#9a8a84;
+  --accent:#d8a24a; --gold:#d8a24a; --blood:#c2152f; --ember:#ff8a3c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:radial-gradient(120% 90% at 50% 6%, #1a0c10 0%, var(--bg) 55%, #050304 100%);
+  color:var(--ink); font-family:"Spectral",Georgia,serif; overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+.paused .anim, .paused .scene *{animation-play-state:paused !important}
+
+/* ---------- cinematic stage ---------- */
+#stage{position:fixed; inset:0; display:flex; align-items:center; justify-content:center}
+.frame{
+  position:relative; width:min(100vw,177.7vh); height:min(100vh,56.25vw);
+  overflow:hidden; background:#06040a; box-shadow:0 0 140px rgba(0,0,0,.8) inset, 0 30px 90px rgba(0,0,0,.6);
+}
+#ash{position:absolute; inset:0; z-index:1; pointer-events:none}
+
+.scene{position:absolute; inset:0; z-index:2; opacity:0; transition:opacity 1.5s ease; pointer-events:none}
+.scene.active{opacity:1}
+.scene svg{position:absolute; inset:0; width:100%; height:100%}
+/* a soft vignette over scenes */
+#vignette{position:absolute; inset:0; z-index:4; pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 42%, transparent 52%, rgba(5,3,4,.55) 100%);}
+
+/* ---------- speaker / beat label ---------- */
+#label{position:absolute; left:4.4%; top:7.5%; z-index:6; opacity:0; transform:translateY(8px);
+  transition:opacity .8s ease, transform .8s ease; max-width:54%}
+#label.show{opacity:1; transform:none}
+#label .kicker{display:flex; align-items:center; gap:9px; margin-bottom:5px}
+#label .ksig{width:26px; height:26px; color:var(--accent); transition:color .6s ease; flex:0 0 auto}
+#label .ksig svg{width:100%;height:100%}
+#label .kname{font-family:"Cinzel",serif; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
+  font-size:clamp(9px,1.05vw,13px); color:var(--accent); transition:color .6s ease}
+#label .ttl{font-family:"Cinzel",serif; font-weight:700; line-height:1.04; letter-spacing:.005em;
+  font-size:clamp(20px,3.4vw,50px); color:#fff; text-shadow:0 2px 26px rgba(0,0,0,.7)}
+
+/* ---------- caption ---------- */
+#cap-wrap{position:absolute; left:0; right:0; bottom:8.5%; z-index:6; display:flex; justify-content:center;
+  padding:0 6%; pointer-events:none}
+#cap{position:relative; max-width:min(1080px,90%); text-align:center;
+  font-size:clamp(14px,1.85vw,25px); line-height:1.45; font-weight:400; letter-spacing:.004em; color:var(--ink);
+  text-shadow:0 2px 20px rgba(0,0,0,.95), 0 0 60px rgba(0,0,0,.85);
+  opacity:0; transform:translateY(10px); transition:opacity .5s ease, transform .5s ease}
+#cap.show{opacity:1; transform:none}
+#cap.dlg{font-style:italic}
+#cap::before{content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:135%; height:340%; z-index:-1; pointer-events:none;
+  background:radial-gradient(closest-side, rgba(6,4,6,.82), rgba(6,4,6,.4) 60%, transparent 100%)}
+
+/* ---------- intro ---------- */
+#intro{position:absolute; inset:0; z-index:20; overflow-y:auto;
+  background:radial-gradient(80% 80% at 50% 40%, rgba(26,12,16,.55), rgba(4,3,4,.95));
+  transition:opacity 1.1s ease}
+#intro.gone{opacity:0; pointer-events:none}
+.intro-in{min-height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; gap:2.2vh; padding:5vh 7vw 7vh}
+#intro .eyebrow{font-family:"Cinzel",serif; font-size:clamp(9px,1.05vw,13px); letter-spacing:.5em; text-transform:uppercase; color:var(--gold)}
+#intro h1{font-family:"Cinzel",serif; font-weight:700; letter-spacing:.02em; font-size:clamp(40px,9vw,118px); line-height:.92;
+  background:linear-gradient(180deg,#fff 0%, #e9c277 52%, #b3122b 132%); -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent; filter:drop-shadow(0 8px 50px rgba(179,18,43,.32))}
+#intro .sub{font-size:clamp(13px,1.55vw,19px); font-style:italic; color:#cbb9a9; max-width:44ch; line-height:1.55; font-weight:300}
+.cast{display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:11px 18px; width:100%; max-width:760px; margin-top:1vh}
+.cast .c{display:flex; align-items:center; gap:11px; text-align:left; padding:7px 10px; border:1px solid rgba(216,162,74,.13); border-radius:9px; background:rgba(255,255,255,.012)}
+.cast .ic{width:32px;height:32px;flex:0 0 auto} .cast .ic svg{width:100%;height:100%}
+.cast .nm{font-family:"Cinzel",serif; font-size:12px; letter-spacing:.02em; line-height:1.15}
+.cast .tg{font-style:italic; font-size:11px; color:var(--muted); margin-top:1px}
+#begin{margin-top:1vh; display:inline-flex; align-items:center; gap:.7em; font-family:"Cinzel",serif; font-weight:600;
+  font-size:clamp(14px,1.5vw,17px); letter-spacing:.06em; color:#1a0c0a; padding:.85em 2.1em; border:none; border-radius:100px;
+  cursor:pointer; background:linear-gradient(180deg,#f0cd86,#d8a24a);
+  box-shadow:0 12px 44px rgba(216,162,74,.34), inset 0 0 0 1px rgba(255,255,255,.25); transition:transform .25s, box-shadow .25s}
+#begin:hover{transform:translateY(-2px) scale(1.02); box-shadow:0 18px 56px rgba(216,162,74,.5)}
+#begin .tri{width:0;height:0;border-left:11px solid #1a0c0a;border-top:7px solid transparent;border-bottom:7px solid transparent}
+#intro .note{font-size:11px;color:#6a5a56;letter-spacing:.03em}
+#intro .src{font-size:11px;color:#5e4f4b;max-width:52ch;line-height:1.6}
+
+/* ---------- controls ---------- */
+#controls{position:absolute; left:0; right:0; bottom:0; z-index:30; display:flex; align-items:center; gap:13px;
+  padding:13px 4.4%; background:linear-gradient(0deg, rgba(5,3,5,.85), transparent);
+  opacity:0; transition:opacity .4s ease; pointer-events:none}
+.frame.playing #controls{opacity:1; pointer-events:auto}
+.btn{background:rgba(240,230,216,.05); border:1px solid rgba(216,162,74,.28); color:var(--ink); border-radius:50%;
+  cursor:pointer; flex:0 0 auto; display:grid; place-items:center; transition:background .2s,border-color .2s,transform .15s}
+.btn:hover{background:rgba(216,162,74,.16); border-color:var(--accent)} .btn:active{transform:scale(.94)}
+.btn svg{fill:var(--ink)}
+.btn.lg{width:46px;height:46px} .btn.lg svg{width:18px;height:18px}
+.btn.sm{width:38px;height:38px} .btn.sm svg{width:14px;height:14px}
+#speed{width:auto;min-width:46px;height:38px;border-radius:20px;padding:0 12px;font-family:"Spectral",serif;font-style:italic;font-size:13px}
+#prog{flex:1; height:3px; border-radius:3px; background:rgba(240,230,216,.13); position:relative; cursor:pointer}
+#bar{position:absolute; left:0;top:0;bottom:0; width:0; background:linear-gradient(90deg,var(--accent),var(--blood)); border-radius:3px; transition:width .5s ease, background .8s ease}
+#beat{font-family:"Cinzel",serif; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); min-width:120px; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:24%}
+
+/* ---------- shared animation helpers ---------- */
+.spin{transform-origin:center;animation:spin 60s linear infinite}
+.spin-s{transform-origin:center;animation:spin 120s linear infinite}
+.spin-r{transform-origin:center;animation:spin 80s linear infinite reverse}
+.spin-f{transform-origin:center;animation:spin 9s linear infinite}
+.spin-vf{transform-origin:center;animation:spin 2.4s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.breathe{transform-origin:center;animation:breathe 6s ease-in-out infinite}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.flick{transform-origin:bottom center;animation:flick 1.4s ease-in-out infinite}
+@keyframes flick{0%,100%{opacity:.9;transform:scaleY(1) scaleX(1)}40%{opacity:1;transform:scaleY(1.1) scaleX(.94)}70%{opacity:.85;transform:scaleY(.96) scaleX(1.04)}}
+.sway{transform-origin:top center;animation:sway 4s ease-in-out infinite}
+@keyframes sway{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+.tw{animation:tw 3s ease-in-out infinite}
+@keyframes tw{0%,100%{opacity:.2}50%{opacity:1}}
+.pulse{animation:pulse 3.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.25}50%{opacity:.95}}
+.pulse-f{animation:pulse 1.6s ease-in-out infinite}
+.drift{animation:drift 26s ease-in-out infinite}
+@keyframes drift{0%{transform:translate(0,0)}50%{transform:translate(2.4%,-2%)}100%{transform:translate(0,0)}}
+@keyframes floatUp{0%{transform:translateY(34px);opacity:0}16%{opacity:.9}100%{transform:translateY(-58px);opacity:0}}
+.flow{stroke-dasharray:8 16; animation:flow 2.2s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-48}}
+.draw{stroke-dasharray:600; stroke-dashoffset:600; animation:draw 5s ease-in-out infinite alternate}
+@keyframes draw{to{stroke-dashoffset:0}}
+.beam{animation:beam 1.7s ease-in-out infinite}
+@keyframes beam{0%,100%{opacity:.12}50%{opacity:.6}}
+
+/* one-shot scene-entry effects (fire when scene gets .go) */
+.flash{opacity:0}
+.scene.active.go .flash{animation:flashK 1.7s ease-out .3s forwards}
+@keyframes flashK{0%{opacity:0}12%{opacity:.85}100%{opacity:0}}
+.burst{opacity:0;transform-origin:center}
+.scene.active.go .burst{animation:burstK 3s cubic-bezier(.1,.7,.3,1) .3s forwards}
+@keyframes burstK{0%{opacity:0;transform:scale(.08)}14%{opacity:1}100%{opacity:0;transform:scale(4.2)}}
+.stamp{opacity:0;transform-origin:center}
+.scene.active.go .stamp{animation:stampK 1.2s cubic-bezier(.2,1.4,.4,1) .4s forwards}
+@keyframes stampK{0%{opacity:0;transform:scale(2.4) rotate(-12deg)}60%{opacity:1;transform:scale(1) rotate(0)}100%{opacity:1;transform:scale(1)}}
+.fall{opacity:0;transform-origin:center}
+.scene.active.go .fall{animation:fallK 3.4s ease-in 1s forwards}
+@keyframes fallK{0%{opacity:0;transform:translateY(-260px) scale(.6)}20%{opacity:1}82%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(10px) scale(2.2)}}
+.rise{transform-origin:center;animation:rise 7s ease-in-out infinite alternate}
+@keyframes rise{from{transform:translateY(8px)}to{transform:translateY(-8px)}}
+
+@media (max-width:640px){ #beat{display:none} #label{max-width:78%} }
+
+/* ---- audio upload UI ---- */
+#drop{margin:1.6vh auto .2vh;width:min(560px,90%);border:1.6px dashed rgba(216,162,74,.42);border-radius:14px;padding:24px 20px 20px;cursor:pointer;background:rgba(255,255,255,.015);transition:border-color .2s, background .2s, transform .2s}
+#drop:hover{border-color:var(--gold);background:rgba(216,162,74,.06)}
+#drop.drag{border-color:var(--gold);background:rgba(216,162,74,.14);transform:scale(1.012)}
+#drop.has{border-style:solid;border-color:rgba(79,230,205,.5);background:rgba(79,230,205,.05)}
+#drop .dz-ic{width:30px;height:30px;color:var(--gold);opacity:.9;margin-bottom:6px}
+#drop.has .dz-ic{color:#4fe6cd}
+#drop .dz-msg{font-family:"Spectral",serif;font-style:italic;font-size:15px;color:#e9dcc8;letter-spacing:.01em}
+#drop .dz-sub{font-size:11px;color:#7c6a64;margin-top:7px;letter-spacing:.02em}
+#loaded{display:none;align-items:center;justify-content:center;gap:9px;margin:11px auto 2px;font-size:12.5px;color:#cbb9a9}
+#loaded.show{display:flex}
+#loaded .ck{color:#4fe6cd;font-weight:700}
+#loaded .fn{font-family:"Cinzel",serif;letter-spacing:.02em;color:#f0e6d8;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#loaded #dur{color:#7c6a64}
+#begin[disabled]{opacity:.38;cursor:not-allowed;filter:grayscale(.45);box-shadow:none}
+#begin[disabled]:hover{transform:none}
+#intro.ended #drop, #intro.ended #loaded, #intro.ended .cast{display:none}
+audio{display:none}
+/* captions toggle */
+#cc{font-family:"Cinzel",serif;font-weight:600;letter-spacing:.06em;font-size:12px;position:relative}
+#cc.off{opacity:.5}
+#cc.off::after{content:"";position:absolute;left:18%;right:18%;top:50%;height:1.5px;background:currentColor;transform:rotate(-12deg);opacity:.85}
+</style>
+</head>
+<body>
+<div id="stage"><div class="frame" id="frame">
+  <canvas id="ash"></canvas>
+
+  <!-- ===================== SHARED DEFS ===================== -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <radialGradient id="gEmber" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff2cf"/><stop offset="34%" stop-color="#ff9a3c"/>
+      <stop offset="72%" stop-color="#c2152f" stop-opacity=".55"/><stop offset="100%" stop-color="#3a0810" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gGold" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff"/><stop offset="45%" stop-color="#f2cd7e"/><stop offset="100%" stop-color="#d8a24a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gBlood" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff6a72"/><stop offset="46%" stop-color="#b3122b" stop-opacity=".7"/><stop offset="100%" stop-color="#b3122b" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gWhite" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff"/><stop offset="55%" stop-color="#dfeaf2" stop-opacity=".9"/><stop offset="100%" stop-color="#a9c2d6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gCyan" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#eafcff"/><stop offset="48%" stop-color="#46c6ff" stop-opacity=".8"/><stop offset="100%" stop-color="#1d6fb0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gTeal" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#dffff6"/><stop offset="50%" stop-color="#3fd9c0" stop-opacity=".8"/><stop offset="100%" stop-color="#1f8f88" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gFloor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1c0e12"/><stop offset="100%" stop-color="#06040a"/>
+    </linearGradient>
+    <linearGradient id="gBeam" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#cfe fff" stop-opacity="0"/><stop offset="50%" stop-color="#aee6ff" stop-opacity=".5"/><stop offset="100%" stop-color="#aee6ff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="soft2"><feGaussianBlur stdDeviation="16"/></filter>
+
+    <!-- speaker sigils -->
+    <symbol id="sg-book" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M24 12c-5-4-12-4-16-2v26c4-2 11-2 16 2 5-4 12-4 16-2V10c-4-2-11-2-16 2z"/><path d="M24 12v28"/></symbol>
+    <symbol id="sg-mask" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M10 6c2 4 1 8-1 10M38 6c-2 4-1 8 1 10"/><path d="M9 16c3-3 9-4 15-4s12 1 15 4c1 9-4 22-15 26C13 38 8 25 9 16z"/><path d="M17 22l5 3M31 22l-5 3M21 33c2 1 4 1 6 0"/></symbol>
+    <symbol id="sg-flame" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M24 4c2 8-6 11-6 18 0 0-4-2-4-7-5 5-7 11-7 16a17 17 0 0034 0c0-9-6-16-11-20-1 4-4 5-6 3 3-4 6-9 6-13z"/></symbol>
+    <symbol id="sg-eye" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M4 24c6-9 13-13 20-13s14 4 20 13c-6 9-13 13-20 13S10 33 4 24z"/><circle cx="24" cy="24" r="6"/><path d="M40 30c4 2 5 6 4 9"/></symbol>
+    <symbol id="sg-penta" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><circle cx="24" cy="24" r="20"/><polygon points="24,7 33.5,38 8.4,18.8 39.6,18.8 14.5,38"/></symbol>
+    <symbol id="sg-broom" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M30 6L18 30"/><path d="M12 42c0-8 3-12 8-13 5-1 9 1 11 4-3 6-10 10-19 9z"/><path d="M22 28l6 4"/></symbol>
+    <symbol id="sg-hex" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><polygon points="24,5 40,14 40,34 24,43 8,34 8,14"/><circle cx="24" cy="24" r="3" fill="currentColor"/><path d="M24 8v8M40 16l-7 4M40 32l-7-4M24 40v-8M8 32l7-4M8 16l7 4"/></symbol>
+    <symbol id="sg-gem" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M14 8h20l8 11-18 21L6 19z"/><path d="M6 19h36M14 8l10 11 10-11M24 19v21"/></symbol>
+    <symbol id="sg-oracle" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><circle cx="24" cy="24" r="7"/><path d="M24 4v6M24 38v6M4 24h6M38 24h6M10 10l4 4M34 34l4 4M38 10l-4 4M10 38l4-4"/></symbol>
+
+    <!-- a reusable robed-figure -->
+    <symbol id="figure" viewBox="0 0 120 200"><path d="M60 18a20 20 0 0 1 20 20c0 9-4 13-4 20l14 120c1 8-9 14-30 14s-31-6-30-14L44 58c0-7-4-11-4-20a20 20 0 0 1 20-20z"/></symbol>
+    <symbol id="child" viewBox="0 0 80 120"><circle cx="40" cy="22" r="16"/><path d="M40 40c14 0 22 8 22 20l4 46c0 8-12 12-26 12s-26-4-26-12l4-46c0-12 8-20 22-20z"/></symbol>
+  </defs></svg>
+
+  <!-- ===================== SCENES ===================== -->
+
+  <!-- chamber : the Forbiddance -->
+    <!-- SCENES (episode 24) -->
+
+  <!-- staircase : the massive entryhall staircase -->
+  <div class="scene" data-scene="staircase">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0c0a08"/>
+      <ellipse cx="800" cy="240" rx="560" ry="240" fill="url(#gGold)" opacity=".08" filter="url(#soft2)"/>
+      <!-- mezzanine -->
+      <rect x="200" y="260" width="1200" height="30" fill="#241c14"/>
+      <g fill="none" stroke="#6a5230" stroke-width="3"><path d="M200 260v-60M340 260v-60M1260 260v-60M1400 260v-60"/></g>
+      <!-- the grand staircase (stepped) -->
+      <g fill="#1a1410">
+        <polygon points="560,900 1040,900 980,820 620,820"/>
+        <polygon points="600,820 1000,820 950,740 650,740"/>
+        <polygon points="640,740 960,740 920,660 680,660"/>
+        <polygon points="676,660 924,660 892,580 708,580"/>
+        <polygon points="708,580 892,580 866,500 734,500"/>
+        <polygon points="734,500 866,500 846,420 754,420"/>
+        <polygon points="754,420 846,420 830,340 770,340"/>
+      </g>
+      <!-- red carpet runner -->
+      <polygon points="770,900 830,900 812,340 788,340" fill="#5a121f" opacity=".8"/>
+      <!-- gold balustrades -->
+      <g stroke="#caa86a" stroke-width="3" stroke-opacity=".7" fill="none"><path d="M620,820L770,340M980,820L830,340"/></g>
+      <!-- Carissa, mid-ascent -->
+      <use href="#figure" x="772" y="470" width="56" height="94" fill="#1a0d10"/>
+      <g fill="#ffd9a0" opacity=".4"><circle cx="700" cy="320" r="2.6" class="tw"/><circle cx="900" cy="340" r="2.4" class="tw" style="animation-delay:-1.4s"/></g>
+    </svg>
+  </div>
+
+  <!-- handhold : an unreasonably advanced perversion -->
+  <div class="scene" data-scene="handhold">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#08090e"/>
+      <circle cx="800" cy="450" r="240" fill="url(#gCyan)" opacity=".1" filter="url(#soft2)"/>
+      <!-- two hands reaching toward each other, not quite touching -->
+      <g fill="none" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M520 560C600 520 680 500 740 478" stroke="#1a0d10"/>
+        <path d="M1080 560C1000 520 920 500 860 478" stroke="#16283a"/>
+      </g>
+      <g fill="#1a0d10"><circle cx="744" cy="474" r="14"/><circle cx="726" cy="456" r="12"/><circle cx="712" cy="436" r="11"/></g>
+      <g fill="#16283a"><circle cx="856" cy="474" r="14"/><circle cx="874" cy="456" r="12"/><circle cx="888" cy="436" r="11"/></g>
+      <!-- the charged gap -->
+      <circle cx="800" cy="456" r="10" fill="url(#gWhite)" class="pulse-f"/>
+      <circle cx="800" cy="456" r="34" fill="none" stroke="#bfeafa" stroke-width="1.5" stroke-opacity=".5" class="pulse"/>
+      <!-- question marks of hesitation -->
+      <g fill="#bfeafa" font-family="Cinzel,serif" opacity=".55"><text x="800" y="340" font-size="44" text-anchor="middle" class="tw">?</text><text x="730" y="300" font-size="28" text-anchor="middle" class="tw" style="animation-delay:-1.2s">?</text><text x="880" y="310" font-size="32" text-anchor="middle" class="tw" style="animation-delay:-2s">?</text></g>
+    </svg>
+  </div>
+
+  <!-- towers : where the towers were -->
+  <div class="scene" data-scene="towers">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0b0c10"/>
+      <rect width="1600" height="540" fill="url(#gCyan)" opacity=".05"/>
+      <!-- villa wings -->
+      <g fill="#11151c"><rect x="0" y="420" width="520" height="480"/><polygon points="0,420 120,340 520,340 520,420"/><rect x="1080" y="420" width="520" height="480"/><polygon points="1080,420 1480,340 1600,420"/></g>
+      <!-- the tower, rising -->
+      <g fill="#141922"><rect x="700" y="180" width="200" height="720"/><polygon points="680,180 800,80 920,180"/></g>
+      <g fill="url(#gGold)" opacity=".4"><rect x="740" y="260" width="50" height="70" rx="6"/><rect x="810" y="260" width="50" height="70" rx="6"/><rect x="775" y="420" width="50" height="70" rx="6"/></g>
+      <!-- a courtyard below -->
+      <ellipse cx="800" cy="800" rx="320" ry="60" fill="#0e1218"/>
+      <!-- the two, looking toward it; a directional gesture -->
+      <g fill="#16283a"><use href="#figure" x="540" y="700" width="50" height="84"/></g>
+      <g fill="#1a0d10"><use href="#figure" x="600" y="700" width="50" height="84"/></g>
+      <path d="M660 720L760 660" stroke="#5fd0ff" stroke-width="2" stroke-dasharray="8 10" class="flow" fill="none"/><polygon points="760,660 742,664 750,680" fill="#5fd0ff"/>
+    </svg>
+  </div>
+
+  <!-- nightsky : the sky is very bright -->
+  <div class="scene" data-scene="nightsky">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#05070f"/>
+      <ellipse cx="800" cy="300" rx="900" ry="300" fill="url(#gCyan)" opacity=".06" filter="url(#soft2)"/>
+      <!-- the milky way band -->
+      <path d="M0 200C400 320 1000 180 1600 360L1600 460C1000 280 400 420 0 300z" fill="#1a2240" opacity=".5"/>
+      <!-- brilliant stars -->
+      <g fill="#dff6ff">
+        <g class="tw"><circle cx="180" cy="160" r="3"/><circle cx="360" cy="240" r="2.4"/><circle cx="520" cy="120" r="3.4"/><circle cx="700" cy="220" r="2.2"/><circle cx="900" cy="140" r="3"/><circle cx="1120" cy="240" r="2.6"/><circle cx="1320" cy="160" r="3.2"/><circle cx="1480" cy="260" r="2.4"/></g>
+        <g class="tw" style="animation-delay:-1s"><circle cx="260" cy="340" r="2.6"/><circle cx="460" cy="380" r="2.2"/><circle cx="640" cy="320" r="3"/><circle cx="840" cy="380" r="2.4"/><circle cx="1040" cy="320" r="2.8"/><circle cx="1240" cy="380" r="2.2"/><circle cx="1420" cy="340" r="2.6"/></g>
+        <g class="tw" style="animation-delay:-2s"><circle cx="320" cy="460" r="2.2"/><circle cx="600" cy="440" r="2.6"/><circle cx="780" cy="480" r="2"/><circle cx="980" cy="450" r="2.4"/><circle cx="1180" cy="480" r="2.2"/></g>
+      </g>
+      <!-- horizon + two small figures looking up -->
+      <rect y="700" width="1600" height="200" fill="#0a0e16"/>
+      <g fill="#10161e"><use href="#figure" x="740" y="600" width="50" height="100"/><use href="#figure" x="800" y="600" width="50" height="100"/></g>
+    </svg>
+  </div>
+
+  <!-- aliens : a few billion years out -->
+  <div class="scene" data-scene="aliens">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#07060e"/>
+      <!-- distant clustered civilizations -->
+      <g>
+        <g transform="translate(360 300)"><circle r="60" fill="url(#gCyan)" opacity=".25" filter="url(#soft)"/><g fill="#bfeafa"><circle cx="-14" cy="-10" r="2.4"/><circle cx="10" cy="6" r="2"/><circle cx="0" cy="-18" r="2.2"/><circle cx="16" cy="-8" r="1.8"/></g></g>
+        <g transform="translate(1180 360)"><circle r="70" fill="url(#gWhite)" opacity=".18" filter="url(#soft)"/><g fill="#cbb0ff"><circle cx="-16" cy="8" r="2.4"/><circle cx="12" cy="-12" r="2"/><circle cx="-4" cy="-4" r="2.2"/></g></g>
+        <g transform="translate(820 600)"><circle r="56" fill="url(#gCyan)" opacity=".2" filter="url(#soft)"/><g fill="#bfeafa"><circle cx="-10" cy="6" r="2"/><circle cx="12" cy="-8" r="2.2"/></g></g>
+      </g>
+      <!-- light-cones / simultaneity lines -->
+      <g stroke="#5a6ab0" stroke-width="1.4" stroke-opacity=".4" fill="none" class="flow" stroke-dasharray="8 14"><path d="M360 300L820 600M1180 360L820 600M360 300L1180 360"/></g>
+      <!-- calculation lattice -->
+      <g class="spin-s" opacity=".15" transform="translate(800 450)"><use href="#sg-hex" x="-160" y="-160" width="320" height="320" color="#7fb0ff"/></g>
+      <g fill="#dff6ff" opacity=".5"><circle cx="600" cy="220" r="2" class="tw"/><circle cx="1000" cy="500" r="2.2" class="tw" style="animation-delay:-1.6s"/></g>
+    </svg>
+  </div>
+
+  <!-- starstone : become a god or die trying -->
+  <div class="scene" data-scene="starstone">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0606"/>
+      <!-- the star stone, radiant -->
+      <g transform="translate(800 320)">
+        <circle r="280" fill="url(#gEmber)" opacity=".3" filter="url(#soft2)" class="breathe"/>
+        <g class="spin-s" opacity=".5"><g fill="#ffcf86"><polygon points="-6,0 6,0 12,-360 -12,-360"/><polygon points="-6,0 6,0 12,-360 -12,-360" transform="rotate(60)"/><polygon points="-6,0 6,0 12,-360 -12,-360" transform="rotate(120)"/><polygon points="-6,0 6,0 12,-360 -12,-360" transform="rotate(180)"/><polygon points="-6,0 6,0 12,-360 -12,-360" transform="rotate(240)"/><polygon points="-6,0 6,0 12,-360 -12,-360" transform="rotate(300)"/></g></g>
+        <polygon points="0,-90 78,-45 78,45 0,90 -78,45 -78,-45" fill="url(#gGold)" stroke="#ffe6b0" stroke-width="2"/>
+        <polygon points="0,-90 0,90 78,45 78,-45" fill="#ffb877" opacity=".5"/>
+        <circle r="20" fill="#fff" class="pulse-f"/>
+      </g>
+      <!-- ascending figure reaching for godhood -->
+      <use href="#figure" x="744" y="560" width="112" height="200" fill="#241a0c"/>
+      <path d="M800 560C800 500 800 460 800 420" stroke="#ffd27a" stroke-width="3" stroke-dasharray="6 10" fill="none" class="flow"/>
+      <g fill="#ffd27a"><circle cx="800" cy="540" r="4" style="animation:floatUp 4s ease-in infinite"/><circle cx="770" cy="500" r="3" style="animation:floatUp 4s ease-in infinite; animation-delay:-2s"/></g>
+    </svg>
+  </div>
+
+  <!-- crash : my head, ripped off in the crash -->
+  <div class="scene" data-scene="crash">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#08060a"/>
+      <!-- left: the fall / breaking -->
+      <g>
+        <path d="M120 60L520 520" stroke="#c2152f" stroke-width="4" stroke-opacity=".7" class="flick"/>
+        <path d="M120 60L520 520" stroke="#ff8a3c" stroke-width="1.6" stroke-opacity=".8"/>
+        <g stroke="#ff5560" stroke-width="2" stroke-opacity=".5"><path d="M300 280l-40 10M380 360l-44 6M220 200l-38 14"/></g>
+        <!-- the snapped line (abstracted) -->
+        <path d="M480 500l40 40M540 480l-30 70" stroke="#c2152f" stroke-width="3" stroke-linecap="round"/>
+      </g>
+      <!-- right: arrival in a new world -->
+      <circle cx="1080" cy="460" r="280" fill="url(#gCyan)" opacity=".18" filter="url(#soft2)" class="breathe"/>
+      <use href="#figure" x="1024" y="400" width="112" height="200" fill="#16283a"/>
+      <circle cx="1080" cy="460" r="120" fill="none" stroke="#bfeafa" stroke-width="1.5" stroke-opacity=".5" class="pulse"/>
+      <g fill="#bfeafa" opacity=".6"><circle cx="1180" cy="380" r="3" class="tw"/><circle cx="980" cy="520" r="2.6" class="tw" style="animation-delay:-1.4s"/></g>
+      <!-- divider -->
+      <path d="M780 120L760 780" stroke="#2a2030" stroke-width="2" stroke-opacity=".4"/>
+    </svg>
+  </div>
+
+  <!-- multiverse : a vast number of universes -->
+  <div class="scene" data-scene="multiverse">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#07060e"/>
+      <!-- a field of parallel-world bubbles -->
+      <g fill="none">
+        <circle cx="300" cy="260" r="80" stroke="#5a6ab0" stroke-width="2" stroke-opacity=".5"/>
+        <circle cx="560" cy="360" r="100" stroke="#b98cff" stroke-width="2" stroke-opacity=".6"/><circle cx="560" cy="360" r="40" fill="#b98cff" opacity=".15"/>
+        <circle cx="820" cy="240" r="70" stroke="#5a6ab0" stroke-width="2" stroke-opacity=".5"/>
+        <circle cx="1060" cy="380" r="110" stroke="#b98cff" stroke-width="2" stroke-opacity=".6"/><circle cx="1060" cy="380" r="44" fill="#b98cff" opacity=".15"/>
+        <circle cx="1320" cy="280" r="80" stroke="#5a6ab0" stroke-width="2" stroke-opacity=".5"/>
+        <circle cx="440" cy="600" r="90" stroke="#5a6ab0" stroke-width="2" stroke-opacity=".5"/>
+        <circle cx="720" cy="640" r="76" stroke="#b98cff" stroke-width="2" stroke-opacity=".6"/><circle cx="720" cy="640" r="30" fill="#b98cff" opacity=".15"/>
+        <circle cx="980" cy="640" r="84" stroke="#5a6ab0" stroke-width="2" stroke-opacity=".5"/>
+        <circle cx="1240" cy="620" r="92" stroke="#b98cff" stroke-width="2" stroke-opacity=".6"/><circle cx="1240" cy="620" r="36" fill="#b98cff" opacity=".15"/>
+      </g>
+      <!-- branching threads between them -->
+      <g stroke="#3a4a7a" stroke-width="1.4" stroke-opacity=".4" fill="none" class="flow" stroke-dasharray="6 12"><path d="M300 260L560 360L820 240L1060 380L1320 280M560 360L440 600L720 640L980 640L1240 620"/></g>
+      <g fill="#cbb0ff" opacity=".6"><circle cx="560" cy="360" r="4" class="pulse-f"/><circle cx="1060" cy="380" r="4" class="pulse-f" style="animation-delay:-.8s"/></g>
+    </svg>
+  </div>
+
+  <!-- identity_torture : distinctly-me experiences -->
+  <div class="scene" data-scene="identity_torture">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#080a0e"/>
+      <circle cx="800" cy="450" r="320" fill="url(#gCyan)" opacity=".06" filter="url(#soft2)"/>
+      <!-- a figure simplifying / losing distinct features -->
+      <use href="#figure" x="380" y="400" width="120" height="200" fill="#16283a"/>
+      <use href="#figure" x="640" y="400" width="120" height="200" fill="#16283a" opacity=".6"/>
+      <use href="#figure" x="900" y="400" width="120" height="200" fill="#1a2230" opacity=".35"/>
+      <use href="#figure" x="1160" y="400" width="120" height="200" fill="#1d1f26" opacity=".18"/>
+      <!-- dissolving motes drifting off the rightmost -->
+      <g fill="#9fb4cf" opacity=".5"><circle cx="1280" cy="440" r="3" style="animation:floatUp 5s ease-in infinite"/><circle cx="1320" cy="500" r="2.6" style="animation:floatUp 5s ease-in infinite; animation-delay:-2.5s"/></g>
+      <!-- a faint unease -->
+      <g stroke="#c2152f" stroke-width="1.6" stroke-opacity=".3" class="pulse-f"><path d="M1140 360l40 -10M1180 540l40 10"/></g>
+    </svg>
+  </div>
+
+  <!-- flirting : how to flirt back -->
+  <div class="scene" data-scene="flirting">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0810"/>
+      <ellipse cx="800" cy="460" rx="420" ry="240" fill="url(#gBlood)" opacity=".08" filter="url(#soft2)"/>
+      <!-- two figures, playful -->
+      <use href="#figure" x="460" y="440" width="116" height="194" fill="#1a0d10"/>
+      <use href="#figure" x="1024" y="440" width="116" height="194" fill="#16283a"/>
+      <!-- signal-sparks / little hearts arcing between -->
+      <g>
+        <path d="M620 480Q800 380 980 480" fill="none" stroke="#ff8a8f" stroke-width="2" stroke-opacity=".5" class="flow" stroke-dasharray="6 10"/>
+        <g fill="#ff6a72"><path d="M760 430c-6-9-22-5-22 5 0 8 12 13 22 22 10-9 22-14 22-22 0-10-16-14-22-5z" class="pulse-f"/></g>
+        <g fill="#ff9aa0" opacity=".8"><circle cx="700" cy="450" r="4" class="tw"/><circle cx="860" cy="450" r="4" class="tw" style="animation-delay:-1s"/></g>
+      </g>
+      <!-- a wand with a heart (magic-item flirting) -->
+      <g transform="translate(540 540)"><line x1="0" y1="0" x2="-40" y2="40" stroke="#caa86a" stroke-width="3"/><circle cx="0" cy="0" r="8" fill="#ff6a72" class="pulse-f"/></g>
+    </svg>
+  </div>
+
+  <!-- cuddle : named adorably -->
+  <div class="scene" data-scene="cuddle">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0e0a0c"/>
+      <ellipse cx="800" cy="460" rx="500" ry="300" fill="url(#gEmber)" opacity=".1" filter="url(#soft2)"/>
+      <!-- a cozy daybed with cushions -->
+      <rect x="420" y="520" width="760" height="180" rx="30" fill="#2a141c"/>
+      <rect x="420" y="470" width="760" height="80" rx="30" fill="#341822"/>
+      <g fill="#3e1f2a"><rect x="470" y="440" width="120" height="100" rx="24"/><rect x="620" y="450" width="110" height="90" rx="22"/><rect x="1010" y="440" width="120" height="100" rx="24"/></g>
+      <!-- warm lamp -->
+      <g transform="translate(260 420)"><circle r="40" fill="url(#gEmber)" opacity=".6" filter="url(#soft)"/><circle r="16" fill="#ffd27a" class="flick"/></g>
+      <g transform="translate(1340 420)"><circle r="36" fill="url(#gEmber)" opacity=".5" filter="url(#soft)"/><circle r="14" fill="#ffd27a" class="flick" style="animation-delay:-.6s"/></g>
+      <!-- an ironic little heart-tag -->
+      <g transform="translate(800 300)"><path d="M0 -10c-7-10-26-5-26 7 0 9 14 15 26 27 12-12 26-18 26-27 0-12-19-17-26-7z" fill="none" stroke="#ff8a8f" stroke-width="2.5" class="breathe"/></g>
+      <g fill="#ffc0a0" opacity=".5"><circle cx="700" cy="380" r="2.6" class="tw"/><circle cx="900" cy="400" r="2.4" class="tw" style="animation-delay:-1.4s"/></g>
+    </svg>
+  </div>
+
+  <!-- signaling : no word for signaling equilibrium -->
+  <div class="scene" data-scene="signaling">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#090a0e"/>
+      <ellipse cx="800" cy="450" rx="440" ry="280" fill="url(#gCyan)" opacity=".06" filter="url(#soft2)"/>
+      <!-- two parties -->
+      <circle cx="320" cy="450" r="60" fill="#16283a" stroke="#5fd0ff" stroke-width="2"/>
+      <circle cx="1280" cy="450" r="60" fill="#241420" stroke="#ff6a72" stroke-width="2"/>
+      <!-- overt signals (semantic arrows) -->
+      <g stroke="#bfeafa" stroke-width="2.5" fill="none"><path d="M390 410C600 340 1000 340 1210 410"/></g>
+      <polygon points="1210,410 1188,406 1196,424" fill="#bfeafa"/>
+      <g stroke="#ffb0b4" stroke-width="2.5" fill="none"><path d="M1210 490C1000 560 600 560 390 490"/></g>
+      <polygon points="390,490 412,494 404,476" fill="#ffb0b4"/>
+      <!-- semantic tags -->
+      <g fill="none" stroke="#5fd0ff" stroke-width="1.6" stroke-opacity=".6"><rect x="560" y="300" width="80" height="36" rx="6"/><rect x="960" y="300" width="80" height="36" rx="6"/></g>
+      <!-- the hidden adversarial layer (dashed, beneath) -->
+      <g stroke="#b98cff" stroke-width="1.6" stroke-dasharray="6 10" stroke-opacity=".5" fill="none" class="flow"><path d="M380 540C700 660 900 660 1220 540"/></g>
+      <!-- equilibrium point -->
+      <circle cx="800" cy="450" r="12" fill="url(#gWhite)" class="pulse-f"/>
+      <circle cx="800" cy="450" r="40" fill="none" stroke="#bfeafa" stroke-width="1.5" stroke-opacity=".5" class="pulse"/>
+    </svg>
+  </div>
+
+  <!-- leanback : he leans back into her -->
+  <div class="scene" data-scene="leanback">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0c0a0c"/>
+      <ellipse cx="800" cy="460" rx="380" ry="280" fill="url(#gEmber)" opacity=".1" filter="url(#soft2)"/>
+      <radialGradient id="warm24"><stop offset="0" stop-color="#ffb877" stop-opacity=".5"/><stop offset="1" stop-color="#ffb877" stop-opacity="0"/></radialGradient>
+      <!-- Carissa, behind / supporting -->
+      <g fill="#1a0d10"><ellipse cx="760" cy="460" rx="92" ry="150"/><circle cx="760" cy="300" r="40"/></g>
+      <!-- Keltham, leaning back into her -->
+      <g fill="#16283a" transform="rotate(-12 840 460)"><ellipse cx="850" cy="470" rx="80" ry="150"/><circle cx="850" cy="320" r="38"/></g>
+      <!-- warmth where they meet -->
+      <circle cx="810" cy="430" r="120" fill="url(#warm24)" class="breathe"/>
+      <g fill="#ffd0b0" opacity=".6"><circle cx="800" cy="320" r="3" style="animation:floatUp 6s ease-in infinite"/><circle cx="840" cy="360" r="2.6" style="animation:floatUp 6s ease-in infinite; animation-delay:-3s"/></g>
+    </svg>
+  </div>
+
+  <!-- crush : the crush -->
+  <div class="scene" data-scene="crush">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0c0a0e"/>
+      <ellipse cx="800" cy="460" rx="360" ry="300" fill="url(#gBlood)" opacity=".1" filter="url(#soft2)"/>
+      <!-- two close figures -->
+      <use href="#figure" x="640" y="440" width="116" height="194" fill="#16283a"/>
+      <use href="#figure" x="844" y="440" width="116" height="194" fill="#1a0d10"/>
+      <!-- a soft glowing heart between -->
+      <g transform="translate(800 470)">
+        <path d="M0 -22c-12-18-44-9-44 11 0 16 24 26 44 44 20-18 44-28 44-44 0-20-32-29-44-11z" fill="url(#gBlood)" opacity=".5" class="pulse-f"/>
+        <path d="M0 -22c-12-18-44-9-44 11 0 16 24 26 44 44 20-18 44-28 44-44 0-20-32-29-44-11z" fill="none" stroke="#ff8a8f" stroke-width="2.5" class="breathe"/>
+      </g>
+      <g fill="#ff9aa0" opacity=".6"><circle cx="700" cy="360" r="3" class="tw"/><circle cx="900" cy="380" r="2.6" class="tw" style="animation-delay:-1.4s"/><circle cx="800" cy="320" r="2.4" class="tw" style="animation-delay:-2.2s"/></g>
+    </svg>
+  </div>
+
+  <!-- confusion : confused again, and back -->
+  <div class="scene" data-scene="confusion">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#08080e"/>
+      <!-- two minds in a recursive loop -->
+      <g transform="translate(480 420)"><circle r="80" fill="#16283a" stroke="#5fd0ff" stroke-width="2"/><circle r="44" fill="none" stroke="#bfeafa" stroke-width="1.4" stroke-opacity=".5"/></g>
+      <g transform="translate(1120 420)"><circle r="80" fill="#241420" stroke="#ff6a72" stroke-width="2"/><circle r="44" fill="none" stroke="#ffb0b4" stroke-width="1.4" stroke-opacity=".5"/></g>
+      <!-- looping arrows between them -->
+      <g fill="none" stroke="#b98cff" stroke-width="2.5" stroke-opacity=".7">
+        <path d="M560 380C720 300 880 300 1040 380"/><polygon points="1040,380 1018,374 1024,394" fill="#b98cff"/>
+        <path d="M1040 460C880 540 720 540 560 460"/><polygon points="560,460 582,466 576,446" fill="#b98cff"/>
+      </g>
+      <!-- a lock clicking on universal validities -->
+      <g transform="translate(800 660)">
+        <rect x="-40" y="0" width="80" height="64" rx="8" fill="#16202a" stroke="#5fd0ff" stroke-width="2"/>
+        <path d="M-26 0v-16a26 26 0 0 1 52 0v16" fill="none" stroke="#5fd0ff" stroke-width="3"/>
+        <path d="M-12 30l10 12 18 -22" fill="none" stroke="#bfeafa" stroke-width="3" stroke-linecap="round" class="pulse-f"/>
+      </g>
+      <g fill="#cbb0ff" opacity=".5"><circle cx="800" cy="400" r="3" class="pulse"/></g>
+    </svg>
+  </div>
+
+  <!-- watchers : the person who ends the world -->
+  <div class="scene" data-scene="watchers">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#08060c"/>
+      <!-- Keltham, small, observed -->
+      <circle cx="800" cy="500" r="150" fill="url(#gCyan)" opacity=".14" filter="url(#soft2)"/>
+      <use href="#figure" x="760" y="430" width="80" height="134" fill="#16283a"/>
+      <!-- watching eyes in the dark -->
+      <g fill="none" stroke="#b98cff" stroke-width="2.5">
+        <g transform="translate(220 220)"><ellipse rx="44" ry="22" fill="#140a18"/><ellipse rx="44" ry="22"/><circle r="9" fill="#c2152f" class="pulse-f"/></g>
+        <g transform="translate(1380 240)"><ellipse rx="40" ry="20" fill="#140a18"/><ellipse rx="40" ry="20"/><circle r="8" fill="#c2152f" class="pulse-f" style="animation-delay:-.5s"/></g>
+        <g transform="translate(280 700)"><ellipse rx="42" ry="21" fill="#140a18"/><ellipse rx="42" ry="21"/><circle r="8" fill="#c2152f" class="pulse-f" style="animation-delay:-1s"/></g>
+        <g transform="translate(1340 720)"><ellipse rx="40" ry="20" fill="#140a18"/><ellipse rx="40" ry="20"/><circle r="8" fill="#c2152f" class="pulse-f" style="animation-delay:-1.5s"/></g>
+      </g>
+      <!-- gazes converging -->
+      <g stroke="#b98cff" stroke-width="1.4" stroke-opacity=".35" class="pulse"><path d="M260 230L770 480M1340 250L840 480M320 700L770 520M1300 720L840 520"/></g>
+      <!-- the ominous question + a faintly cracked world above -->
+      <g transform="translate(800 200)"><circle r="40" fill="#0e1620" stroke="#5a6ab0" stroke-width="2"/><path d="M-40 0h80M0 -40v80" stroke="#5a6ab0" stroke-width="1" stroke-opacity=".5"/><path d="M-16 -30l8 24 -12 14 14 22" stroke="#c2152f" stroke-width="2" fill="none" class="pulse-f"/></g>
+      <text x="800" y="330" text-anchor="middle" fill="#cbb0ff" font-family="Cinzel,serif" font-size="40" opacity=".6" class="tw">?</text>
+    </svg>
+  </div>
+
+  <!-- /SCENES -->
+
+  <div id="vignette"></div>
+
+  <div id="label">
+    <div class="kicker"><svg class="ksig"><use id="ksig-use" href="#sg-book"/></svg><span class="kname" id="kname">The Reading</span></div>
+    <div class="ttl" id="ttl">Corrigibility</div>
+  </div>
+
+  <div id="cap-wrap"><div id="cap"></div></div>
+
+  <!-- intro -->
+  <div id="intro">
+    <div class="intro-in">
+      <div class="eyebrow">an animated reading · episode 24</div>
+      <h1>Planecrash</h1>
+      <div class="sub">Keltham and Carissa explore the Duke's villa — the staircase, the towers, the night sky — and talk their way through cosmology, the <i>star stone</i>, and a tentative closeness, while unseen watchers wonder what he is. This plays the <b>AskWhoCasts AI</b> reading — load the audio and the animation follows it, captioned with the original text.</div>
+      <div id="drop">
+        <svg class="dz-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L8 8m4-4 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <div class="dz-msg">Drop the episode 24 audio here, or click to choose</div>
+        <div class="dz-sub">mp3 · m4a · wav · ogg — stays on your device, nothing is uploaded</div>
+        <input type="file" id="audiofile" accept="audio/*" hidden>
+      </div>
+      <div id="loaded"><span class="ck">&#10003;</span> <span class="fn" id="fname"></span> <span id="dur"></span></div>
+      <button id="begin" disabled><span class="tri"></span> Play</button>
+      <div class="cast" id="cast"></div>
+      <div class="note">Sound from your file &middot; seek, speed (1&times; / 1.25&times; / 1.5&times; / 0.75&times;), captions (CC / press &ldquo;c&rdquo;) and &larr; &rarr; arrows all work</div>
+      <div class="src">Reading &amp; audio by <b>AskWhoCasts AI</b> &mdash; support it at patreon.com/askwhocastsai. Episode 24 of &ldquo;mad investor chaos and the woman of asmodeus&rdquo; (Planecrash) by Iarwain &amp; lintamande.</div>
+    </div>
+  </div>
+  <audio id="player" preload="metadata"></audio>
+
+  <!-- controls -->
+  <div id="controls">
+    <button class="btn sm" id="prev" title="Previous passage" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M7 5h2v14H7zM20 5v14l-9-7z"/></svg></button>
+    <button class="btn lg" id="play" title="Play / Pause" aria-label="Play"><svg id="playicon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
+    <button class="btn sm" id="next" title="Next passage" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M15 5h2v14h-2zM4 5l9 7-9 7z"/></svg></button>
+    <button class="btn sm" id="restart" title="Restart" aria-label="Restart"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg></button>
+    <div id="prog"><div id="bar"></div></div>
+    <button class="btn" id="cc" title="Captions on/off (c)" aria-pressed="true">CC</button>
+    <button class="btn" id="speed" title="Reading speed">1.0×</button>
+    <div id="beat">The Forbiddance</div>
+  </div>
+
+</div></div>
+
+<script>
+
+/* ===================== CHARACTERS ===================== */
+const CHARS = {
+  narrator: {name:'Narrator',      tag:'the tale itself',       color:'#d8c39a', sigil:'sg-book'},
+  keltham:  {name:'Keltham',       tag:'a mind from dath ilan', color:'#5fd0ff', sigil:'sg-hex'},
+  carissa:  {name:'Carissa Sevar', tag:'to-let-you-in',         color:'#ff5d6c', sigil:'sg-flame'},
+  elias:    {name:'Elias Abarco',  tag:'unseen observers',      color:'#c2152f', sigil:'sg-eye'},
+};
+const SCENE_TITLES = {
+  staircase:'The Massive Entryhall Staircase', handhold:'An Unreasonably Advanced Perversion', towers:'Where the Towers Were',
+  nightsky:'The Sky Is Very Bright', aliens:'A Few Billion Years Out', starstone:'Become a God or Die Trying',
+  crash:'My Head, Ripped Off in the Crash', multiverse:'A Vast Number of Universes', identity_torture:'Distinctly-Me Experiences',
+  flirting:'How to Flirt Back', cuddle:'Named Adorably', signaling:'No Word for Signaling Equilibrium',
+  leanback:'He Leans Back Into Her', crush:'The Crush', confusion:'Confused Again, and Back', watchers:'The Person Who Ends the World'
+};
+
+/* ===================== CAPTIONS + SCENE/SPEAKER BEATS ===================== */
+/* CUES: the VERBATIM glowfic text, aligned to the audio's timeline {t: startSeconds, x: text}.
+   Empty x clears the caption (intro credits, and the tail the source doesn't cover).
+   BEATS: which scene + speaker is on screen at each time {t, s:scene, v:speaker}. */
+const CUES=[{t:0,x:""},{t:24.78,x:"Carissa would attempt to trot up the massive entryhall staircase in a sexy way except"},{t:30.65,x:"she's not actually sure she knows how to do that,"},{t:34.27,x:"it's a skillset that definitely exists and that she has witnessed on display but not"},{t:39.36,x:"one she's had occasion to practice, and trying and failing to do it is pathetic."},{t:45.57,x:"The natural default mode for exploring is more - cautious, giggly,"},{t:49.86,x:"childlike, and that is appealing in its own way - maybe to Keltham too -"},{t:55.39,x:"but not sexy, and she's going to be kind of dissatisfied if -"},{t:60.31,x:"- one thing at a time. The massive entryhall staircase opens out onto a luxurious mezzanine"},{t:67.4,x:"and then there are two wings with rooms, presumably parlors and bedrooms and guest rooms"},{t:73.8,x:"and so on, and no obvious staircase up, though she knows that this place has"},{t:79.62,x:"some towers. \"Do you have a sense of where the towers were,"},{t:83.31,x:"relative to where we are.\""},{t:84.85,x:"Keltham tries to visualize the villa as seen from the courtyards they sometimes pass through."},{t:89.67,x:"\"I don't think I actually remember, but I think there's a tower visible from a"},{t:94.11,x:"courtyard I think is that way, and then we'd know.\""},{t:97.33,x:"He gestures in a direction. He's considering offering to hold hands,"},{t:101,x:"but maybe Cheliax considers handholding an unreasonably advanced form of erotic perversion practiced by only"},{t:106.57,x:"the most sexually degenerate individuals, only if he keeps asking about that sort of thing"},{t:111.85,x:"at every step, that'll take all night, but also holding hands seems not optimal for"},{t:116.46,x:"exploring and potentially sort of awkward for maneuvering, and do they even do that here,"},{t:121.04,x:"and..."},{t:121.35,x:"\"Yeah, all right, let's try in that direction.\""},{t:123.78,x:"Off they go, then! (He still hasn't asked about holding hands.)"},{t:127.95,x:"Carissa can't read his mind. Though she is aware that paradigmatic flirting in most places"},{t:134.2,x:"involves physical contact so they can - brush against each other,"},{t:138.2,x:"maybe, in tight spaces, which she can probably find if she tries hard and believes"},{t:144.2,x:"in herself - oh, here's a servant's hallway, meant for halflings and very cozy -"},{t:149.4,x:"I WOULD APPRECIATE INSTRUCTIONS TO THE TOWER AND WILL PAY YOU SOMETHING REASONABLE FOR THEM"},{t:155.4,x:"she thinks loudly at security."},{t:157.28,x:"Elias Abarco hates this particular girl by now but that's all the more reason to"},{t:161.41,x:"take a deal like that! \"Door on your left,\" he whispers when she's far enough"},{t:165.76,x:"ahead Keltham won't hear it."},{t:167.67,x:"Carissa doesn't even expect to regret this!"},{t:170.52,x:"Asmodeus personally is interested in her trajectory!!"},{t:173.32,x:"The door on her left opens in her hand, though she wouldn't have expected it"},{t:178.09,x:"to, and it's a grand bedroom, with a four-poster bed with sweeping velvet drapes and"},{t:184,x:"a fireplace and a sitting room and a dog bed fancier than anything Carissa's ever"},{t:189.52,x:"slept on. And it has a staircase up, a neat little spiral staircase with carpeted"},{t:195.24,x:"steps."},{t:195.62,x:"Bit weird and sparse for a bedroom, but everything here is like that."},{t:199.86,x:"\"Stairs! Is that as tower-promising as it looks to an outsider from another dimension?\""},{t:204.68,x:"\"In this dimension, too, stairs often lead up to towers.\""},{t:208.94,x:"It would be - wise to try to arrange incidental physical contact here?"},{t:213.94,x:"But she doesn't think of handholding because that's not really a thing."},{t:218.61,x:"Keltham has been thinking thoughts along not entirely dissimilar lines,"},{t:221.25,x:"and tries to match his steps to Carissa such that,"},{t:223.75,x:"if she was okay with that, they could try both going up these stairs in"},{t:228,x:"quite close proximity. If she seems to be falling behind or pulling ahead,"},{t:232.33,x:"he won't fight that, of course."},{t:234.47,x:"No, no, they can go up the stairs together, brushing shoulders a slightly unnecessary amount."},{t:240.42,x:"There's something profoundly strange here and she doesn't know what it is."},{t:245.47,x:"Maybe it's just the role reversal, that usually people are trying to seduce her."},{t:250.67,x:"Maybe it's just that he's very young, and she hasn't dated teenagers since she was"},{t:255.67,x:"one, mostly at the Worldwound the interesting people have a decade on her because that's"},{t:260.77,x:"what makes them interesting, all the magic they know....maybe an adult dath ilani would be"},{t:265.69,x:"running rings around all of them, and that's why Asmodeus picked a teenager -"},{t:270.67,x:"And then they're out at the top of the tower."},{t:274.03,x:"Cheliax is not industrially advanced enough to have light pollution."},{t:278,x:"The sky is very bright and very clear."},{t:281.07,x:"Dath ilan is too good at coordination to have either lots of aerosols in the"},{t:284.8,x:"atmosphere or lots of high-scattering non-red lights on at night all the time,"},{t:288.3,x:"and Keltham has ever been a tourist in clear cold high places where the stars"},{t:292.38,x:"are brighter yet. It's not a new sight to him,"},{t:295.19,x:"except of course in the sense that - \"The patterns of the suns are different,\""},{t:299.52,x:"Keltham murmurs. He didn't get around to checking last night,"},{t:303.33,x:"with all the various rushes. \"I was wondering if this was a branched time of"},{t:308.43,x:"my own planet, in my own -\" Taldane doesn't have a word that means galaxy -"},{t:312.7,x:"\"larger structure of suns. Didn't seem likely, but - anyway, it's definitely not.\""},{t:318.05,x:"Dath ilan doesn't have the notion of 'constellations' in quite the same way,"},{t:323.07,x:"but he doesn't see any of the patterns that a dath ilani would use to"},{t:326.8,x:"identify the Northern Star or Southern Center or the direction of a meteor shower."},{t:330.72,x:"\"I think you're from farther away than any of those stars."},{t:334.68,x:"A very good wizard can teleport to those, and not to dath ilan.\""},{t:339.29,x:"\"That's - incredibly impressive, we were not ready to go anywhere and come back,"},{t:343,x:"not for a while, it would have been insanely expensive even by our own standards."},{t:347.32,x:"We built hugely powerful beams of light and used that to launch probes toward the"},{t:352.3,x:"second-nearest sun, just to get started on practicing, but they won't get to their destinations"},{t:357.03,x:"for a long time. We did it just because we could,"},{t:360.13,x:"in the end, and not for - not for reasons, really.\""},{t:362.71,x:"\"We were pretty sure there was nobody else anywhere near our neighborhood,"},{t:366.07,x:"in any sun close enough for light to travel to us from there."},{t:369.93,x:"People did some clever calculations saying that the aliens were probably a few billion years"},{t:374.8,x:"out, in our - simultaneity - all with logic and calculations that don't apply here at all,"},{t:379.77,x:"if your wizards can teleport there and back in less than years."},{t:382.87,x:"Find any people around the other suns, or is it all just lifeless other planets"},{t:386.74,x:"the way we'd deduced in our own world?\""},{t:389.23,x:"\"The other planets around our sun are all settled, but that's -"},{t:392.73,x:"happened at the same time as us, it wasn't an independent event."},{t:397.05,x:"From farther than that, uh, I've heard it claimed the crashed ship that is quarantined"},{t:402.73,x:"in Numeria came from another sun but I don't know more about that."},{t:407.45,x:"Aroden, when he was an epic hero, spent thousands of years looking,"},{t:411.67,x:"and came back with empty hands.\""},{t:413.67,x:"\"It feels so unreal to think of that as being something one person does."},{t:418.33,x:"We'd have millions of people investigating a question like that,"},{t:421.67,x:"if a possible alien invasion had happened, it would take millions of people."},{t:426,x:"One person becoming powerful enough to go to the stars on their own is -"},{t:429.67,x:"a story you write and only sell to adults, because if you told it to"},{t:433.3,x:"children you'd be setting them up for disappointment when they learned how economics worked in"},{t:437.48,x:"real life. This place really is magic, just like we tell it in stories where"},{t:442.14,x:"I come from.\""},{t:442.91,x:"- hand on his arm? \"I hope it doesn't seem - like an entirely horrible place to"},{t:449.09,x:"you. It needs some work, but - but it's work a person can do,"},{t:453.95,x:"if that's what you mean by 'magic', it doesn't take millions...\""},{t:457.45,x:"He leans gently in that direction, which is hopefully a signal that it's fine."},{t:461.71,x:"\"Eh, frankly it's pretty horrible. So lots of room for improvement,"},{t:464.86,x:"and unspendably vast riches if I can figure out how to collect a five percent"},{t:468.89,x:"fee on five percent of the improvements.\""},{t:470.67,x:"His brain takes this moment to wonder if Owl's Wisdom would have something else to"},{t:475.11,x:"say about this stereotypically Keltham response, and Keltham tells it to shut up and come"},{t:480.17,x:"back later. Also no, because that is who Keltham is in another world,"},{t:484.58,x:"on a basic level, and even if he later decides he was wrong about some"},{t:488.94,x:"things that won't poof him into an random average dath ilani."},{t:492.13,x:"It is much less horrible than dath ilan where people can die forever if their"},{t:497.42,x:"brains are destroyed - not having that argument because in her heart she suspects she'd lose"},{t:502.78,x:"it, probably a similar percentage of people manage to go to Abaddon and get eaten."},{t:508.53,x:"And because having arguments isn't sexy. What to say, then,"},{t:513.82,x:"though. \"Well, I've heard more unrealistic ambitions.\""},{t:517.28,x:"\"Who is it that has me beat on this metric and how?"},{t:520.64,x:"I may have to adjust my aim upwards.\""},{t:522.88,x:"\"Some people are planning to run the Starstone as soon as they can fly and"},{t:527.84,x:"become a god or die trying!!\""},{t:529.76,x:"\"Nah, I'm more ambitious than that. Some people succeed at running the Starstone,"},{t:533.68,x:"right? And yet your world's still an enormous messy mess of messiness."},{t:537.04,x:"So fixing the world is obviously harder."},{t:539.29,x:"Plus, I mean, if you're going to die and go to an afterlife anyways,"},{t:543.35,x:"why wouldn't you run the Starstone? How does that even take ambition and not just"},{t:548,x:"plain old opportunism?\""},{t:549.09,x:"\"The people who die running the Starstone don't always go to the afterlives."},{t:554.55,x:"They usually do, but - every once in a while, one or two percent,"},{t:558.43,x:"they're just gone. No one knows what the difference is."},{t:561.48,x:"It's not the chanciest chance you could take but - I'd just die,"},{t:565.95,x:"personally.\""},{t:566.37,x:"\"Yeah, I haven't really been thinking about it because I reflexively decided that it was"},{t:572,x:"a Keeper sort of question but - I had a thing happen to me that was"},{t:575.75,x:"supposed to obliterate my own consciousness, and here I am."},{t:578.25,x:"It kind of suggests that maybe - people are in enough different places that there's always"},{t:582.69,x:"some of them left, whatever happens to them."},{t:585.15,x:"By the end of my biological lifespan I'll probably have the most expensive intelligence headband"},{t:590.24,x:"and the most expensive Owl's Wisdom headband, and maybe then I'll be able to think"},{t:595.64,x:"about that sensibly even if there's no Keepers around."},{t:597.94,x:"And then decide whether I want to go to the afterlife here that I seem"},{t:601.58,x:"to be headed for, or if I want to optimize for Neutral Evil,"},{t:605.03,x:"so I can go on to whatever place comes next in the sequence whose zero"},{t:610.21,x:"is dath ilan and whose first successor is Golarion.\""},{t:613.31,x:"\"I - - that doesn't make any sense to me but I guess it wouldn't."},{t:617.35,x:"I am - not very willing to trade off definitely not dying -"},{t:620.7,x:"against many other things.\""},{t:621.97,x:"\"Woulda said the same, before I died in a plane crash that couldn't possibly have"},{t:626.24,x:"failed to utterly obliterate my brain. I'm pretty sure I remember my head being ripped"},{t:630.66,x:"off my neck in the crash, before I found myself in Golarion instead."},{t:634.24,x:"I'm sure that sounds like small potatoes to your own standards of what people come"},{t:638.17,x:"back from, but where I come from it was supposed to be permanent.\""},{t:641.2,x:"\"And it wasn't.\" \"Dying in a plane crash is something that you'd expect to obliterate"},{t:645.12,x:"every brain of every copy of you, across all the branches of branching time inside"},{t:650.75,x:"the universe as conventionally understood. If there was still some of me left after that"},{t:656.09,x:"-\" \"Well, it's suggestive of some weird things being true."},{t:659.91,x:"That would then, by shaky extrapolation, go on being true if something else happened that"},{t:665.7,x:"would otherwise obliterate my presence within Golarion as conventionally understood.\""},{t:669.61,x:"\"But I'm not actually going to try to figure it out without more intelligence and"},{t:673.71,x:"wisdom headbands after I'm older, if those are actual options here."},{t:676.62,x:"Handing that job to your future self seems like the equivalent of saying to wait"},{t:681.67,x:"and ask a Keeper.\""},{t:683.22,x:"- nod. \"My working theory has been that Asmodeus - grabbed a copy somehow or something -"},{t:689.95,x:"which would have been fantastically expensive but maybe still the best way to explain to"},{t:695.96,x:"us what we're doing wrong. I don't know if that changes any of your reasoning"},{t:700.76,x:"or if it's just true that some other god somewhere else might be grabbing people"},{t:705.67,x:"from Abaddon.\""},{t:706.67,x:"\"Well, the obvious thought is that your universe is my universe's physics plus magic,"},{t:711.33,x:"and can see my universe from here, and by mediocrity is probably part of a"},{t:715.64,x:"vast lattice containing lots of other universes that can see my universe,"},{t:719,x:"and then this universe is one that's visible from universes that look like this universe"},{t:723.29,x:"plus even more magic, and maybe mostly when somebody dies in Abaddon nothing happens,"},{t:727.86,x:"but there's a vast number of double magical universes and some tiny fraction of those"},{t:732.14,x:"have a god or a glitch or a whatever that materializes another copy of the"},{t:736.38,x:"person who just got eaten.\" \"Assuming they get eaten quickly,"},{t:739.14,x:"and not by their minds getting chewed up a bit at a time so that"},{t:743.36,x:"their consciousness turns into a small painful simple thing before it ends."},{t:747.68,x:"There's a disease like that in dath ilan, that slowly degrades your consciousness if you"},{t:752.86,x:"let it run until it kills you, taking away your memories year by year."},{t:756.86,x:"People usually go into cryonic suspension immediately if they find out they have it."},{t:761.09,x:"I also need to know more about Abaddon, besides solving metaphysics,"},{t:765.09,x:"before I start treating Abaddon as an exit route.\""},{t:768.29,x:"\"Seems worth noting though that if the gods also think that's how Abaddon works,"},{t:772.35,x:"that the people who end there just wake up someplace else the same as I"},{t:776.71,x:"did, it could explain why the gods aren't treating it as more of an emergency.\""},{t:781,x:"\"I think Asmodeus has expended a fair number of resources to make sure everyone headed"},{t:785.7,x:"there is offered the choice of Hell instead?"},{t:788.5,x:"But I don't know if that's because He considers Abaddon-death an emergency or because He"},{t:794.35,x:"wants them in Hell instead. I ...have never heard it's slow but I haven't asked,"},{t:800.22,x:"either - if people die brain damaged in this world they're normal in the next one,"},{t:805.33,x:"the soul remembers more...\""},{t:806.67,x:"\"Yeah, but just because there's somebody walking around who remembers being the person who got"},{t:811.67,x:"damaged and then got better, doesn't mean that, from a first-person perspective,"},{t:815.67,x:"if you get damaged enough to forget who you are,"},{t:819,x:"then that experiencer mostly experiences becoming you again."},{t:821.67,x:"That's why people go into cryonic suspension right away if they get Memory Degrading Disorder."},{t:827.2,x:"Sure, future tech might be enough to read back the memories you lost,"},{t:832.28,x:"but that doesn't mean that you experience turning back into you after you've simplified and"},{t:836.48,x:"shrunk to the point where you can't tell yourself apart from a lot of other"},{t:841,x:"people with Memory Degrading Disorder. You might experience turning into somebody else instead.\""},{t:845.33,x:"This language is really not suited to discussing this subject matter,"},{t:849.25,x:"but then, it's not much suited to discussing anything else either."},{t:853.19,x:"\"- huh, I'm not sure that's what I care about?"},{t:856.7,x:"If I got slowly tortured out of having distinctly-me experiences but a bunch of copies"},{t:862.26,x:"of me from before that were still around I don't think I'd be very upset"},{t:867.81,x:"about that? I haven't considered this very much, maybe to dath ilani people it's obvious"},{t:873.29,x:"why I should care about that more than about whether there's still a me.\""},{t:877.79,x:"Blue and orange. \"I would in fact be quite upset about any Kelthams being slowly"},{t:882.61,x:"tortured out of having distinctly-me experiences, even if I was one of the ones who"},{t:887.75,x:"survived unharmed. I may be selfish but not to the point of intertemporal conflicts with"},{t:892.56,x:"my own copies from a few minutes earlier!\""},{t:895.01,x:"- Carissa is not sure she understands that objection thoroughly enough to be sure her reasons"},{t:900.29,x:"for not minding aren't very Chelish! \"I mean, I expect I would find being tortured"},{t:906,x:"aversive, it's in the definition, but the thing that makes torture-which-makes-me-no-longer-distinctly-me far far far worse"},{t:915.33,x:"than torture which doesn't have that effect is that then the things I think of"},{t:920.33,x:"as Carissa don't exist anymore at all."},{t:922.78,x:"And if Carissa will keep existing no matter what but some threads of her end"},{t:928.65,x:"I ...don't understand why I'd mind. Maybe I'd mind if I understood.\""},{t:933.35,x:"\"Yeah, that - makes some sense -\" \"Sorry. It's just that the thing you said sounded a"},{t:939.22,x:"bit - similar to an argument my mother once tried on me -"},{t:942.25,x:"about how a further implication of selfishness was that I shouldn't care about what happened"},{t:946,x:"to the Keltham of tomorrow, because he was a slightly different person from me,"},{t:949.86,x:"so screw him - and I'm finally in the region that's supposed to be Evil,"},{t:953.86,x:"now, but then you said that you didn't care about -"},{t:957.33,x:"and it just sounded like - sorry.\" \"This all probably doesn't sound very romantic-escalatory,"},{t:962.57,x:"does it? Sorry bout that, I was somewhat better at dates in dath ilan when"},{t:966.86,x:"I knew all the conventions. My respect for you being the woman who decided to"},{t:971.52,x:"fling herself on the sharp kitchen knife of my early learning experiences.\""},{t:975.97,x:"- Carissa's going to not touch that because once again she's not sure that the thing"},{t:981.18,x:"Keltham's pointing at is not a true thing about Cheliax she's supposed to be hiding."},{t:986.12,x:"How to flirt back, though. \"I can flirt with people who have -"},{t:990.62,x:"magic items for it, can read your face so closely they might as well be"},{t:995.83,x:"able to read your mind, who have magic that does more than Splendour -"},{t:999.78,x:"I have done that, though not very much, because I tried not to get in"},{t:1004.5,x:"over my head, at the Worldwound, there wasn't anything there worth getting in over my"},{t:1009.8,x:"head for - but I want you, see, you think like no one in this universe"},{t:1015.2,x:"and it feels - possible that I could think like that too,"},{t:1019.45,x:"not after the centuries of perfecting it'll take me to be Contessa Lrilatha but,"},{t:1025.18,x:"like, next year, sooner if I can squeeze a headband out of somebody,"},{t:1029.21,x:"and - I want you, so you don't actually have to be good at flirting,"},{t:1033.32,x:"unless you yourself get in the mood by flirting deftly at people,"},{t:1037.14,x:"in which case I suppose you had better get good at it.\""},{t:1040.9,x:"Keltham leans in to her and grins, broadly, even if she maybe can't see it."},{t:1045.1,x:"\"Well, thanks for taking all the uncertainty and plot tension out of our flirting,"},{t:1049.25,x:"then. Where I come from there's enough distinct books on romantic theory to fill this"},{t:1053,x:"house's library ten times over, and most of them would say that just giving away"},{t:1056.87,x:"the ending makes it be less fun, but right now my experiences would seem to"},{t:1061.23,x:"be falsifying that. I don't think that cuddling you on a roof and looking up"},{t:1065.67,x:"at the stars is even slightly less fun if I know I can't fail.\""},{t:1070.33,x:"\"Well, you could fail at the planet-sized ambitions, maybe we can get enough plot tension"},{t:1075.13,x:"out of that. And there is still the question of who will win the sexual"},{t:1079.7,x:"varieties contest, though I have to say I'm optimistic.\""},{t:1082.91,x:"\"Not betting I'll win, but not giving up without any fight."},{t:1086.91,x:"And by the way, things would be different if I had access to my own"},{t:1092,x:"world's technology, just saying.\""},{t:1093.33,x:"\"Is there sex technology? That's delightful, actually."},{t:1095.64,x:"We will have to fix things up enough that we too can have sex technology."},{t:1100.25,x:"- don't tell me what the sex technology does, I want to try to guess.\""},{t:1105.24,x:"\"I don't even know what 1% of 0.1% of all the sex technology does,"},{t:1110.28,x:"just the incredibly basic stuff that's in almost every cuddleroom and that everyone gets training"},{t:1115,x:"in how to use. But if you imagine something, I can probably take a pretty"},{t:1119.28,x:"good guess as to whether it existed."},{t:1121.21,x:"Using the simple rule that, if it sounds possible to our technology level,"},{t:1124.79,x:"somebody somewhere has done it, and if it doesn't sound possible,"},{t:1128.2,x:"there's still a 70% chance somebody has done it.\""},{t:1131.8,x:"\"Sex in midair.\""},{t:1133,x:"\"Probability 1. Giant windpits, people going up very high in aeroplanes and jumping out and"},{t:1138.03,x:"having sex on the way down, people getting into orbit around the planet and having"},{t:1142.17,x:"sex there.\""},{t:1142.63,x:"\" - wouldn't jumping out of airplanes kill you, without magic -\""},{t:1146.24,x:"\"Nah, somebody,\" in pre-Screened history but he's trying to call less attention to that,"},{t:1151.28,x:"\"just thought for another couple of minutes and figured out how to survive it without"},{t:1155.25,x:"magic. I'm pretty sure we do a lot of stuff you imagine takes magic."},{t:1158.75,x:"For jumping out of airplanes, you fold up a giant cloth into a backpack and"},{t:1162.71,x:"when you're getting near the ground, you unfold it and it catches the air and"},{t:1167,x:"slows your fall. I've been trying to figure out whether some people's home cuddlerooms have"},{t:1172.15,x:"midair sex equipment, like, just 2%-rich people, not 0.1%-rich people who can put whole wind"},{t:1177.5,x:"pits in their cuddlerooms. Maybe a possible method there would be to wear metal bands"},{t:1181.5,x:"and put lightning-magnets in the ceiling that hovered you by pulling on the metal,"},{t:1185.32,x:"but I don't know if the math works on that without doing more math.\""},{t:1188.94,x:"The cloth thing does not at all sound like it would work."},{t:1192.84,x:"\"Cuddlerooms are - sex dungeons, except named adorably because no one is a sadist?\""},{t:1197.95,x:"\"Like, the room of your house where you have sex?"},{t:1201.61,x:"Dungeon sounds sort of like whip but as a spatial place,"},{t:1205.16,x:"so I don't think dath ilani would have sex wherever that is.\""},{t:1209.03,x:"\"Normal peoples' houses have one room. Rich peoples' houses have several rooms but still,"},{t:1214.19,x:"you have sex in your bedroom usually, unless you're into weird things like sex on"},{t:1219.67,x:"tables. Rich people who like tying people up and hitting them in ways beds do"},{t:1224.67,x:"not natively enable might have a sex dungeon."},{t:1227.74,x:"I have never heard of a cuddle room and it translates as -"},{t:1232.43,x:"indulgent in a bizarre direction -\""},{t:1234.29,x:"\"Yeah, well, if you have an economy that can make more stuff per person,"},{t:1238.29,x:"they also buy larger houses to contain all that stuff."},{t:1241.14,x:"This place we're currently staying is larger than my parents' house by a factor of"},{t:1245.56,x:"10, but only because they were work-focused people who didn't have enough different hobbies that"},{t:1250.25,x:"they'd want that many separate rooms. My parents could in fact have afforded a house"},{t:1254,x:"this size, though they couldn't have afforded to fill it all up with things we'd"},{t:1258.05,x:"consider expensive.\" \"So yes, separate rooms for sex, because you own stuff that optimizes sleep"},{t:1263.3,x:"and stuff that optimizes sex and they are almost entirely not the same stuff for"},{t:1267.47,x:"anything larger-scale than a small pillow.\" \"I have been trying to figure out where in"},{t:1271.73,x:"a bedroom you'd have sex, because the bedrooms here do not have anything that looks"},{t:1275.73,x:"to me like a good surface for having sex on."},{t:1278.4,x:"It is now occurring to me that people here probably have sex on the things"},{t:1282.79,x:"you call beds, and then change the cloth outer surfaces of the bed,"},{t:1286.83,x:"and then go to sleep there.\""},{t:1288.69,x:"\"Yes? - magicking the sheets rather than changing them, but yes."},{t:1292,x:"Is there some reason not to do that?\""},{t:1294.67,x:"\"It's - kind of icky from a dath ilani perspective."},{t:1297.48,x:"But maybe that's just because we wouldn't have magic for -"},{t:1300.44,x:"clearing the room's air afterwards and so on?"},{t:1302.81,x:"It's just odd to think of doing something that is intrinsically and rightfully messy in"},{t:1306.83,x:"the nice clean place where you sleep."},{t:1308.63,x:"If this place has spare bedrooms not being used, I might ask to have one"},{t:1312.49,x:"of those for my cuddleroom. Kind of a group resource,"},{t:1315.86,x:"really, under the circumstances.\""},{t:1317.14,x:"\"I am sure you can request a cuddle room if you want one."},{t:1321.52,x:"Tragically we will not be able to see the confused face of whoever authorizes resources"},{t:1327.24,x:"for this project.\""},{t:1328.33,x:"\"Magic doesn't do capture of still and moving images?\""},{t:1331.33,x:"\"They won't make the face if we might be watching!!!!\""},{t:1334.67,x:"\"Chelish version of dignity, like being cheerful in a classroom setting?\""},{t:1339.15,x:"\" - yeah. More centrally this than the cheerfulness in class thing,"},{t:1343.94,x:"I think. Not - communicating with your emotions or expressions anything you wouldn't consciously decide to"},{t:1351.38,x:"communicate with your words. If they wouldn't send you a reply saying \"sure,"},{t:1356.33,x:"but I think that's extremely weird of you\", and they wouldn't,"},{t:1360.45,x:"then they also won't make a \"that's extremely weird\" face where you can see it.\""},{t:1365.91,x:"\"There is some really basic thing here about social equilibria which I'm missing,"},{t:1369.8,x:"and under other circumstances I'd delay it for later but I'm worried that I will"},{t:1374,x:"somehow do something that Cheliax considers not just undignified but a catastrophic negative indicator,"},{t:1379.48,x:"if I don't figure it out.\" \"Meanwhile in dath ilan,"},{t:1383,x:"there is famous motion-capture of, like, the head Keeper for the entire planet looking surprised"},{t:1388.33,x:"on being told experimental results, because it's way, way, way beneath her dignity to pretend"},{t:1393.43,x:"that she's not surprised when in fact she is surprised.\""},{t:1396.91,x:"\"But, I mean, if everybody here knows that people are -"},{t:1400.33,x:"faking things, as we'd see it - then it's not even a failed attempt at deception"},{t:1405.33,x:"because everybody knows what's actually happening so it's not even deceptive and there is some"},{t:1410.03,x:"very odd equilibrium here that I am not getting at all.\""},{t:1413.45,x:"\"I think that if someone was very emotionally expressive in a situation where Chelish people"},{t:1419.71,x:"generally don't do emotional communication then we might think they were -"},{t:1424.52,x:"immature, or not fully in control of themselves, or - trying to make a demand via"},{t:1430.24,x:"the emotional expressiveness, the way you might do exaggerated emotions to make fun of someone"},{t:1435.33,x:"or make a point to a very small child or to make it impossible for"},{t:1440.95,x:"people to engage with anything else... people are capable of adjusting for other people being"},{t:1447.04,x:"from other places, though, and you're not emotionally expressive to a degree where it has"},{t:1452.23,x:"come up already...\""},{t:1453.27,x:"\"But then your -\" Taldane, of course, does not contain the word for signaling-equilibrium."},{t:1457.88,x:"\"I mean, I get how it's often advantageous to conceal information,"},{t:1461.4,x:"there's all kinds of -\" Taldane does not contain a word meaning 'zero-sum interaction'."},{t:1466.24,x:"\"There's situations where you do worse if the other person does better,"},{t:1470.2,x:"like, negotiating prices, you wouldn't want somebody bargaining with you to know your -\""},{t:1474.88,x:"Taldane doesn't have the word true-reserve-price. \"The lowest price you'd actually accept,"},{t:1479.62,x:"if it's lower than they'd expect for some reason."},{t:1482.35,x:"So concealment, sure, in cases where the other person knows you might be hiding something"},{t:1486.38,x:"but what matters is that they don't know exactly what you're hiding."},{t:1489.78,x:"But when it comes to uniformly faking false signals - I mean,"},{t:1493.04,x:"if everyone, like all the students in the classroom, is always wearing a cheerful expression"},{t:1497.67,x:"even when they're not cheerful, that's not a -\" Taldane lacks every single component word of"},{t:1503,x:"the compound term meaning 'an equilibrium where signals preserve their overt semantics given the incentives"},{t:1508.94,x:"for both signal-senders and signal-receivers'. Keltham hates this language, and he'd ask how anybody ever"},{t:1515,x:"thinks in it, but the answer, of course, is that they don't."},{t:1518.96,x:"\"If everyone has incentives to fool people by smiling when they're sad and frowning when"},{t:1523.76,x:"they're happy, pretty soon a smile means sadness and a frown means happiness and nobody"},{t:1528.77,x:"gets fooled anymore. If everybody acts cheerful when they're not actually cheerful,"},{t:1532.92,x:"people will figure that out. It fooled me but only on literally the first day"},{t:1538.12,x:"after I arrived here from another dimension without that custom,"},{t:1541.58,x:"and this cannot reasonably be the -\" Taldane doesn't have the word average-use-case."},{t:1546.45,x:"\"Normal way that events happen every day."},{t:1548.9,x:"So you have some incredibly weird equilibrium going, of a form where everyone is acting"},{t:1554,x:"cheerful even though they know nobody will actually think they are cheerful."},{t:1558,x:"Students are behaving in a way we'd interpret as being about an..."},{t:1562.71,x:"adversarial... information-hiding... interaction, with their teachers, they're sending a constant first-order-misleading cheerfulness signal that everybody"},{t:1569.18,x:"knows is misleading. And I don't understand why or how you got there."},{t:1573.33,x:"In dath ilan, well before that point, a thousand Very Serious People would show up"},{t:1578,x:"and start arguing that Civilization was doing something silly and needed to wake up and"},{t:1582.77,x:"snap out of it.\" \"And I know that the answer is probably weird and alien"},{t:1586.65,x:"and unLawful by my standards, and complicated, and is going to take a while to"},{t:1590.62,x:"explain, and not be particularly sexy, so when it comes to that whole general issue"},{t:1595.28,x:"we should maybe just pick it up tomorrow."},{t:1597.76,x:"Except that there's this one upcoming special case that seems important,"},{t:1601.07,x:"which is that if I hug you in some way that makes you feel horribly"},{t:1605.52,x:"uncomfortable, and Chelish dignity calls for you to send a first-order-misleading constant signal that you're"},{t:1610.43,x:"having a great time, and I'm supposed to already know that's exactly what you'd do"},{t:1614.71,x:"if something was wrong, and then I'm meant to act in some complicated way that"},{t:1619.29,x:"makes that whole equilibrium not suck for you and that incentivizes people in your position"},{t:1623.64,x:"to keep sending the first-order-misleading signal, well, in reality, I just got here from another"},{t:1629.05,x:"plane, and I do not, in fact, have the faintest inkling of -"},{t:1632.48,x:"do you see why I'm trying to ask about this even though we were in"},{t:1636.62,x:"the middle of being romantically escalatory?\""},{t:1638.17,x:"\" - because you're adorable. - sorry, that's not - I do understand what you're saying,"},{t:1644.35,x:"I think. It is not the case that you're supposed to read my signals and"},{t:1649.57,x:"assume my acting happy means I am actually sad and need something different."},{t:1655.18,x:"I think you're - right, that this is an extremely complicated conversation that's going to take"},{t:1662.33,x:"us half a day, in the general case, and - - and there is a person who"},{t:1667.5,x:"could've arrived here instead of Keltham who'd run into that problem tonight,"},{t:1672.5,x:"if, say, he said \"I want to sleep with Carissa or I'll go somewhere else"},{t:1678.67,x:"with the Lawfulness Revolution\", and this was obviously worth it to me but not because"},{t:1684.22,x:"it was going to be good for me, just because I was going to get"},{t:1687.56,x:"rich by more than it was going to be bad for me."},{t:1690.22,x:"That person would get smiled at and the smile wouldn't be any information actually."},{t:1694.57,x:"But - but you're going to tell me that a dath ilani,"},{t:1698.86,x:"even an Evil one, wouldn't do that, aren't you, I don't know why they wouldn't"},{t:1703.8,x:"do that but you wouldn't do that -\""},{t:1705.85,x:"\"I'd tell her that I'd trade sexual favors for getting equity in the revolutionary startup,"},{t:1710.67,x:"if she honestly wanted to make that trade, but I wouldn't -"},{t:1714.33,x:"expect her to ask for a false signal from me,"},{t:1717.5,x:"and then be fooled by it? Like, if she handed me a script for scripted"},{t:1721.25,x:"sex work, I'd run her script if she paid me enough,"},{t:1724,x:"but I'd expect her to know. Or if it came to lying to somebody and"},{t:1727.75,x:"telling her that I'm attracted to her, in hopes that she'll give me more equity,"},{t:1731.5,x:"not that I'd expect she would, but - if that works at all -"},{t:1734.5,x:"it works because the world is mostly full of people who don't lie about that,"},{t:1738.25,x:"and those people laid the groundwork for me to fool her successfully,"},{t:1741.28,x:"so those people built something and I'm stomping on it and breaking it and profiting"},{t:1745.48,x:"from that, and that is something I find genuinely repellent."},{t:1748.27,x:"I want to build my own things and profit from them."},{t:1751.27,x:"And in this world I don't see how it works at all,"},{t:1754.55,x:"because if it's the expected practice you just know I'm probably lying.\""},{t:1757.86,x:"\" - okay I have - some idea of how I would bridge this but it will take"},{t:1763.63,x:"at least an hour and make you very sad."},{t:1766.56,x:"But also you - might actually prefer to have gotten it all before you try having"},{t:1771.36,x:"sex with people here? Not - because you're going to hurt me -"},{t:1774.86,x:"if you're just worried that you'll hurt me tonight I can just give you my"},{t:1779.73,x:"word that I'll tell you in unambiguous words if I need anything -"},{t:1784.09,x:"but because -\" Because her own brain is now screaming with confusion,"},{t:1788.11,x:"about what the Asmodean version of that is, and she's getting ahead of herself trying"},{t:1793.63,x:"to figure that out but also it's her job which Asmodeus gave her,"},{t:1798.73,x:"how can she think about anything else - \"I can't predict you very well."},{t:1803.38,x:"I wish I could. I want to understand you as badly as I've wanted anything"},{t:1808.58,x:"in my life. But I ...think I predict...that you'd want to know first."},{t:1813.62,x:"Even if it means we spend the whole night being sad."},{t:1817.75,x:"But I'm not - I don't like giving advice as confused as I am right now"},{t:1822.53,x:"-\""},{t:1822.72,x:"Keltham leans back into her, hoping it's the right thing to do."},{t:1826.05,x:"\"A dath ilani in your position asks for time to think,"},{t:1829.07,x:"gathers her thoughts, probably asks more questions to narrow things down about my own state"},{t:1833.52,x:"of mind. She thinks of questions to ask me, privately makes her predictions about how"},{t:1838.18,x:"I'll answer, and then asks. She isn't in a rush to arrive at answers,"},{t:1842.64,x:"even short-term answers about whether or not to give a piece of advice,"},{t:1846.82,x:"if she's not right in the middle of trying to -"},{t:1850.04,x:"operate dangerous machinery with a time limit.\""},{t:1852.1,x:"\"We don't need to rush on larger timescales either."},{t:1854.86,x:"You told me how this subplot ends, I can survive if it takes a little"},{t:1859,x:"longer.\""},{t:1859.17,x:"- what if she wants to be Lawful Neutral because Keltham is -"},{t:1863,x:"Well, then she'll die and go to Hell and not get to do anything cool,"},{t:1867.88,x:"so she should pick a less stupid want that isn't based on a crush on"},{t:1872.25,x:"a teenager. It doesn't feel like it's because of the crush on the teenager,"},{t:1876.55,x:"it feels like the other way around."},{t:1878.77,x:"\"I'd like some time to think,\" she says quietly."},{t:1881.76,x:"\"Hence the rooftop with the pretty stars.\""},{t:1884.43,x:"Keltham will fall quiet after that."},{t:1886.71,x:"They're very pretty stars. She will die horribly if she turns Keltham against Cheliax."},{t:1892.05,x:"Anything that's true of all Golarion isn't that, and she's pretty sure that nowhere in"},{t:1897.83,x:"Golarion do powerful men want the women they're sleeping with to communicate needing things to"},{t:1904.08,x:"happen differently. She will die horribly and worse afterwards if she ends up wholly persuaded"},{t:1910.37,x:"of Keltham's worldview and not suitable as an instrument of Hell anymore."},{t:1915.54,x:"But her first foolish foray into Keltham's worldview was, Asmodeus thought,"},{t:1922,x:"worthwhile, so - maybe she has a bit of slack there,"},{t:1925.5,x:"presumably he wouldn't have expended those resources for someone who couldn't find the right path"},{t:1930.82,x:"even when she was trying. And she hasn't gone and asked the cleric her questions"},{t:1936.27,x:"yet. Maybe it's okay to try to understand the dath ilan way of thinking and"},{t:1941.14,x:"separately try to understand the Asmodean one and then integrate them."},{t:1944.7,x:"If she can't understand dath ilan she won't be able to do her job."},{t:1949.57,x:"Keltham will at some point figure stuff out - not all the stuff,"},{t:1953.75,x:"but some stuff. He's already figured some things out just from the fact Chelish students"},{t:1959,x:"conceal distress during class. The ideas that look right next to each other,"},{t:1963.73,x:"to him, are different; they won't be able to predict which things are right next"},{t:1969.29,x:"to other things unless they get really good at dath ilan-ness themselves."},{t:1973.86,x:"To him, 'people smile during class' was right next to 'you might not actually want"},{t:1979.17,x:"to be here', not that he has the imagination to have realized the ways she"},{t:1984.22,x:"might be here if she didn't want to be."},{t:1986.96,x:"It feels like there are walls closing in from all sides,"},{t:1990.47,x:"and - \"Might someone consult a Keeper?\" she says."},{t:1994.2,x:"\"If they were dath ilani and very stuck and very confused even about the origins"},{t:2000,x:"of their own confusion.\""},{t:2001.33,x:"Keltham has likewise been staring up at the stars, pondering whether or not he regrets"},{t:2006.27,x:"his life choices. He thinks not? He's still going to have sex with Carissa later"},{t:2010.36,x:"and this way he also got to act cool and all-wise in front of her."},{t:2014.73,x:"\"I was about to say that most dath ilani have options short of paying to"},{t:2018.55,x:"talk to a Keeper, like, they have some regular friends who are older than them"},{t:2022.66,x:"and smarter than them. Then I remembered you are in fact already one of the"},{t:2026.79,x:"smartest people on this planet, and also you've been talking to an alien."},{t:2030.61,x:"So yeah, in dath ilan, Governance would make Keeper assistance available to anyone in a"},{t:2035.43,x:"position like that, and the dath ilani would probably escalate directly to them instead of"},{t:2039.88,x:"messing around, because there's no point in..."},{t:2041.77,x:"there's no point in tapping a nail with a tiny hammer when you can hit"},{t:2046.03,x:"it with an enormous hammer instead.\" That's not the original proverb and it doesn't make"},{t:2051.21,x:"any sense as he tried to culturally translate it, but,"},{t:2054.66,x:"eh, hopefully the idea came across."},{t:2056.46,x:"\"Okay. I think I need to go ask a cleric of Asmodeus for help."},{t:2060.54,x:"There's one on site and I was, in fact, told to talk to them if"},{t:2064.69,x:"I wanted to, and I was going to in the morning,"},{t:2067.65,x:"but I might be sufficiently stuck right now that I ought not to wait.\""},{t:2071.32,x:"\"Makes sense. If they say something that doesn't make any sense in Lawful terms,"},{t:2074.94,x:"you could come back and ask me about that, and then I could say something"},{t:2078.97,x:"else that makes you confused again, and you could go back and forth three times"},{t:2083.19,x:"and then stop.\""},{t:2084.03,x:"\"Or drag them up here and make them talk to you themself while I hide"},{t:2088.06,x:"in a corner and listen.\""},{t:2089.35,x:"\"That would be cheating! And cheating is technique!\""},{t:2091.42,x:"\"Maybe the way to straighten everything up is for you to march off directly to"},{t:2096.05,x:"Hell and find a door to knock on and invite Asmodeus to debate you Himself.\""},{t:2102.18,x:"(Almost definitely heretical???? Will accept appropriate punishments.)"},{t:2105.22,x:"\"Think that's a joke but I'm not entirely sure?"},{t:2109.22,x:"I wouldn't expect to win a debate about any facts where I disagreed with a"},{t:2113.93,x:"god. Also I thought the running hypothesis was that Asmodeus can't just tell you or"},{t:2118.2,x:"even his clerics all the key truths, and has no better options than pointing you"},{t:2121.9,x:"at an alien who has no idea of the local non-necessary facts,"},{t:2124.79,x:"but who at least has a lock on some universal validities..."},{t:2128.29,x:"you know, I feel a small sense of progress about being able to say that,"},{t:2134,x:"and having it make sense to you, where it wouldn't have made sense to you"},{t:2138.57,x:"yesterday.\""},{t:2138.87,x:"\"Yes, sorry, that was a joke. Asmodeus can only sort of talk to the most"},{t:2143.74,x:"powerful devils who can only sort of convey things to the lesser devils who can"},{t:2148.43,x:"only sort of convey them to us."},{t:2151.43,x:"People do go march into Hell seeking help or advice or something sometimes but this"},{t:2157.64,x:"just means bothering people like Contessa Lrilatha, there's no Asmodeus to march up to no"},{t:2162.73,x:"matter how many doors you knock on."},{t:2165.17,x:"I ....think I understand a lot of things a lot better than yesterday,"},{t:2170.65,x:"and I'm delighted about it, but also it means there are all these new confusions"},{t:2176,x:"in places I was accustomed to relying on.\""},{t:2178.67,x:"\"Yeah, I'm not sure I can say that I've been there,"},{t:2182,x:"but I suspect that I've recently been nearby."},{t:2184,x:"If that's already happening to you, then we really need enough Owl's Wisdom cleric spells"},{t:2187.75,x:"to touch everyone else in the research group once per week,"},{t:2190.9,x:"or a Wisdom headband to pass around."},{t:2192.94,x:"I suspect it's a bad idea to let people learn a ton of dath ilani"},{t:2197,x:"technique and only then hit them with their first Owl's Wisdom.\""},{t:2200.5,x:"\"Seems like it might be, yeah. And if you can schedule your heretical realizations then"},{t:2205.4,x:"you can also schedule your time with a cleric for right after.\""},{t:2209.6,x:"\"I don't think 'heretical' translated at all, it sounded like -"},{t:2213.16,x:"false, only actually it's some different property a proposition can have than falsity,"},{t:2217.84,x:"but still a bad one - maybe information-with-negative-value flavored?\""},{t:2222.19,x:"Because of course Taldane doesn't have 'infohazard' either..."},{t:2226.12,x:"also, 'heretical' doesn't mean 'infohazardous' or it would've translated, but if it's neither false nor"},{t:2231.34,x:"an infohazard then what could possibly make a proposition be a bad one..."},{t:2235.38,x:"maybe it harms society but not the bearer?"},{t:2238.18,x:"But that should've translated as collective-infohazard, if the info has local benefit but negative externalities."},{t:2244.33,x:"This pathway of communications difficulties may be finite but it sure is a long-ass one."},{t:2250,x:"\"It's, uh, there are a bunch of known ways that human brains misbehave when trying"},{t:2254.85,x:"to understand Asmodeanism, and if you find yourself convinced of one of them you're supposed"},{t:2259.77,x:"to go get it straightened out, they're false but not false like they say different"},{t:2265.89,x:"things about how Hell works than normal Asmodeanism does, more false like....they use a bunch"},{t:2271.86,x:"of invalid steps to get to the conclusion, which only happens to be correct because"},{t:2276.76,x:"society, which is using a different reasoning process, handed it to them,"},{t:2281.33,x:"and if they get too attached to their invalid stepping and run off to do"},{t:2287.29,x:"further derivations those'll be just straightforwardly false.\""},{t:2290.59,x:"\"Particular flavor of invalidity, then.\" The word 'heresy' doesn't really sound like that,"},{t:2294.84,x:"though? Well, Keltham can just avoid using the word until he actually understands it."},{t:2299.23,x:"\"I create a polite social affordance for you to run off now to the cleric,"},{t:2302.61,x:"in hopes of getting everything sorted out in time to do something else with your"},{t:2306,x:"day,\" such as Keltham, \"or to stay and look up at the stars for longer."},{t:2310.57,x:"Just say which.\""},{t:2311.43,x:"\"I will run off. And try not to take too long about it.\""},{t:2315.03,x:"\"Don't rush enough that you might end up with the wrong answer."},{t:2318.13,x:"I'm not a runaway machine that's going to chew through eight houses if you take"},{t:2322,x:"an extra minute to think.\" \"I'd offer to stay up here for a set period"},{t:2326.22,x:"of time, but I don't have my small wearable time-telling device."},{t:2329.59,x:"Maybe I'll just look up and think for a bit,"},{t:2332.67,x:"then head on down if I notice myself not wanting to be on the roof.\""},{t:2337.67,x:"\"Sounds good.\" Why is he so adorable."},{t:2340,x:"And she scurries down the stairs and - where is the cleric in charge here going"},{t:2344.57,x:"to be - in the temple, presumably - Halfling slave #958245 \"Broom\":"},{t:2346.39,x:"That was a very interesting and very confusing conversation and Broom is not quite sure"},{t:2351.33,x:"what to make of it. He hesitates between continuing to watch 'Keltham',"},{t:2355.47,x:"or trying to overhear the woman's conversation with an Asmodean cleric..."},{t:2359.53,x:"...Broom is not entirely sure what he can get away with around here,"},{t:2363.7,x:"just yet. Broom is curious about the conversation that will happen with the cleric;"},{t:2367.9,x:"it is not clear that Broom needs to know in order to do his new"},{t:2372.33,x:"job. Broom imagines trying to explain to Aspexia Rugatonn why he thought he needed to"},{t:2376.71,x:"listen to the conversation with the cleric, if he gets caught doing that."},{t:2381.8,x:"Broom thinks he would rather not have that conversation."},{t:2385.4,x:"Broom shall, on reflection, continue to watch the human boy who somehow managed to talk"},{t:2389.93,x:"himself out of scoring with the older human girl, after being told it was a"},{t:2393.93,x:"sure thing, and who doesn't look particularly regretful about the fact."},{t:2397.45,x:"Is this boy the person who ends the world?"},{t:2400.6,x:"He doesn't look it, but he also seems very very very alien and very hard"},{t:2409.15,x:"to understand, and might do unexpected things because of that."},{t:2416.5,x:""}];
+const BEATS=[{t:0,s:'staircase',v:'narrator'},{t:24,s:'staircase',v:'carissa'},{t:55,s:'staircase',v:'carissa'},{t:110,s:'handhold',v:'keltham'},{t:165,s:'handhold',v:'carissa'},{t:219,s:'towers',v:'keltham'},{t:274,s:'nightsky',v:'keltham'},{t:322,s:'nightsky',v:'keltham'},{t:372,s:'aliens',v:'keltham'},{t:427,s:'aliens',v:'keltham'},{t:476,s:'aliens',v:'keltham'},{t:524,s:'starstone',v:'keltham'},{t:579,s:'multiverse',v:'keltham'},{t:629,s:'crash',v:'keltham'},{t:679,s:'crash',v:'keltham'},{t:727,s:'multiverse',v:'keltham'},{t:777,s:'multiverse',v:'keltham'},{t:832,s:'identity_torture',v:'keltham'},{t:881,s:'identity_torture',v:'keltham'},{t:931,s:'identity_torture',v:'carissa'},{t:985,s:'flirting',v:'carissa'},{t:1033,s:'flirting',v:'keltham'},{t:1088,s:'flirting',v:'keltham'},{t:1143,s:'flirting',v:'keltham'},{t:1191,s:'cuddle',v:'keltham'},{t:1242,s:'cuddle',v:'carissa'},{t:1296,s:'cuddle',v:'carissa'},{t:1351,s:'signaling',v:'keltham'},{t:1399,s:'signaling',v:'keltham'},{t:1455,s:'signaling',v:'keltham'},{t:1504,s:'signaling',v:'keltham'},{t:1559,s:'signaling',v:'keltham'},{t:1607,s:'signaling',v:'keltham'},{t:1661,s:'signaling',v:'carissa'},{t:1717,s:'signaling',v:'keltham'},{t:1772,s:'leanback',v:'carissa'},{t:1820,s:'leanback',v:'keltham'},{t:1874,s:'crush',v:'keltham'},{t:1922,s:'crush',v:'carissa'},{t:1975,s:'crush',v:'keltham'},{t:2029,s:'confusion',v:'keltham'},{t:2077,s:'confusion',v:'keltham'},{t:2126,s:'confusion',v:'keltham'},{t:2181,s:'confusion',v:'keltham'},{t:2236,s:'signaling',v:'keltham'},{t:2284,s:'confusion',v:'keltham'},{t:2340,s:'staircase',v:'carissa'},{t:2395,s:'watchers',v:'elias'},{t:2415,s:'watchers',v:'narrator'}];
+
+/* ===================== ASH / EMBERS ===================== */
+const cv=document.getElementById('ash'), ctx=cv.getContext('2d');
+let parts=[], W=0,H=0, accent={r:216,g:162,b:74};
+function size(){ const r=cv.getBoundingClientRect(); W=cv.width=r.width; H=cv.height=r.height; }
+addEventListener('resize',size); size();
+function spawn(){ return {x:Math.random()*W, y:H+10, vy:-(0.2+Math.random()*0.55), vx:(Math.random()-0.5)*0.2, r:Math.random()*1.7+0.4, life:0, max:H*(0.5+Math.random()*0.6), tw:Math.random()*6}; }
+for(let i=0;i<60;i++){ const p=spawn(); p.y=Math.random()*H; parts.push(p); }
+let ashPaused=false;
+function ash(t){
+  if(!ashPaused){
+    ctx.clearRect(0,0,W,H);
+    for(const p of parts){
+      p.y+=p.vy; p.x+=p.vx+Math.sin(t/1000+p.tw)*0.14; p.life++;
+      const k=1-p.life/p.max;
+      if(p.life>p.max||p.y<-10){ Object.assign(p,spawn()); continue; }
+      const a=Math.max(0,k)*0.8*(0.6+0.4*Math.sin(t/300+p.tw));
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7);
+      ctx.fillStyle=`rgba(${accent.r},${accent.g},${accent.b},${a})`; ctx.shadowBlur=8; ctx.shadowColor=ctx.fillStyle; ctx.fill();
+    }
+    ctx.shadowBlur=0;
+  }
+  requestAnimationFrame(ash);
+}
+requestAnimationFrame(ash);
+function hexRgb(h){const m=h.replace('#','');return {r:parseInt(m.slice(0,2),16),g:parseInt(m.slice(2,4),16),b:parseInt(m.slice(4,6),16)};}
+
+/* ===================== DOM ===================== */
+const SPEEDS=[1,1.25,1.5,0.75];
+let speed=1, curScene=null, curCue=-1, curBeat=-1, capsOn=true;
+const frame=document.getElementById('frame');
+const introEl=document.getElementById('intro');
+const capEl=document.getElementById('cap');
+const labelEl=document.getElementById('label');
+const knameEl=document.getElementById('kname');
+const ttlEl=document.getElementById('ttl');
+const ksigUse=document.getElementById('ksig-use');
+const barEl=document.getElementById('bar');
+const beatEl=document.getElementById('beat');
+const playIcon=document.getElementById('playicon');
+const ccBtn=document.getElementById('cc');
+const audio=document.getElementById('player');
+const dropZone=document.getElementById('drop');
+const audioInput=document.getElementById('audiofile');
+const loadedBox=document.getElementById('loaded');
+const fnameEl=document.getElementById('fname');
+const durEl=document.getElementById('dur');
+const beginBtn=document.getElementById('begin');
+
+/* scene crossfade (Stardust-style) — beatEl shows the clock, so setScene only writes the title */
+function setScene(name){
+  if(name===curScene) return;
+  curScene=name;
+  document.querySelectorAll('.scene').forEach(el=>el.classList.remove('active','go'));
+  const el=document.querySelector(`.scene[data-scene="${name}"]`);
+  if(el){ el.classList.add('active'); requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add('go'))); }
+  ttlEl.textContent=SCENE_TITLES[name]||'';
+}
+function setSpeaker(v){
+  const c=CHARS[v]; if(!c) return;
+  knameEl.textContent=c.name; ksigUse.setAttribute('href','#'+c.sigil);
+  document.documentElement.style.setProperty('--accent', c.color); accent=hexRgb(c.color);
+}
+/* caption: blank text hides it; honours the CC toggle */
+function setCaption(text){
+  if(!capsOn || !text){ capEl.classList.remove('show'); return; }
+  capEl.classList.remove('show');
+  setTimeout(()=>{ if(!capsOn) return; capEl.textContent=text; capEl.classList.add('show'); },170);
+}
+function applyCaps(){ const c=CUES[curCue]; setCaption(c?c.x:''); }
+function setIcon(p){ playIcon.innerHTML = p?'<path d="M6 5h4v14H6zM14 5h4v14h-4z"></path>':'<path d="M8 5v14l11-7z"></path>'; }
+
+/* ===================== CLOCK + SYNC ===================== */
+function fmt(s){ if(!isFinite(s)||s<0) s=0; s=Math.floor(s); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+function findIdx(arr,time){ let lo=0,hi=arr.length-1,res=0; while(lo<=hi){ const m=(lo+hi)>>1; if(arr[m].t<=time){res=m;lo=m+1;} else hi=m-1; } return res; }
+function sync(){
+  const ct=audio.currentTime||0, d=audio.duration;
+  const bi=findIdx(BEATS,ct);
+  if(bi!==curBeat){ curBeat=bi; setScene(BEATS[bi].s); setSpeaker(BEATS[bi].v); }
+  const ci=findIdx(CUES,ct);
+  if(ci!==curCue){ curCue=ci; setCaption(CUES[ci].x); }
+  if(d){ barEl.style.width=Math.min(100,(ct/d*100))+'%'; }
+  beatEl.textContent=fmt(ct)+(d?(' / '+fmt(d)):'');
+}
+let rafId=0;
+function loop(){ if(audio.paused) return; sync(); rafId=requestAnimationFrame(loop); }
+
+/* ===================== AUDIO EVENTS ===================== */
+audio.addEventListener('timeupdate', sync);
+audio.addEventListener('seeked', ()=>{ curCue=-1; sync(); });
+audio.addEventListener('loadedmetadata', ()=>{ durEl.textContent='· '+fmt(audio.duration); beatEl.textContent='0:00 / '+fmt(audio.duration); });
+audio.addEventListener('play', ()=>{ frame.classList.add('playing'); document.body.classList.remove('paused'); ashPaused=false; setIcon(true); labelEl.classList.add('show'); sync(); loop(); });
+audio.addEventListener('pause', ()=>{ setIcon(false); document.body.classList.add('paused'); ashPaused=true; });
+audio.addEventListener('ended', finish);
+
+/* ===================== UPLOAD ===================== */
+const AUDIO_EXT=/\.(mp3|m4a|wav|ogg|oga|aac|flac|opus|weba|mp4)$/i;
+function loadAudioFile(file){
+  if(!file) return false;
+  if(file.type && !file.type.startsWith('audio/') && !AUDIO_EXT.test(file.name)) return false;
+  try{ if(audio.src) URL.revokeObjectURL(audio.src); }catch(_){}
+  audio.src=URL.createObjectURL(file); audio.playbackRate=speed; audio.load();
+  fnameEl.textContent=file.name; durEl.textContent='';
+  loadedBox.classList.add('show'); dropZone.classList.add('has');
+  beginBtn.disabled=false;
+  return true;
+}
+audioInput.addEventListener('change', e=>{ loadAudioFile(e.target.files[0]); });
+dropZone.addEventListener('click', ()=>audioInput.click());
+['dragenter','dragover'].forEach(ev=>dropZone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); dropZone.classList.add('drag'); }));
+['dragleave','dragend','drop'].forEach(ev=>dropZone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); if(ev!=='dragover') dropZone.classList.remove('drag'); }));
+dropZone.addEventListener('drop', e=>{
+  const files=[...(e.dataTransfer?e.dataTransfer.files:[])];
+  const aud=files.find(f=>f.type.startsWith('audio/')||AUDIO_EXT.test(f.name));
+  if(aud) loadAudioFile(aud);
+});
+
+/* ===================== PLAYBACK CONTROL ===================== */
+function startPlayback(){
+  if(!audio.src){ dropZone.classList.add('drag'); setTimeout(()=>dropZone.classList.remove('drag'),650); return; }
+  introEl.classList.remove('ended'); introEl.classList.add('gone');
+  if(audio.ended || (audio.duration && audio.currentTime>=audio.duration-0.05)){ audio.currentTime=0; curCue=-1; curBeat=-1; }
+  const p=audio.play(); if(p&&p.catch) p.catch(()=>{});
+}
+function finish(){
+  frame.classList.remove('playing'); setIcon(false);
+  introEl.classList.add('ended'); introEl.classList.remove('gone');
+}
+function seekToBeat(idx){ idx=Math.max(0,Math.min(BEATS.length-1,idx)); audio.currentTime=Math.max(0,BEATS[idx].t)+0.02; curCue=-1; sync(); }
+function nextBeat(){ seekToBeat(findIdx(BEATS,audio.currentTime)+1); }
+function prevBeat(){ const ci=findIdx(BEATS,audio.currentTime); seekToBeat((audio.currentTime-BEATS[ci].t>1.4)?ci:ci-1); }
+function togglePlay(){ if(audio.paused) audio.play().catch(()=>{}); else audio.pause(); }
+function toggleCaps(){ capsOn=!capsOn; ccBtn.classList.toggle('off',!capsOn); ccBtn.setAttribute('aria-pressed',String(capsOn)); applyCaps(); }
+
+beginBtn.addEventListener('click', startPlayback);
+document.getElementById('play').addEventListener('click', ()=>{ if(!introEl.classList.contains('gone')){ startPlayback(); return; } togglePlay(); });
+document.getElementById('next').addEventListener('click', nextBeat);
+document.getElementById('prev').addEventListener('click', prevBeat);
+document.getElementById('restart').addEventListener('click', ()=>{ audio.currentTime=0; curCue=-1; curBeat=-1; sync(); if(audio.paused) audio.play().catch(()=>{}); });
+document.getElementById('speed').addEventListener('click', e=>{ speed=SPEEDS[(SPEEDS.indexOf(speed)+1)%SPEEDS.length]; audio.playbackRate=speed; e.currentTarget.textContent=String(speed)+'×'; });
+ccBtn.addEventListener('click', toggleCaps);
+document.getElementById('prog').addEventListener('click', e=>{ if(!audio.duration) return; const r=e.currentTarget.getBoundingClientRect(); const frac=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)); audio.currentTime=frac*audio.duration; curCue=-1; sync(); });
+addEventListener('keydown', e=>{ if(!introEl.classList.contains('gone')) return;
+  if(e.code==='Space'){ e.preventDefault(); togglePlay(); }
+  else if(e.code==='ArrowRight'){ e.preventDefault(); nextBeat(); }
+  else if(e.code==='ArrowLeft'){ e.preventDefault(); prevBeat(); }
+  else if(e.key==='c'||e.key==='C'){ e.preventDefault(); toggleCaps(); } });
+addEventListener('beforeunload', ()=>{ try{ if(audio.src) URL.revokeObjectURL(audio.src); }catch(_){} });
+
+/* cast list */
+(function(){ const cast=document.getElementById('cast'); if(!cast) return;
+  for(const key of ['narrator','carissa','keltham','elias']){
+    const c=CHARS[key], d=document.createElement('div'); d.className='c';
+    d.innerHTML=`<div class="ic" style="color:${c.color}"><svg><use href="#${c.sigil}"/></svg></div><div><div class="nm">${c.name.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div><div class="tg">${c.tag}</div></div>`;
+    cast.appendChild(d);
+  } })();
+
+/* initial backdrop + idle state */
+document.getElementById('speed').textContent='1×';
+setScene(BEATS[0].s); setSpeaker(BEATS[0].v); setIcon(false);
+beatEl.textContent='0:00';
+
+</script>
+</body>
+</html>
