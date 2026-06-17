@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planecrash — Corrigibility · an animated reading</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Spectral:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0608; --ink:#f0e6d8; --muted:#9a8a84;
+  --accent:#d8a24a; --gold:#d8a24a; --blood:#c2152f; --ember:#ff8a3c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:radial-gradient(120% 90% at 50% 6%, #1a0c10 0%, var(--bg) 55%, #050304 100%);
+  color:var(--ink); font-family:"Spectral",Georgia,serif; overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+.paused .anim, .paused .scene *{animation-play-state:paused !important}
+
+/* ---------- cinematic stage ---------- */
+#stage{position:fixed; inset:0; display:flex; align-items:center; justify-content:center}
+.frame{
+  position:relative; width:min(100vw,177.7vh); height:min(100vh,56.25vw);
+  overflow:hidden; background:#06040a; box-shadow:0 0 140px rgba(0,0,0,.8) inset, 0 30px 90px rgba(0,0,0,.6);
+}
+#ash{position:absolute; inset:0; z-index:1; pointer-events:none}
+
+.scene{position:absolute; inset:0; z-index:2; opacity:0; transition:opacity 1.5s ease; pointer-events:none}
+.scene.active{opacity:1}
+.scene svg{position:absolute; inset:0; width:100%; height:100%}
+/* a soft vignette over scenes */
+#vignette{position:absolute; inset:0; z-index:4; pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 42%, transparent 52%, rgba(5,3,4,.55) 100%);}
+
+/* ---------- speaker / beat label ---------- */
+#label{position:absolute; left:4.4%; top:7.5%; z-index:6; opacity:0; transform:translateY(8px);
+  transition:opacity .8s ease, transform .8s ease; max-width:54%}
+#label.show{opacity:1; transform:none}
+#label .kicker{display:flex; align-items:center; gap:9px; margin-bottom:5px}
+#label .ksig{width:26px; height:26px; color:var(--accent); transition:color .6s ease; flex:0 0 auto}
+#label .ksig svg{width:100%;height:100%}
+#label .kname{font-family:"Cinzel",serif; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
+  font-size:clamp(9px,1.05vw,13px); color:var(--accent); transition:color .6s ease}
+#label .ttl{font-family:"Cinzel",serif; font-weight:700; line-height:1.04; letter-spacing:.005em;
+  font-size:clamp(20px,3.4vw,50px); color:#fff; text-shadow:0 2px 26px rgba(0,0,0,.7)}
+
+/* ---------- caption ---------- */
+#cap-wrap{position:absolute; left:0; right:0; bottom:8.5%; z-index:6; display:flex; justify-content:center;
+  padding:0 6%; pointer-events:none}
+#cap{position:relative; max-width:min(1080px,90%); text-align:center;
+  font-size:clamp(14px,1.85vw,25px); line-height:1.45; font-weight:400; letter-spacing:.004em; color:var(--ink);
+  text-shadow:0 2px 20px rgba(0,0,0,.95), 0 0 60px rgba(0,0,0,.85);
+  opacity:0; transform:translateY(10px); transition:opacity .5s ease, transform .5s ease}
+#cap.show{opacity:1; transform:none}
+#cap.dlg{font-style:italic}
+#cap::before{content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:135%; height:340%; z-index:-1; pointer-events:none;
+  background:radial-gradient(closest-side, rgba(6,4,6,.82), rgba(6,4,6,.4) 60%, transparent 100%)}
+
+/* ---------- intro ---------- */
+#intro{position:absolute; inset:0; z-index:20; overflow-y:auto;
+  background:radial-gradient(80% 80% at 50% 40%, rgba(26,12,16,.55), rgba(4,3,4,.95));
+  transition:opacity 1.1s ease}
+#intro.gone{opacity:0; pointer-events:none}
+.intro-in{min-height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; gap:2.2vh; padding:5vh 7vw 7vh}
+#intro .eyebrow{font-family:"Cinzel",serif; font-size:clamp(9px,1.05vw,13px); letter-spacing:.5em; text-transform:uppercase; color:var(--gold)}
+#intro h1{font-family:"Cinzel",serif; font-weight:700; letter-spacing:.02em; font-size:clamp(40px,9vw,118px); line-height:.92;
+  background:linear-gradient(180deg,#fff 0%, #e9c277 52%, #b3122b 132%); -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent; filter:drop-shadow(0 8px 50px rgba(179,18,43,.32))}
+#intro .sub{font-size:clamp(13px,1.55vw,19px); font-style:italic; color:#cbb9a9; max-width:44ch; line-height:1.55; font-weight:300}
+.cast{display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:11px 18px; width:100%; max-width:760px; margin-top:1vh}
+.cast .c{display:flex; align-items:center; gap:11px; text-align:left; padding:7px 10px; border:1px solid rgba(216,162,74,.13); border-radius:9px; background:rgba(255,255,255,.012)}
+.cast .ic{width:32px;height:32px;flex:0 0 auto} .cast .ic svg{width:100%;height:100%}
+.cast .nm{font-family:"Cinzel",serif; font-size:12px; letter-spacing:.02em; line-height:1.15}
+.cast .tg{font-style:italic; font-size:11px; color:var(--muted); margin-top:1px}
+#begin{margin-top:1vh; display:inline-flex; align-items:center; gap:.7em; font-family:"Cinzel",serif; font-weight:600;
+  font-size:clamp(14px,1.5vw,17px); letter-spacing:.06em; color:#1a0c0a; padding:.85em 2.1em; border:none; border-radius:100px;
+  cursor:pointer; background:linear-gradient(180deg,#f0cd86,#d8a24a);
+  box-shadow:0 12px 44px rgba(216,162,74,.34), inset 0 0 0 1px rgba(255,255,255,.25); transition:transform .25s, box-shadow .25s}
+#begin:hover{transform:translateY(-2px) scale(1.02); box-shadow:0 18px 56px rgba(216,162,74,.5)}
+#begin .tri{width:0;height:0;border-left:11px solid #1a0c0a;border-top:7px solid transparent;border-bottom:7px solid transparent}
+#intro .note{font-size:11px;color:#6a5a56;letter-spacing:.03em}
+#intro .src{font-size:11px;color:#5e4f4b;max-width:52ch;line-height:1.6}
+
+/* ---------- controls ---------- */
+#controls{position:absolute; left:0; right:0; bottom:0; z-index:30; display:flex; align-items:center; gap:13px;
+  padding:13px 4.4%; background:linear-gradient(0deg, rgba(5,3,5,.85), transparent);
+  opacity:0; transition:opacity .4s ease; pointer-events:none}
+.frame.playing #controls{opacity:1; pointer-events:auto}
+.btn{background:rgba(240,230,216,.05); border:1px solid rgba(216,162,74,.28); color:var(--ink); border-radius:50%;
+  cursor:pointer; flex:0 0 auto; display:grid; place-items:center; transition:background .2s,border-color .2s,transform .15s}
+.btn:hover{background:rgba(216,162,74,.16); border-color:var(--accent)} .btn:active{transform:scale(.94)}
+.btn svg{fill:var(--ink)}
+.btn.lg{width:46px;height:46px} .btn.lg svg{width:18px;height:18px}
+.btn.sm{width:38px;height:38px} .btn.sm svg{width:14px;height:14px}
+#speed{width:auto;min-width:46px;height:38px;border-radius:20px;padding:0 12px;font-family:"Spectral",serif;font-style:italic;font-size:13px}
+#prog{flex:1; height:3px; border-radius:3px; background:rgba(240,230,216,.13); position:relative; cursor:pointer}
+#bar{position:absolute; left:0;top:0;bottom:0; width:0; background:linear-gradient(90deg,var(--accent),var(--blood)); border-radius:3px; transition:width .5s ease, background .8s ease}
+#beat{font-family:"Cinzel",serif; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); min-width:120px; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:24%}
+
+/* ---------- shared animation helpers ---------- */
+.spin{transform-origin:center;animation:spin 60s linear infinite}
+.spin-s{transform-origin:center;animation:spin 120s linear infinite}
+.spin-r{transform-origin:center;animation:spin 80s linear infinite reverse}
+.spin-f{transform-origin:center;animation:spin 9s linear infinite}
+.spin-vf{transform-origin:center;animation:spin 2.4s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.breathe{transform-origin:center;animation:breathe 6s ease-in-out infinite}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.flick{transform-origin:bottom center;animation:flick 1.4s ease-in-out infinite}
+@keyframes flick{0%,100%{opacity:.9;transform:scaleY(1) scaleX(1)}40%{opacity:1;transform:scaleY(1.1) scaleX(.94)}70%{opacity:.85;transform:scaleY(.96) scaleX(1.04)}}
+.sway{transform-origin:top center;animation:sway 4s ease-in-out infinite}
+@keyframes sway{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+.tw{animation:tw 3s ease-in-out infinite}
+@keyframes tw{0%,100%{opacity:.2}50%{opacity:1}}
+.pulse{animation:pulse 3.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.25}50%{opacity:.95}}
+.pulse-f{animation:pulse 1.6s ease-in-out infinite}
+.drift{animation:drift 26s ease-in-out infinite}
+@keyframes drift{0%{transform:translate(0,0)}50%{transform:translate(2.4%,-2%)}100%{transform:translate(0,0)}}
+@keyframes floatUp{0%{transform:translateY(34px);opacity:0}16%{opacity:.9}100%{transform:translateY(-58px);opacity:0}}
+.flow{stroke-dasharray:8 16; animation:flow 2.2s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-48}}
+.draw{stroke-dasharray:600; stroke-dashoffset:600; animation:draw 5s ease-in-out infinite alternate}
+@keyframes draw{to{stroke-dashoffset:0}}
+.beam{animation:beam 1.7s ease-in-out infinite}
+@keyframes beam{0%,100%{opacity:.12}50%{opacity:.6}}
+
+/* one-shot scene-entry effects (fire when scene gets .go) */
+.flash{opacity:0}
+.scene.active.go .flash{animation:flashK 1.7s ease-out .3s forwards}
+@keyframes flashK{0%{opacity:0}12%{opacity:.85}100%{opacity:0}}
+.burst{opacity:0;transform-origin:center}
+.scene.active.go .burst{animation:burstK 3s cubic-bezier(.1,.7,.3,1) .3s forwards}
+@keyframes burstK{0%{opacity:0;transform:scale(.08)}14%{opacity:1}100%{opacity:0;transform:scale(4.2)}}
+.stamp{opacity:0;transform-origin:center}
+.scene.active.go .stamp{animation:stampK 1.2s cubic-bezier(.2,1.4,.4,1) .4s forwards}
+@keyframes stampK{0%{opacity:0;transform:scale(2.4) rotate(-12deg)}60%{opacity:1;transform:scale(1) rotate(0)}100%{opacity:1;transform:scale(1)}}
+.fall{opacity:0;transform-origin:center}
+.scene.active.go .fall{animation:fallK 3.4s ease-in 1s forwards}
+@keyframes fallK{0%{opacity:0;transform:translateY(-260px) scale(.6)}20%{opacity:1}82%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(10px) scale(2.2)}}
+.rise{transform-origin:center;animation:rise 7s ease-in-out infinite alternate}
+@keyframes rise{from{transform:translateY(8px)}to{transform:translateY(-8px)}}
+
+@media (max-width:640px){ #beat{display:none} #label{max-width:78%} }
+
+/* ---- audio upload UI ---- */
+#drop{margin:1.6vh auto .2vh;width:min(560px,90%);border:1.6px dashed rgba(216,162,74,.42);border-radius:14px;padding:24px 20px 20px;cursor:pointer;background:rgba(255,255,255,.015);transition:border-color .2s, background .2s, transform .2s}
+#drop:hover{border-color:var(--gold);background:rgba(216,162,74,.06)}
+#drop.drag{border-color:var(--gold);background:rgba(216,162,74,.14);transform:scale(1.012)}
+#drop.has{border-style:solid;border-color:rgba(79,230,205,.5);background:rgba(79,230,205,.05)}
+#drop .dz-ic{width:30px;height:30px;color:var(--gold);opacity:.9;margin-bottom:6px}
+#drop.has .dz-ic{color:#4fe6cd}
+#drop .dz-msg{font-family:"Spectral",serif;font-style:italic;font-size:15px;color:#e9dcc8;letter-spacing:.01em}
+#drop .dz-sub{font-size:11px;color:#7c6a64;margin-top:7px;letter-spacing:.02em}
+#loaded{display:none;align-items:center;justify-content:center;gap:9px;margin:11px auto 2px;font-size:12.5px;color:#cbb9a9}
+#loaded.show{display:flex}
+#loaded .ck{color:#4fe6cd;font-weight:700}
+#loaded .fn{font-family:"Cinzel",serif;letter-spacing:.02em;color:#f0e6d8;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#loaded #dur{color:#7c6a64}
+#begin[disabled]{opacity:.38;cursor:not-allowed;filter:grayscale(.45);box-shadow:none}
+#begin[disabled]:hover{transform:none}
+#intro.ended #drop, #intro.ended #loaded, #intro.ended .cast{display:none}
+audio{display:none}
+/* captions toggle */
+#cc{font-family:"Cinzel",serif;font-weight:600;letter-spacing:.06em;font-size:12px;position:relative}
+#cc.off{opacity:.5}
+#cc.off::after{content:"";position:absolute;left:18%;right:18%;top:50%;height:1.5px;background:currentColor;transform:rotate(-12deg);opacity:.85}
+</style>
+</head>
+<body>
+<div id="stage"><div class="frame" id="frame">
+  <canvas id="ash"></canvas>
+
+  <!-- ===================== SHARED DEFS ===================== -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <radialGradient id="gEmber" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff2cf"/><stop offset="34%" stop-color="#ff9a3c"/>
+      <stop offset="72%" stop-color="#c2152f" stop-opacity=".55"/><stop offset="100%" stop-color="#3a0810" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gGold" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff"/><stop offset="45%" stop-color="#f2cd7e"/><stop offset="100%" stop-color="#d8a24a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gBlood" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff6a72"/><stop offset="46%" stop-color="#b3122b" stop-opacity=".7"/><stop offset="100%" stop-color="#b3122b" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gWhite" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff"/><stop offset="55%" stop-color="#dfeaf2" stop-opacity=".9"/><stop offset="100%" stop-color="#a9c2d6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gCyan" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#eafcff"/><stop offset="48%" stop-color="#46c6ff" stop-opacity=".8"/><stop offset="100%" stop-color="#1d6fb0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gTeal" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#dffff6"/><stop offset="50%" stop-color="#3fd9c0" stop-opacity=".8"/><stop offset="100%" stop-color="#1f8f88" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gFloor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1c0e12"/><stop offset="100%" stop-color="#06040a"/>
+    </linearGradient>
+    <linearGradient id="gBeam" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#cfe fff" stop-opacity="0"/><stop offset="50%" stop-color="#aee6ff" stop-opacity=".5"/><stop offset="100%" stop-color="#aee6ff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="soft2"><feGaussianBlur stdDeviation="16"/></filter>
+
+    <!-- speaker sigils -->
+    <symbol id="sg-book" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M24 12c-5-4-12-4-16-2v26c4-2 11-2 16 2 5-4 12-4 16-2V10c-4-2-11-2-16 2z"/><path d="M24 12v28"/></symbol>
+    <symbol id="sg-mask" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M10 6c2 4 1 8-1 10M38 6c-2 4-1 8 1 10"/><path d="M9 16c3-3 9-4 15-4s12 1 15 4c1 9-4 22-15 26C13 38 8 25 9 16z"/><path d="M17 22l5 3M31 22l-5 3M21 33c2 1 4 1 6 0"/></symbol>
+    <symbol id="sg-flame" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M24 4c2 8-6 11-6 18 0 0-4-2-4-7-5 5-7 11-7 16a17 17 0 0034 0c0-9-6-16-11-20-1 4-4 5-6 3 3-4 6-9 6-13z"/></symbol>
+    <symbol id="sg-eye" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M4 24c6-9 13-13 20-13s14 4 20 13c-6 9-13 13-20 13S10 33 4 24z"/><circle cx="24" cy="24" r="6"/><path d="M40 30c4 2 5 6 4 9"/></symbol>
+    <symbol id="sg-penta" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><circle cx="24" cy="24" r="20"/><polygon points="24,7 33.5,38 8.4,18.8 39.6,18.8 14.5,38"/></symbol>
+    <symbol id="sg-broom" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M30 6L18 30"/><path d="M12 42c0-8 3-12 8-13 5-1 9 1 11 4-3 6-10 10-19 9z"/><path d="M22 28l6 4"/></symbol>
+    <symbol id="sg-hex" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><polygon points="24,5 40,14 40,34 24,43 8,34 8,14"/><circle cx="24" cy="24" r="3" fill="currentColor"/><path d="M24 8v8M40 16l-7 4M40 32l-7-4M24 40v-8M8 32l7-4M8 16l7 4"/></symbol>
+    <symbol id="sg-gem" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M14 8h20l8 11-18 21L6 19z"/><path d="M6 19h36M14 8l10 11 10-11M24 19v21"/></symbol>
+    <symbol id="sg-oracle" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><circle cx="24" cy="24" r="7"/><path d="M24 4v6M24 38v6M4 24h6M38 24h6M10 10l4 4M34 34l4 4M38 10l-4 4M10 38l4-4"/></symbol>
+
+    <!-- a reusable robed-figure -->
+    <symbol id="figure" viewBox="0 0 120 200"><path d="M60 18a20 20 0 0 1 20 20c0 9-4 13-4 20l14 120c1 8-9 14-30 14s-31-6-30-14L44 58c0-7-4-11-4-20a20 20 0 0 1 20-20z"/></symbol>
+    <symbol id="child" viewBox="0 0 80 120"><circle cx="40" cy="22" r="16"/><path d="M40 40c14 0 22 8 22 20l4 46c0 8-12 12-26 12s-26-4-26-12l4-46c0-12 8-20 22-20z"/></symbol>
+  </defs></svg>
+
+  <!-- ===================== SCENES ===================== -->
+
+  <!-- chamber : the Forbiddance -->
+    <!-- SCENES (episode 34) -->
+
+  <!-- zon_kuthon : foul is fair -->
+  <div class="scene" data-scene="zon_kuthon">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#08060a"/>
+      <radialGradient id="void34"><stop offset="0" stop-color="#3a1830" stop-opacity=".6"/><stop offset="1" stop-color="#08060a" stop-opacity="0"/></radialGradient>
+      <circle cx="700" cy="450" r="360" fill="url(#void34)" class="breathe" style="animation-duration:9s"/>
+      <!-- a chained, thorned figure in the void, head bowed, inverted -->
+      <g transform="translate(700 440)">
+        <use href="#figure" x="-56" y="-100" width="112" height="200" fill="#140810"/>
+        <!-- chains -->
+        <g fill="none" stroke="#5a4452" stroke-width="3" stroke-opacity=".8"><path d="M-90 -60q40 30 0 60M90 -60q-40 30 0 60M-70 100q40 -20 70 10M70 110q-40 -20 -70 0"/></g>
+        <g fill="#5a4452"><circle cx="-90" cy="-30" r="6"/><circle cx="90" cy="-30" r="6"/><circle cx="-40" cy="115" r="6"/><circle cx="40" cy="118" r="6"/></g>
+        <!-- thorns -->
+        <g stroke="#7a2840" stroke-width="2"><path d="M-30 -60l-14 -16M20 -50l16 -14M0 0l-18 8M10 40l16 6"/></g>
+      </g>
+      <!-- inverted triangle (inverted values) -->
+      <g transform="translate(700 300)"><polygon points="-40,-36 40,-36 0,36" fill="none" stroke="#a0306a" stroke-width="2.5" class="pulse"/></g>
+      <!-- the counterweight: a faint balance against Asmodeus -->
+      <g transform="translate(1240 440)" opacity=".5" stroke="#6a5a4a" stroke-width="3"><line x1="-110" y1="0" x2="110" y2="0"/><line x1="0" y1="-40" x2="0" y2="0"/><g transform="translate(-110 0)"><use href="#sg-penta" x="-26" y="-26" width="52" height="52" color="#ff8a3c"/></g><g transform="translate(110 0)"><polygon points="0,-26 8,-8 26,-6 12,8 16,26 0,16 -16,26 -12,8 -26,-6 -8,-8" fill="#a0306a"/></g></g>
+      <text x="800" y="800" text-anchor="middle" fill="#a06a84" font-family="Cinzel,serif" font-size="22" opacity=".7">Zon-Kuthon — foul is fair</text>
+    </svg>
+  </div>
+
+  <!-- nethys_mischief : hey, zon-kuthon... -->
+  <div class="scene" data-scene="nethys_mischief">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0810"/>
+      <!-- Nethys, the mad eye -->
+      <g transform="translate(420 440)"><ellipse rx="150" ry="80" fill="#140a1e" stroke="#b98cff" stroke-width="3"/><circle r="44" fill="url(#gCyan)" opacity=".3"/><circle r="22" fill="#1a1228" stroke="#cbb0ff" stroke-width="2"/><circle r="8" fill="#dff6ff" class="pulse-f"/></g>
+      <!-- a dark realm (Zon-Kuthon) on the right -->
+      <g transform="translate(1200 440)"><circle r="120" fill="#140810" stroke="#7a2840" stroke-width="2.5"/><g stroke="#7a2840" stroke-width="2" stroke-opacity=".6"><path d="M-60 -60l30 30M60 -60l-30 30M-60 60l30 -30M60 60l-30 -30"/></g></g>
+      <!-- the sly whisper-thread carrying mischief -->
+      <g stroke="#b98cff" stroke-width="2" stroke-dasharray="6 8" stroke-opacity=".6" class="flow" fill="none"><path d="M560 440C760 400 980 400 1080 430"/></g>
+      <!-- an impish spark -->
+      <g transform="translate(820 410)"><polygon points="0,-22 6,-6 22,-4 8,6 12,24 0,12 -12,24 -8,6 -22,-4 -6,-6" fill="#ffd27a" class="pulse-f"/></g>
+      <text x="800" y="760" text-anchor="middle" fill="#9a7ab0" font-family="Cinzel,serif" font-size="22" opacity=".7">it'd be hilarious if you sent some minions...</text>
+    </svg>
+  </div>
+
+  <!-- debrief : not a quick debrief -->
+  <div class="scene" data-scene="debrief">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0908"/>
+      <!-- a temple corridor receding -->
+      <g fill="#16120c"><polygon points="0,0 0,900 360,720 360,180"/><polygon points="1600,0 1600,900 1240,720 1240,180"/></g>
+      <g stroke="#2a2014" stroke-width="2"><path d="M360 180L1240 180M360 720L1240 720M520 240v420M1080 240v420M680 280v340M920 280v340"/></g>
+      <!-- a torch -->
+      <g transform="translate(560 320)"><path class="flick" d="M0 14c7-26-4-36 0-54 7 14 20 20 14 46 0 11-7 14-14 7z" fill="#ff8a3c"/><circle r="34" fill="url(#gEmber)" opacity=".35"/></g>
+      <!-- weary Carissa entering, shoulders low -->
+      <g transform="translate(800 540)"><use href="#figure" x="-46" y="-84" width="92" height="160" fill="#1a0d10"/><use href="#sg-flame" x="-22" y="-120" width="44" height="44" color="#ff5d6c" opacity=".7" class="flick"/></g>
+      <text x="800" y="800" text-anchor="middle" fill="#9a8a6a" font-family="Cinzel,serif" font-size="22" opacity=".7">not a nice quick twenty-minute debrief</text>
+    </svg>
+  </div>
+
+  <!-- the_abadar_muff : she muffed the recovery -->
+  <div class="scene" data-scene="the_abadar_muff">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0808"/>
+      <ellipse cx="800" cy="440" rx="360" ry="280" fill="url(#gGold)" opacity=".06" filter="url(#soft2)"/>
+      <!-- a hand letting the Abadar gem slip -->
+      <g transform="translate(620 360)" fill="#1a1410"><ellipse rx="50" ry="34"/><g stroke="#1a1410" stroke-width="18" stroke-linecap="round"><path d="M-30 24l-16 60M-8 32l-6 70M14 32l6 70M34 24l16 60"/></g></g>
+      <!-- the falling, cracking gem -->
+      <g transform="translate(760 600)"><use href="#sg-gem" x="-50" y="-50" width="100" height="100" color="#ffd27a"/><g stroke="#ff3a4a" stroke-width="3"><path d="M-10 -30l8 30 -14 24"/></g></g>
+      <g stroke="#caa86a" stroke-width="1.6" stroke-dasharray="4 8" stroke-opacity=".5" fill="none"><path d="M640 420C700 500 730 540 760 560"/></g>
+      <text x="800" y="760" text-anchor="middle" fill="#c2657a" font-family="Cinzel,serif" font-size="22" opacity=".7">on the Abadar thing, she muffed the recovery</text>
+    </svg>
+  </div>
+
+  <!-- practice_with_elias : practice, or elias hits you -->
+  <div class="scene" data-scene="practice_with_elias">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0709"/>
+      <ellipse cx="800" cy="450" rx="420" ry="300" fill="url(#gBlood)" opacity=".08" filter="url(#soft2)"/>
+      <!-- Carissa (left), bracing, with a quick-excuse bubble -->
+      <g transform="translate(520 470)"><use href="#figure" x="-50" y="-90" width="100" height="180" fill="#1a0d10"/></g>
+      <g transform="translate(360 320)" fill="none" stroke="#ff8a8f" stroke-width="2"><ellipse rx="110" ry="60"/><path d="M70 50l30 40 -10 -52" fill="#ff8a8f" stroke="none"/></g>
+      <text x="360" y="328" text-anchor="middle" fill="#ffb0b4" font-family="Cinzel,serif" font-size="22">excuse, fast!</text>
+      <!-- "Imaginary Keltham" / Elias (right) with a raised, measured strike -->
+      <g transform="translate(1080 470)"><use href="#figure" x="-50" y="-90" width="100" height="180" fill="#16202a"/></g>
+      <g stroke="#5fd0ff" stroke-width="5" stroke-linecap="round"><path d="M1020 400l-110 30"/></g>
+      <g transform="translate(900 430)"><circle r="20" fill="none" stroke="#ff5560" stroke-width="3" class="pulse-f"/></g>
+      <text x="800" y="790" text-anchor="middle" fill="#c2657a" font-family="Cinzel,serif" font-size="22" opacity=".7">come up with excuses, or Elias hits you</text>
+    </svg>
+  </div>
+
+  <!-- obscure_god : an obscure tian deity -->
+  <div class="scene" data-scene="obscure_god">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#08080c"/>
+      <!-- the near, obvious golden country (Abadar) -->
+      <g transform="translate(380 480)"><circle r="110" fill="url(#gGold)" opacity=".3"/><use href="#sg-gem" x="-60" y="-60" width="120" height="120" color="#ffd27a"/><rect x="-70" y="80" width="140" height="20" rx="4" fill="#3a2e18"/></g>
+      <text x="380" y="640" text-anchor="middle" fill="#caa86a" font-family="Cinzel,serif" font-size="18" opacity=".7">Abadar — right next door</text>
+      <!-- the misdirection arrow pointing away to a distant obscure star -->
+      <g stroke="#5fd0ff" stroke-width="3" stroke-dasharray="2 0" fill="none"><path d="M520 420C760 320 1000 300 1180 300"/></g>
+      <polygon points="1180,300 1156,292 1162,310" fill="#5fd0ff"/>
+      <g transform="translate(1240 290)"><polygon points="0,-30 8,-8 30,-6 12,8 18,30 0,18 -18,30 -12,8 -30,-6 -8,-8" fill="none" stroke="#9fb0ff" stroke-width="2" class="pulse"/><circle r="5" fill="#cfe0ff" class="pulse-f"/></g>
+      <text x="800" y="760" text-anchor="middle" fill="#7fb0d0" font-family="Cinzel,serif" font-size="22" opacity=".7">find him an obscure Tian deity</text>
+    </svg>
+  </div>
+
+  <!-- excuses : excuses that look like excuses -->
+  <div class="scene" data-scene="excuses">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0a0c"/>
+      <ellipse cx="800" cy="440" rx="380" ry="280" fill="url(#gWhite)" opacity=".04" filter="url(#soft2)"/>
+      <!-- a flimsy patched screen with visible seams (the excuse) -->
+      <g transform="translate(700 440)">
+        <rect x="-180" y="-150" width="360" height="300" rx="8" fill="#16161c" stroke="#5a6470" stroke-width="2"/>
+        <g stroke="#3a4250" stroke-width="2" stroke-dasharray="8 6"><path d="M-60 -150v300M70 -150v300M-180 -20h360M-180 70h360"/></g>
+        <!-- patches / tells -->
+        <g fill="none" stroke="#a08040" stroke-width="2"><rect x="-150" y="-120" width="60" height="40" rx="4"/><rect x="20" y="20" width="80" height="50" rx="4"/></g>
+      </g>
+      <!-- a magnifying eye seeing through it -->
+      <g transform="translate(1120 380)"><circle r="70" fill="none" stroke="#5fd0ff" stroke-width="4"/><line x1="50" y1="50" x2="110" y2="110" stroke="#5fd0ff" stroke-width="6" stroke-linecap="round"/><circle r="20" fill="#16202a" stroke="#bfeafa" stroke-width="2"/><circle r="6" fill="#dff6ff" class="pulse-f"/></g>
+      <text x="800" y="780" text-anchor="middle" fill="#7a8088" font-family="Cinzel,serif" font-size="22" opacity=".7">they look like excuses, to someone who knows</text>
+    </svg>
+  </div>
+
+  <!-- three_hits : three measured blows -->
+  <div class="scene" data-scene="three_hits">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0608"/>
+      <ellipse cx="800" cy="440" rx="380" ry="280" fill="url(#gBlood)" opacity=".14" filter="url(#soft2)"/>
+      <!-- three measured impact-marks in a row -->
+      <g fill="none" stroke-width="3">
+        <g transform="translate(460 440)"><circle r="30" stroke="#ff5560" class="pulse-f"/><circle r="60" stroke="#a0283c" stroke-opacity=".6"/><circle r="90" stroke="#5a1828" stroke-opacity=".4"/></g>
+        <g transform="translate(800 440)"><circle r="30" stroke="#ff5560" class="pulse-f" style="animation-delay:-.3s"/><circle r="60" stroke="#a0283c" stroke-opacity=".6"/><circle r="90" stroke="#5a1828" stroke-opacity=".4"/></g>
+        <g transform="translate(1140 440)"><circle r="30" stroke="#ff5560" class="pulse-f" style="animation-delay:-.6s"/><circle r="60" stroke="#a0283c" stroke-opacity=".6"/><circle r="90" stroke="#5a1828" stroke-opacity=".4"/></g>
+      </g>
+      <g fill="#ffb0b4" font-family="Cinzel,serif" font-size="40" text-anchor="middle"><text x="460" y="456">1</text><text x="800" y="456">2</text><text x="1140" y="456">3</text></g>
+      <text x="800" y="740" text-anchor="middle" fill="#c2657a" font-family="Cinzel,serif" font-size="22" opacity=".7">three hard, carefully measured blows</text>
+    </svg>
+  </div>
+
+  <!-- alignment_spells : spells to change alignment -->
+  <div class="scene" data-scene="alignment_spells">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#09080e"/>
+      <ellipse cx="800" cy="440" rx="380" ry="300" fill="url(#gWhite)" opacity=".04" filter="url(#soft2)"/>
+      <!-- a 3x3 alignment grid -->
+      <g transform="translate(800 440)">
+        <g fill="none" stroke="#4a5260" stroke-width="2"><rect x="-180" y="-180" width="360" height="360" rx="8"/><path d="M-60 -180v360M60 -180v360M-180 -60h360M-180 60h360"/></g>
+        <g font-family="Cinzel,serif" font-size="22" text-anchor="middle" fill="#8a94a4">
+          <text x="-120" y="-110">LG</text><text x="0" y="-110">NG</text><text x="120" y="-110">CG</text>
+          <text x="-120" y="10">LN</text><text x="0" y="10">N</text><text x="120" y="10">CN</text>
+          <text x="-120" y="130">LE</text><text x="0" y="130">NE</text><text x="120" y="130">CE</text>
+        </g>
+        <!-- a marker moving cell to cell (Atonement) -->
+        <rect x="-180" y="-180" width="120" height="120" rx="6" fill="url(#gCyan)" opacity=".4"><animate attributeName="x" values="-180;60;-60;-180" dur="6s" repeatCount="indefinite"/><animate attributeName="y" values="60;-180;60;60" dur="6s" repeatCount="indefinite"/></rect>
+      </g>
+      <text x="800" y="760" text-anchor="middle" fill="#7fb0d0" font-family="Cinzel,serif" font-size="22" opacity=".7">spells to change your alignment — Atonement</text>
+    </svg>
+  </div>
+
+  <!-- pay_the_girls : fucking pay the girls -->
+  <div class="scene" data-scene="pay_the_girls">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0808"/>
+      <ellipse cx="800" cy="440" rx="420" ry="300" fill="url(#gGold)" opacity=".06" filter="url(#soft2)"/>
+      <!-- the girls (small figures), young -->
+      <g fill="#1a0d10"><use href="#child" x="560" y="460" width="70" height="105"/><use href="#child" x="700" y="460" width="70" height="105"/><use href="#child" x="840" y="460" width="70" height="105"/></g>
+      <!-- a faint blood edge (their risk) -->
+      <g fill="#ff5560" opacity=".4"><circle cx="595" cy="450" r="3" class="pulse-f"/><circle cx="735" cy="450" r="3" class="pulse-f" style="animation-delay:-.5s"/><circle cx="875" cy="450" r="3" class="pulse-f" style="animation-delay:-1s"/></g>
+      <!-- coins being handed (pay them) -->
+      <g><circle r="14" fill="url(#gGold)" stroke="#ffd27a" stroke-width="2"><animateMotion dur="3s" repeatCount="indefinite" path="M1180 320L900 470"/></circle><circle r="14" fill="url(#gGold)" stroke="#ffd27a" stroke-width="2"><animateMotion dur="3.4s" repeatCount="indefinite" path="M1180 360L760 480"/></circle></g>
+      <text x="800" y="760" text-anchor="middle" fill="#caa86a" font-family="Cinzel,serif" font-size="22" opacity=".7">fucking pay the girls</text>
+    </svg>
+  </div>
+
+  <!-- ione_spell_list : ione's spell list -->
+  <div class="scene" data-scene="ione_spell_list">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#09070e"/>
+      <ellipse cx="800" cy="440" rx="380" ry="280" fill="url(#gCyan)" opacity=".05" filter="url(#soft2)"/>
+      <!-- Ione, the orderly oracle -->
+      <g transform="translate(380 420)"><circle r="80" fill="url(#gCyan)" opacity=".2"/><use href="#sg-eye" x="-56" y="-56" width="112" height="112" color="#8fd0ea"/></g>
+      <!-- a long spell-list scroll unrolling -->
+      <g transform="translate(960 440)">
+        <rect x="-260" y="-220" width="520" height="440" rx="10" fill="#16140e" stroke="#caa86a" stroke-width="2"/>
+        <g stroke="#7a6038" stroke-width="2" stroke-opacity=".6"><path d="M-220 -170h440M-220 -120h360M-220 -70h440M-220 -20h300M-220 30h440M-220 80h380M-220 130h440M-220 180h320"/></g>
+        <!-- a few highlighted entries -->
+        <g fill="#8fd0ea" opacity=".7"><circle cx="-240" cy="-170" r="5" class="tw"/><circle cx="-240" cy="30" r="5" class="tw" style="animation-delay:-1s"/><circle cx="-240" cy="130" r="5" class="tw" style="animation-delay:-2s"/></g>
+      </g>
+      <text x="800" y="780" text-anchor="middle" fill="#7fb0d0" font-family="Cinzel,serif" font-size="22" opacity=".7">Ione doesn't mind this part of her job</text>
+    </svg>
+  </div>
+
+  <!-- flee_with_him : if he flees, flee with him -->
+  <div class="scene" data-scene="flee_with_him">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#08090e"/>
+      <ellipse cx="800" cy="440" rx="420" ry="280" fill="url(#gCyan)" opacity=".05" filter="url(#soft2)"/>
+      <!-- a guided escape path -->
+      <g stroke="#5fd0ff" stroke-width="2.5" stroke-dasharray="10 10" stroke-opacity=".6" class="flow" fill="none"><path d="M200 620C500 560 700 460 1000 380 1180 332 1320 320 1420 320"/></g>
+      <!-- two figures fleeing together (cyan + red) -->
+      <g transform="translate(560 520)"><use href="#figure" x="-44" y="-80" width="88" height="150" fill="#16283a" transform="skewX(-8)"/></g>
+      <g transform="translate(660 520)"><use href="#figure" x="-44" y="-80" width="88" height="150" fill="#1a0d10" transform="skewX(-8)"/></g>
+      <!-- destination -->
+      <g transform="translate(1420 320)"><circle r="40" fill="none" stroke="#bfeafa" stroke-width="2" stroke-dasharray="5 7" class="spin-s"/><circle r="10" fill="url(#gCyan)" class="pulse-f"/></g>
+      <text x="800" y="780" text-anchor="middle" fill="#7fb0d0" font-family="Cinzel,serif" font-size="22" opacity=".7">if he wants to flee, flee with him</text>
+    </svg>
+  </div>
+
+  <!-- ione_realization : ohhhh — nethys's plan -->
+  <div class="scene" data-scene="ione_realization">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#08070e"/>
+      <ellipse cx="800" cy="440" rx="440" ry="320" fill="url(#gCyan)" opacity=".06" filter="url(#soft2)"/>
+      <!-- Ione's eye flaring with insight -->
+      <g transform="translate(800 440)">
+        <ellipse rx="180" ry="96" fill="#140a1e" stroke="#cbb0ff" stroke-width="3"/>
+        <circle r="56" fill="url(#gCyan)" opacity=".4" class="pulse"/>
+        <circle r="30" fill="#1a1228" stroke="#cbb0ff" stroke-width="2"/>
+        <circle r="10" fill="#dff6ff" class="pulse-f"/>
+      </g>
+      <!-- a hidden plan-web lighting up around her -->
+      <g stroke="#b98cff" stroke-width="1.6" stroke-opacity=".55" fill="none" class="spin-s"><polygon points="0,-260 226,-130 226,130 0,260 -226,130 -226,-130" transform="translate(800 440)"/></g>
+      <g fill="#cbb0ff" opacity=".7"><circle cx="800" cy="180" r="5" class="tw"/><circle cx="1026" cy="310" r="5" class="tw" style="animation-delay:-.7s"/><circle cx="1026" cy="570" r="5" class="tw" style="animation-delay:-1.4s"/><circle cx="574" cy="570" r="5" class="tw" style="animation-delay:-2.1s"/><circle cx="574" cy="310" r="5" class="tw" style="animation-delay:-2.8s"/></g>
+      <text x="800" y="800" text-anchor="middle" fill="#9a7ab0" font-family="Cinzel,serif" font-size="22" opacity=".7">Ohhhh — Lord Nethys does have a plan</text>
+    </svg>
+  </div>
+
+  <!-- modified_books : modified books, fast as we can -->
+  <div class="scene" data-scene="modified_books">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a0808"/>
+      <ellipse cx="800" cy="440" rx="420" ry="280" fill="url(#gGold)" opacity=".06" filter="url(#soft2)"/>
+      <!-- a row of cleric-spell books being rewritten -->
+      <g>
+        <g transform="translate(420 440)"><rect x="-70" y="-100" width="140" height="200" rx="8" fill="#1c150e" stroke="#caa86a" stroke-width="2"/><g stroke="#ffd27a" stroke-width="2" stroke-opacity=".7"><path d="M-46 -60h92" class="draw"/><path d="M-46 -20h70" class="draw" style="animation-delay:-.5s"/><path d="M-46 20h92" class="draw" style="animation-delay:-1s"/></g></g>
+        <g transform="translate(700 440)"><rect x="-70" y="-100" width="140" height="200" rx="8" fill="#1c150e" stroke="#caa86a" stroke-width="2"/><g stroke="#ffd27a" stroke-width="2" stroke-opacity=".7"><path d="M-46 -60h92" class="draw" style="animation-delay:-.3s"/><path d="M-46 -20h70" class="draw" style="animation-delay:-.8s"/><path d="M-46 20h92" class="draw" style="animation-delay:-1.3s"/></g></g>
+        <g transform="translate(980 440)"><rect x="-70" y="-100" width="140" height="200" rx="8" fill="#1c150e" stroke="#caa86a" stroke-width="2"/><g stroke="#ffd27a" stroke-width="2" stroke-opacity=".7"><path d="M-46 -60h92" class="draw" style="animation-delay:-.6s"/><path d="M-46 -20h70" class="draw" style="animation-delay:-1.1s"/><path d="M-46 20h92" class="draw" style="animation-delay:-1.6s"/></g></g>
+        <g transform="translate(1180 440)" opacity=".7"><rect x="-60" y="-90" width="120" height="180" rx="8" fill="#1c150e" stroke="#8a6c40" stroke-width="2"/></g>
+      </g>
+      <text x="800" y="760" text-anchor="middle" fill="#caa86a" font-family="Cinzel,serif" font-size="22" opacity=".7">creating modified books as fast as we can</text>
+    </svg>
+  </div>
+
+  <!-- prayer_code : version three, probably final -->
+  <div class="scene" data-scene="prayer_code">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#080a0e"/>
+      <ellipse cx="800" cy="440" rx="440" ry="300" fill="url(#gCyan)" opacity=".05" filter="url(#soft2)"/>
+      <!-- front-loaded question boxes Q1..Q5 -->
+      <g font-family="Cinzel,serif" font-size="24" text-anchor="middle">
+        <g transform="translate(360 300)"><rect x="-90" y="-44" width="180" height="88" rx="10" fill="#101820" stroke="#5fd0ff" stroke-width="2.5"/><text y="8" fill="#bfeafa">Q1</text></g>
+        <g transform="translate(360 460)"><rect x="-90" y="-44" width="180" height="88" rx="10" fill="#101820" stroke="#5fd0ff" stroke-width="2"/><text y="8" fill="#9fc4d8">Q2</text></g>
+        <g transform="translate(360 620)"><rect x="-90" y="-44" width="180" height="88" rx="10" fill="#101820" stroke="#5fd0ff" stroke-width="1.6" stroke-opacity=".7"/><text y="8" fill="#7fa8bc">Q3</text></g>
+        <g transform="translate(640 380)"><rect x="-90" y="-44" width="180" height="88" rx="10" fill="#101820" stroke="#5fd0ff" stroke-width="1.4" stroke-opacity=".6"/><text y="8" fill="#7fa8bc">Q4</text></g>
+        <g transform="translate(640 540)"><rect x="-90" y="-44" width="180" height="88" rx="10" fill="#101820" stroke="#5fd0ff" stroke-width="1.4" stroke-opacity=".6"/><text y="8" fill="#7fa8bc">Q5</text></g>
+      </g>
+      <!-- prayer-channel line to a divine mark -->
+      <g stroke="#b98cff" stroke-width="2" stroke-dasharray="6 8" stroke-opacity=".6" class="flow" fill="none"><path d="M740 460C900 440 1040 440 1180 440"/></g>
+      <g transform="translate(1260 440)"><circle r="60" fill="url(#gCyan)" opacity=".3"/><use href="#sg-hex" x="-40" y="-40" width="80" height="80" color="#cbb0ff" class="spin-s"/></g>
+      <text x="800" y="800" text-anchor="middle" fill="#7fb0d0" font-family="Cinzel,serif" font-size="22" opacity=".7">version three: front-load the meta-questions</text>
+    </svg>
+  </div>
+
+  <!-- channel_failure : signaling channel failure -->
+  <div class="scene" data-scene="channel_failure">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <rect width="1600" height="900" fill="#0a080c"/>
+      <ellipse cx="800" cy="440" rx="420" ry="280" fill="url(#gCyan)" opacity=".05" filter="url(#soft2)"/>
+      <!-- a prayer channel with an error/failure indicator -->
+      <g transform="translate(800 360)">
+        <rect x="-380" y="-60" width="760" height="120" rx="12" fill="#0c1014" stroke="#2a3a44" stroke-width="2"/>
+        <!-- a broken/error waveform -->
+        <path d="M-360 0L-300 0 -280 -34 -240 34 -210 0 -150 0 -130 -34 -90 34 -60 0 0 0" fill="none" stroke="#7fd0ea" stroke-width="2.5"/>
+        <path d="M20 0L80 0" fill="none" stroke="#5a6a74" stroke-width="2.5" stroke-dasharray="6 8"/>
+        <g stroke="#ff3a4a" stroke-width="3"><path d="M150 -30l60 60M210 -30l-60 60"/></g>
+        <text x="300" y="8" fill="#ff8a8f" font-family="Cinzel,serif" font-size="26" text-anchor="middle">5.none</text>
+      </g>
+      <!-- a danger flag (imminent danger question) -->
+      <g transform="translate(800 600)">
+        <line x1="-160" y1="-60" x2="-160" y2="80" stroke="#caa86a" stroke-width="4"/>
+        <path d="M-160 -60L-40 -40 -160 -20z" fill="#ff3a4a" class="pulse"/>
+        <text x="60" y="0" fill="#c2657a" font-family="Cinzel,serif" font-size="24">imminent danger?</text>
+      </g>
+      <text x="800" y="800" text-anchor="middle" fill="#7fb0d0" font-family="Cinzel,serif" font-size="22" opacity=".7">a redundant signal of total channel failure</text>
+    </svg>
+  </div>
+
+  <!-- /SCENES -->
+
+  <div id="vignette"></div>
+
+  <div id="label">
+    <div class="kicker"><svg class="ksig"><use id="ksig-use" href="#sg-book"/></svg><span class="kname" id="kname">The Reading</span></div>
+    <div class="ttl" id="ttl">Corrigibility</div>
+  </div>
+
+  <div id="cap-wrap"><div id="cap"></div></div>
+
+  <!-- intro -->
+  <div id="intro">
+    <div class="intro-in">
+      <div class="eyebrow">an animated reading &middot; episode 34</div>
+      <h1>Planecrash</h1>
+      <div class="sub">&ldquo;Foul Is Fair.&rdquo; A portrait of Zon-Kuthon and a prank from Nethys; then Carissa&rsquo;s brutal debrief and practice with Maillol, the girls&rsquo; common room, the oracle Ione&rsquo;s realization &mdash; and Keltham quietly engineering a prayer-channel code. This plays the <b>AskWhoCasts AI</b> reading &mdash; load the audio and the animation follows it, captioned with the original text.</div>
+      <div id="drop">
+        <svg class="dz-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L8 8m4-4 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <div class="dz-msg">Drop the episode 34 audio here, or click to choose</div>
+        <div class="dz-sub">mp3 &middot; m4a &middot; wav &middot; ogg &mdash; stays on your device, nothing is uploaded</div>
+        <input type="file" id="audiofile" accept="audio/*" hidden>
+      </div>
+      <div id="loaded"><span class="ck">&#10003;</span> <span class="fn" id="fname"></span> <span id="dur"></span></div>
+      <button id="begin" disabled><span class="tri"></span> Play</button>
+      <div class="cast" id="cast"></div>
+      <div class="note">Sound from your file &middot; seek, speed (1&times; / 1.25&times; / 1.5&times; / 0.75&times;), captions (CC / press &ldquo;c&rdquo;) and &larr; &rarr; arrows all work</div>
+      <div class="src">Reading &amp; audio by <b>AskWhoCasts AI</b> &mdash; support it at patreon.com/askwhocastsai. Episode 34 of &ldquo;mad investor chaos and the woman of asmodeus&rdquo; (Planecrash) by Iarwain &amp; lintamande.</div>
+    </div>
+  </div>
+  <audio id="player" preload="metadata"></audio>
+
+  <!-- controls -->
+  <div id="controls">
+    <button class="btn sm" id="prev" title="Previous passage" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M7 5h2v14H7zM20 5v14l-9-7z"/></svg></button>
+    <button class="btn lg" id="play" title="Play / Pause" aria-label="Play"><svg id="playicon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
+    <button class="btn sm" id="next" title="Next passage" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M15 5h2v14h-2zM4 5l9 7-9 7z"/></svg></button>
+    <button class="btn sm" id="restart" title="Restart" aria-label="Restart"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg></button>
+    <div id="prog"><div id="bar"></div></div>
+    <button class="btn" id="cc" title="Captions on/off (c)" aria-pressed="true">CC</button>
+    <button class="btn" id="speed" title="Reading speed">1.0×</button>
+    <div id="beat">The Forbiddance</div>
+  </div>
+
+</div></div>
+
+<script>
+
+/* ===================== CHARACTERS ===================== */
+const CHARS = {
+  narrator: {name:'Narrator',      tag:'the tale itself',         color:'#d8c39a', sigil:'sg-book'},
+  nethys:   {name:'Nethys',        tag:'god of magic and madness',color:'#b98cff', sigil:'sg-oracle'},
+  carissa:  {name:'Carissa Sevar', tag:'to-let-you-in',           color:'#ff5d6c', sigil:'sg-flame'},
+  ferrer:   {name:'Maillol',       tag:'cleric of asmodeus',      color:'#d8a24a', sigil:'sg-mask'},
+  ione:     {name:'Ione Sala',     tag:"Nethys's oracle",         color:'#8fd0ea', sigil:'sg-eye'},
+  keltham:  {name:'Keltham',       tag:'a mind from dath ilan',   color:'#5fd0ff', sigil:'sg-hex'},
+};
+const SCENE_TITLES = {
+  zon_kuthon:'Zon-Kuthon, Foul Is Fair', nethys_mischief:'Hey, Zon-Kuthon...', debrief:'Not a Quick Debrief',
+  the_abadar_muff:'She Muffed the Recovery', practice_with_elias:'Practice, or Elias Hits You', obscure_god:'An Obscure Tian Deity',
+  excuses:'Excuses That Look Like Excuses', three_hits:'Three Measured Blows', alignment_spells:'Spells to Change Alignment',
+  pay_the_girls:'Fucking Pay the Girls', ione_spell_list:"Ione's Spell List", flee_with_him:'If He Flees, Flee With Him',
+  ione_realization:"Ohhhh — Nethys's Plan", modified_books:'Modified Books, Fast as We Can', prayer_code:'Version Three, Probably Final', channel_failure:'Signaling Channel Failure'
+};
+
+/* ===================== CAPTIONS + SCENE/SPEAKER BEATS ===================== */
+/* CUES: the VERBATIM glowfic text, aligned to the audio's timeline {t: startSeconds, x: text}.
+   Empty x clears the caption (intro credits, and the tail the source doesn't cover).
+   BEATS: which scene + speaker is on screen at each time {t, s:scene, v:speaker}. */
+const CUES=[{t:0,x:""},{t:30.44,x:"Zon-Kuthon keeps mostly to Himself, by His own choice, but also by choice of the"},{t:36.56,x:"other gods. When somebody of the same kind as yourself wanders into the Void and"},{t:42.09,x:"comes back with inverted values, there is an uncertainty about whether,"},{t:46.29,x:"if you talked to the victim too much, something infohazardous might start to happen to"},{t:52.71,x:"you. Zon-Kuthon negotiates little, or not at all; He has little,"},{t:57.38,x:"or no, use for alliances and dealings."},{t:60.5,x:"He keeps to Xovaikain, His true realm, and to Nidal,"},{t:65.5,x:"the material shadow of it. Before Zon-Kuthon, there was Dou-Bral,"},{t:70.65,x:"who helped fight and imprison Rovagug. It is unclear whether Zon-Kuthon would in some new"},{t:78.12,x:"battle fight to preserve all the pain that exists in the world;"},{t:82.62,x:"or if, Dou-Bral having once thought that the joy and beauty of the world outweighed"},{t:88.18,x:"its pain, Zon-Kuthon would now think there was too much pleasure in Existence,"},{t:92.91,x:"and that it ought therefore to be destroyed."},{t:96.5,x:"Or perhaps Dou-Bral was too optimistic, in the days when Dou-Bral fought to defend reality;"},{t:103.45,x:"and if Dou-Bral knew what would have become of Pharasma's world,"},{t:107.45,x:"He would have tried to destroy it, even as Zon-Kuthon apparently seems content with its"},{t:114,x:"continued existence. No other god in creation likes Zon-Kuthon."},{t:118.5,x:"From Asmodeus's perspective He is a pretender to Lawful Evil;"},{t:123.5,x:"from the other Evil gods' perspective, an obsessed fanatic of no use to anyone;"},{t:129.89,x:"from the perspective of Neutral gods, an impediment; from the perspective of Good,"},{t:136,x:"a horror. Why then does Zon-Kuthon continue to exist?"},{t:140.38,x:"Among the less pleasant facts of reality is that among the real reasons why the"},{t:146.1,x:"other gods don't band together to destroy Zon-Kuthon is that,"},{t:150.33,x:"as the last Lawful Evil competitor to Asmodeus of any significance,"},{t:155.42,x:"He is a threat for other gods to hold over Asmodeus -"},{t:160.05,x:"that there is at least one other competitor they could back for Asmodeus's position,"},{t:166.11,x:"if He grew too troublesome. Iomedae and Sarenrae, to be clear,"},{t:171,x:"would not keep Zon-Kuthon around just as a foil to Asmodeus,"},{t:175.15,x:"if those four were the only gods that were; but in a world where the"},{t:180.5,x:"existence of Zon-Kuthon is a constant weight on the negotiating positions of Asmodeus and say"},{t:188,x:"Gorum, trying to destroy Zon-Kuthon could be a mistake even if that were possible."},{t:194.67,x:"Iomedae is more calculating now than when She was human,"},{t:198.67,x:"because She is better at it; She would not destroy Zon-Kuthon if the end result"},{t:203.67,x:"was for Asmodeus to grow stronger and for Hell to last victorious."},{t:207.21,x:"Of course, some gods are less scared of talking to Zon-Kuthon than others,"},{t:210.79,x:"if they've already seen all the way to the end of the Void,"},{t:214.9,x:"where lies the Double Void, which flipped Nethys's utility function's sign right back!"},{t:219.86,x:"No, that's not actually what happened, but it makes about as much sense as anything"},{t:224.31,x:"else that Nethys could or would tell you about it."},{t:227.07,x:"Hey, Zon-Kuthon, Nethys sends. You see this mortal over here in Cheliax,"},{t:230.63,x:"the one who fears you and is horrified by you?"},{t:232.97,x:"You're admittedly missing some context, but it'd be hilarious if you sent some minions to"},{t:237.09,x:"assault his location sometime soon..."},{t:238.79,x:"And Carissa goes back to the temple to look for Maillol."},{t:242.55,x:"She is very tired and suspects, somehow, that this won't be a nice quick twenty"},{t:248.43,x:"minute debrief before bed."},{t:250,x:"It sure isn't. Maillol acidly tells Sevar that nobody needed to promise Keltham that people"},{t:255.91,x:"were actively working to identify his god, up until that point they had the option"},{t:261.4,x:"of saying later that somebody spotted it as Abadar but that they were worried about"},{t:267.4,x:"his adopting Osirion's sexual morals or just that people were still consulting each other about"},{t:273.94,x:"if that was allowable to disclose. This is, mostly, the fault of somebody whose screaming"},{t:280.44,x:"can be distantly heard in Maillol's office, because he was fucking fed up with this"},{t:286.77,x:"whole scenario and this screaming is at least a little consoling."},{t:290.15,x:"Much worse for that guy, he's getting a permanent notation on his file saying that"},{t:294.67,x:"he doesn't think fast enough on his feet to take point on complicated situations,"},{t:298.81,x:"like that incident with Otolmens's oracle. Whom Carissa was also responsible for remembering the existence"},{t:305.18,x:"of, even if it wouldn't have been her job to try to yank the guy"},{t:310.17,x:"out of the room fast enough. Maybe it was somebody else's fuckup who put her"},{t:314.52,x:"in a bad situation, but she is now the one responsible for recoveries,"},{t:319.63,x:"and on the Abadar thing she muffed the recovery."},{t:323.44,x:"\"You're going to spend an hour practicing with Elias,\" Maillol tells Carissa."},{t:328.78,x:"\"He's going to throw situations at you where Keltham runs across something we've been hiding"},{t:333.86,x:"or sees something he shouldn't, you're going to come up with excuses,"},{t:337.3,x:"fast. If they involve you saying that you've got to talk to me before you"},{t:341.87,x:"can figure out what you're authorized to say now, that's not great,"},{t:346.5,x:"but Elias won't hit you.\" Ferrer's sickening fake smile vanishes."},{t:351.27,x:"\"Any time you start saying too much in front of Imaginary Keltham and making up"},{t:357,x:"excuses that are any more complicated than they need to be,"},{t:361.18,x:"Elias is going to hit you.\""},{t:363.36,x:"\"I acknowledge my errors. I acknowledge I need the practice and I know if I"},{t:368.38,x:"argue you're going to make it longer, which you are very welcome to."},{t:371.97,x:"To my mind we never meaningfully had the option of telling him it was Abadar."},{t:376.33,x:"Abadar has a country right near here and he already knows that,"},{t:380.33,x:"and it's an incredibly obvious place to go when he gets fed up and leaves."},{t:385.1,x:"If you want him to even contemplate hiding out in a forest or extradimensional space"},{t:390.07,x:"somewhere and not contacting other governments he needs to think he has an obscure god,"},{t:395.57,x:"not one running a country right next door."},{t:398.62,x:"He's not stupid enough to fail to think that I might be lying about the"},{t:403.06,x:"sexism or that there might be a good justification for it,"},{t:406.26,x:"and it's not an argument-against-Abadar strong enough to stop Keltham trying to contact them."},{t:412.5,x:"You should find him an obscure Tian deity."},{t:416.1,x:"I appreciate that you are monitoring a tendency towards excuses more complicated than they need"},{t:421.55,x:"to be. I am noticing a tendency towards plans that require using a degree of"},{t:426.95,x:"ability to manipulate Keltham's environs which I would prefer he believe Golarion magic does not"},{t:432.89,x:"enable. The High Priestess asked me, this morning, if my recommendation that we explain Otolmens"},{t:440.4,x:"to Keltham overrode her very reasonable heuristics about sharing less about Otolmens,"},{t:445.6,x:"and I was not willing to persist in a recommendation against such advice,"},{t:450.72,x:"but if I'd thought through that her plan involved us consistently deploying reflexive counterspells to"},{t:457.19,x:"protect the invisibility of Otolmens' representative while Keltham flings around fourth-circle cleric magic aimed at"},{t:464.8,x:"discovering concealed things, I would have persisted in my recommendation."},{t:469.56,x:"If Invisibility Purge hadn't discovered Otolmens' oracle Glimpse of Truth would have,"},{t:476.88,x:"you can't inconspicuously counterspell True Seeing, and then it's apparent we deliberately hid him from"},{t:485,x:"Invisibility Purge discovery. If I had thought of the oracle fast enough I would've told"},{t:490.45,x:"Security to do nothing using abilities other than 'put people in other rooms',"},{t:494.67,x:"and if that wasn't fast enough to solve the problem,"},{t:498,x:"so be it. Abadar's going to keep giving Keltham spells in that genre,"},{t:503.11,x:"and honestly the oracle is the most innocuous explanation for them."},{t:507.74,x:"'have an invisible person running around with Security constantly counterspelling and actively interfering in Keltham's"},{t:515.12,x:"efforts to discover them' is an extraordinary expenditure of our effort to keep a secret"},{t:521.57,x:"I at this point forcefully recommend we stop keeping."},{t:525.52,x:"Otolmens is the kind of institution Keltham is used to cooperating with and we should"},{t:530.95,x:"tell him sufficient true things for him to conclude that.\""},{t:534.25,x:"\"Your argument on Abadar is reasonable and I have downgraded my estimate of the severity"},{t:539.39,x:"of your error. It remains that your current excuses are too visibly extemporized."},{t:544.76,x:"Your excuses wouldn't fool me, Sevar, they look like excuses to somebody who knows what"},{t:550.86,x:"that is. I'm not saying you should be choosing excuses to fool me,"},{t:554.9,x:"you should be choosing them to fool Keltham."},{t:557.38,x:"But right now, we're only getting away with this because Keltham is an outsider,"},{t:562.57,x:"and that makes us pathetic and unworthy of the responsibility Asmodeus placed on us."},{t:568.4,x:"Yes, you need a dose of that practice now and not just later."},{t:573.68,x:"That you're already exhausted is part of the point."},{t:577.47,x:"Twenty minutes with Elias today, more later, and don't mistake the reduction for mercy,"},{t:583.13,x:"it's about the degree to which you being slightly better-rested tomorrow is a military priority.\""},{t:589.39,x:"\"I've filed your request for somebody who can train you in conventional honeypot tactics."},{t:594.87,x:"I've filed your request for the alternate Taldor history, and put my own commendation and"},{t:600.86,x:"priority on it; it's not just a workable idea, it gives us an organizing principle"},{t:607,x:"that this chaos of an operation desperately needs."},{t:609.95,x:"We'll tell Broom that we're fine with Keltham's terms for showing himself in front of"},{t:615.71,x:"Keltham, and ask him politely not to stalk Keltham invisibly until we see how much"},{t:622.14,x:"Invisibility Purge Keltham throws around, assuming that's what you meant."},{t:625.8,x:"I'll re-query our policy on keeping Otolmens's existence a secret to the people authorized to"},{t:631.56,x:"make decisions that potentially destroy Golarion. You'll brief the girls tomorrow morning on your new"},{t:637.5,x:"plans. Am I missing anything, Sevar?\""},{t:640.5,x:"\"No, sir.\" It is in some strange way cheering, to be told that they are"},{t:646.93,x:"pathetic and unworthy of the responsibility Asmodeus placed on them,"},{t:650.46,x:"because of course all humans are pathetic and unworthy but it only merits comment if"},{t:655.4,x:"in this context they are expected not to be."},{t:658.55,x:"Maybe sometimes when the stakes are high enough some humans figure out how to not"},{t:664.2,x:"be pathetic and unworthy. Or at least how to be less so."},{t:669,x:"She looks over at Elias. How much does he look like he would prefer this"},{t:674.91,x:"training to involve hitting her a lot."},{t:677.65,x:"...yeah, valid. Carissa, too, if she were in a different role in this operation,"},{t:682.37,x:"would feel like hitting Carissa a lot."},{t:684.44,x:"\"Keltham figures out that you don't really love him,\" Elias says,"},{t:687.7,x:"smiling at her."},{t:688.78,x:"\"Gosh, accusations about drawing ones internal conceptual boundaries wrong are the kind of thing I'd"},{t:694.61,x:"have guessed would be Complicated Romance in dath ilan."},{t:698.68,x:"In Cheliax no one's running around with a baseline expectation anyone could possibly have drawn"},{t:706.26,x:"them coherently in the first place.\""},{t:708.51,x:"\" - that's not even an excuse.\""},{t:710.89,x:"\"Best excuses usually aren't. - I think I should get to hit him if I have"},{t:715.96,x:"a really good one,\" she tells Maillol."},{t:718.33,x:"\"Hold still,\" Maillol says, and delivers three hard, carefully measured punches into the pit of"},{t:723.43,x:"Sevar's stomach. \"You just lost some of the respect I was gaining for you,"},{t:728.3,x:"Sevar,\" he says when he's done. \"Any spite you hold for him is something you"},{t:732.96,x:"can work on while you're not doing something I told you to do."},{t:737.26,x:"Elias, if she acts unprofessional or like she's not taking the exercise seriously,"},{t:742.74,x:"punish her no less than Asmodeus's Law calls for."},{t:746.09,x:"Punish her any more and I expect Hell will have something to say about that"},{t:751.3,x:"too, in due time. Now take this somewhere else.\""},{t:756.08,x:"Maillol has infinity plus one paperworks to file."},{t:760.24,x:"Some parlors have been repurposed into common rooms."},{t:763.53,x:"\"Keltham learns about malediction.\""},{t:765.18,x:"\"In general there are spells for changing your alignment to what you want it to"},{t:770.5,x:"be before you die, called Atonement, but they're expensive and really hard to access,"},{t:775.32,x:"so Asmodeus made a Asmodeus-specific one that's cheaper.\""},{t:778.18,x:"\"Oh, so it only gets used on people who want to go to Hell?\""},{t:782.6,x:"\"Why in the world would you try to use it on someone who wanted to"},{t:787.1,x:"go somewhere else?? There'd be an enormous god-diplomatic-incident about it,"},{t:790.7,x:"I'd expect!\""},{t:791.3,x:"\"Keltham learns that the girls aren't getting paid.\""},{t:793.54,x:"\" - are they not? Fucking pay the girls, we aren't telling any lies that we don't"},{t:799.14,x:"need to.\" Slap. \"Not an excuse.\" \"That's bizarre and I'll go ask site leadership what"},{t:804.86,x:"went wrong immediately.\" \"Keltham learns that the girls were drafted.\""},{t:807.93,x:"\"When you enlist in the Chelish military you promise to go where you're needed."},{t:812.07,x:"That is how every military in the world functions; do dath ilan militaries not require"},{t:817.56,x:"such oaths?\" \"Keltham learns that you're getting sex training.\""},{t:821.56,x:"\"....well obviously I'm getting sex training, he's had it and I'd like to keep up!"},{t:826.5,x:"Also I figured I should see a professional about my relaxation problem.\""},{t:830.36,x:"\"Keltham learns primary worship of other gods is illegal.\""},{t:833.72,x:"\"Primary worship means, like, breaking other local law specifically on the command of foreign gods;"},{t:839.39,x:"it's mentioned as separately illegal from the breaking other local law because most of the"},{t:844.61,x:"general rules about criminal conspiracies don't apply very neatly to criminal conspiracies where you never"},{t:850.5,x:"interact with your co-conspirators and don't know anything about what exactly they're trying to achieve."},{t:856.24,x:"Obviously if you're not breaking any laws in the first place then what would it"},{t:860.9,x:"even mean to make it illegal to worship a god.\""},{t:864.02,x:"\"Keltham learns Cheliax executes people for lèse-majesté.\""},{t:866.88,x:"\"I've never heard of that actually happening."},{t:869.4,x:"It's a thing people say about kings they dislike and probably at some point in"},{t:874.67,x:"history was true of some of them but Abrogail Thrune's not a thin-skinned maniac whose"},{t:879.67,x:"brain stopped fully functioning thirty years ago, like a lot of kings are,"},{t:884,x:"and most king-related abuses are those kings.\""},{t:886.67,x:"\"Keltham learns that the girls sold their souls.\""},{t:889.15,x:"\"Most people make arrangements before they die, with a devil who has a specialty they're"},{t:893.77,x:"interested in or who lives in the plane of Hell they want to live in"},{t:898.3,x:"or whatever. The alternative is getting thrown into general processing,"},{t:901.3,x:"which can be slow, when a lot of people die at once,"},{t:905,x:"and it can be expensive and take a long time to get somewhere right for"},{t:910,x:"you. The girls hadn't yet because they're so young but now they're at elevated risk"},{t:915.24,x:"of death and also have highly secret information so I'm not surprised they made arrangements.\""},{t:920.64,x:"\"Keltham learns that that vision was of Asmodean Hell.\""},{t:922.92,x:"\"- Keltham we've got to get out of here - Security'll have scrolls of Teleport on them"},{t:927,x:"and I know how to read one, do you have something from your god that'll"},{t:931.1,x:"take someone on Security down if we take them by surprise -\""},{t:934.4,x:"\"I assume there's a plan, from there.\""},{t:936.5,x:"\"Well, not yet, but hopefully there will be by the time it's relevant,"},{t:940.88,x:"if it is. - does Security carry scrolls of Teleport, if not I'm not sure how"},{t:946.28,x:"we can make our implausible escape.\" \"Sometimes, but we're in a Forbiddance.\""},{t:950,x:"\"I do have a plan for that, I'm going to fly out with him clinging"},{t:954.5,x:"to me, both invisible, and then cast the Teleport from midair."},{t:957.66,x:"Luckily no one will see us.\" \"That's a lot of thought to have put into"},{t:961.79,x:"your romantic escape with Keltham.\" \"Look, if you think I'm a traitor it doesn't make"},{t:965.91,x:"any sense to mildly chide me about it, and if you don't then it doesn't"},{t:970,x:"make any sense to mildly chide me for looking it.\""},{t:972.73,x:"\"I think you're enough of a chameleon to be a traitor if the circumstances presented"},{t:977.9,x:"themselves. - Keltham finds out you tortured some orphans to death for practice.\""},{t:982.8,x:"\"I absolutely have not done that!\" \"Keltham finds out most people don't want to go"},{t:988.53,x:"to Hell.\" \"Good is popular because they run soup kitchens and orphanages and so on."},{t:992.53,x:"People think of them as the people who helped them when they needed it."},{t:996.33,x:"So they want to be Good, but that doesn't actually get you Good,"},{t:1000.67,x:"it's not Good itself, it's just vague identification.\""},{t:1003.33,x:"\"Keltham finds out you reported people to the authorities for disloyal thoughts.\""},{t:1007.33,x:"\"Some demons at the Worldwound can fuck with your mind."},{t:1011.67,x:"We have a monitoring system set up to catch anyone who gets infected before they"},{t:1016.34,x:"slit all their bunkmates' throats in the night and eat their eyeballs,"},{t:1020.38,x:"yes, that has happened, yes, I've reported people for further monitoring who I thought had"},{t:1025.97,x:"thought-patterns that might point them that way.\""},{t:1028.64,x:"Carissa loves her job."},{t:1030.07,x:"Ione doesn't mind this part of her job at all!"},{t:1033.41,x:"In accordance with the general instruction to tell no lies that Security explained to her"},{t:1038.8,x:"- apparently Carissa Sevar is running this show now which ???"},{t:1042.6,x:"but fine - Ione is actually remembering and writing her own descriptions,"},{t:1047.45,x:"without secretly grabbing the cleric spellbook and cheating."},{t:1050.73,x:"Though that makes some sense, even; if Ione's descriptions looked too much like the book"},{t:1056.33,x:"descriptions, after the book gets 'returned to the library', Keltham might notice."},{t:1060.4,x:"An hour isn't really much time to write down that many cleric spells and one-sentence"},{t:1066.8,x:"descriptions, but here's what Ione's got!"},{t:1066.85,x:"Cantrips / Orisons: Create Water -- Creates 2 gallons/level of pure water."},{t:1066.9,x:"Detect Magic -- Detects spells and magic items within 60 ft."},{t:1066.95,x:"Detect Poison -- Detects poison in one creature or object."},{t:1067,x:"Guidance -- Touched creature gains +1 on one attack roll, saving throw,"},{t:1067.05,x:"or skill check. Light -- Object shines like a torch."},{t:1067.1,x:"Mending -- Makes minor repairs on an object."},{t:1067.15,x:"Purify Food and Drink -- Purifies 1 cu."},{t:1067.2,x:"ft./level of food or water. Read Magic -- Read scrolls and spellbooks."},{t:1067.25,x:"Resistance -- Touched creature gains +1 on saving throws."},{t:1067.3,x:"Spark -- Ignites flammable objects. Stabilize -- Cause a dying creature to stabilize."},{t:1067.35,x:"1st circle: Air Bubble -- Creates a small pocket of air around your head or an"},{t:1067.4,x:"object. Ant Haul -- Triples carrying capacity of a creature."},{t:1067.45,x:"Bane -- Enemies take –1 on attack rolls and saves against fear."},{t:1067.5,x:"Barbed Chains -- Hellish chains attack and cause a target to become shaken."},{t:1067.55,x:"Bless -- Allies gain +1 on attack rolls and saves against fear."},{t:1067.6,x:"Bless Water -- Makes holy water. Cause Fear -- One creature of 5 HD or less flees"},{t:1067.65,x:"for 1d4 rounds. Command -- One subject obeys selected command for 1 round."},{t:1067.7,x:"Compel Hostility -- Compels opponents to attack you instead of your allies."},{t:1067.75,x:"Comprehend Languages -- You understand all spoken and written languages."},{t:1067.8,x:"Cure Light Wounds -- Cures 1d8 damage + 1/level (max +5)."},{t:1067.85,x:"Curse Water -- Makes unholy water. Detect Chaos/Evil/Good/Law -- Reveals creatures, spells,"},{t:1067.9,x:"or objects of selected alignment. Detect Charm -- Detect strength and location of charms,"},{t:1067.95,x:"compulsions, and possession auras on creatures in the area."},{t:1068,x:"Detect Life -- Determine whether a creature is alive or dead."},{t:1068.05,x:"Detect Demon -- You sense the presence of a specific kind of evil—that of demons,"},{t:1068.1,x:"their servants, and the Abyss. The amount of information revealed depends on how long you"},{t:1068.15,x:"study a particular area or subject. Detect Undead -- Reveals undead within 60 ft."},{t:1068.2,x:"Diagnose Disease -- Detect and identify diseases. Doom -- One subject takes –2 on attack rolls,"},{t:1068.25,x:"damage rolls, saves, and checks. Endure Elements -- Exist comfortably in hot or cold regions."},{t:1068.3,x:"Hide from Undead -- Undead can’t perceive one subject/level."},{t:1068.35,x:"Infernal Healing -- Touch a creature with devils blood, giving it fast healing 1."},{t:1068.4,x:"Inflict Light Wounds -- Touch deals 1d8 damage +1/level (max +5)."},{t:1068.45,x:"Keltham's Truth Spell -- One touched target can only speak truth."},{t:1068.5,x:"2 min / caster circle. Lighten Object -- Halve the weight of one object for 1 min/level."},{t:1068.55,x:"Size of the object is limited to 1 cubic foot per level."},{t:1068.6,x:"Magic Weapon -- Weapon gains +1 bonus. Moment of Greatness -- Doubles a morale bonus."},{t:1068.65,x:"Murderous Command -- Target is compelled to kill its ally."},{t:1068.7,x:"Obscure Poison -- Make it harder to detect a poison or a venomous creature."},{t:1068.75,x:"Obscuring Mist -- Fog surrounds you. Protection from Chaos/Evil/Good/Law -- +2 to AC and saves,"},{t:1068.8,x:"plus additional protection against selected alignment. Read Weather -- Precisely forecast natural weather phenomenon that will"},{t:1068.85,x:"occur in your area over the next 48 hours."},{t:1068.9,x:"Recharge Innate Magic -- Regain one use of all 0 and 1st-level spell-like abilities of a"},{t:1068.95,x:"racial trait. Remove Fear -- Suppresses fear or gives +4 on saves against fear for one"},{t:1069,x:"subject + one per four levels. Remove Sickness -- Suppress disease, nausea,"},{t:1069.05,x:"and the sickened condition. Rite of Bodily Purity -- You energize your body’s immune system,"},{t:1069.1,x:"improving your ability to resist toxins and ailments."},{t:1069.15,x:"Sanctuary -- Opponents can’t attack you, and you can’t attack."},{t:1069.2,x:"Shadow Trap -- You pin the target’s shadow to its current location,"},{t:1069.25,x:"causing the target to become entangled and preventing it from moving farther than 5 feet"},{t:1069.3,x:"from its original position, as if anchored to the terrain."},{t:1069.35,x:"Shield of Faith -- Aura grants +2 or higher deflection bonus."},{t:1069.4,x:"Summon Monster I -- Summons extraplanar creature to fight for you."},{t:1069.45,x:"Touch of Blindness -- A touch from your hand, which is engulfed in darkness,"},{t:1069.5,x:"disrupts a creature’s vision by coating its eyes in supernatural darkness."},{t:1069.55,x:"Ione already suspects some of the edits they'll want from her."},{t:1070.87,x:"2nd circle: Abeyance -- You suppress the effects of a curse on a creature."},{t:1070.96,x:"Aid -- +1 on attack rolls and saves against fear, 1d8 temporary hp +1/level (max +10)."},{t:1071.07,x:"Alchemical Tinkering -- Perform one of a limited number of possible alchemical transformations."},{t:1071.16,x:"Align Weapon -- Weapon becomes good, evil, lawful, or chaotic."},{t:1071.22,x:"Ancestral Communion -- You contact your ancestors to bolster your own knowledge."},{t:1071.3,x:"Animate Dead, Lesser -- Create one skeleton or zombie."},{t:1071.36,x:"Arrow of Law -- Harm and possibly daze chaotic creatures."},{t:1071.43,x:"Augury -- Learns whether an action will have good or bad consequences over the next half-hour."},{t:1071.54,x:"Bear’s Endurance -- Subject gains +4 to Con for 1 min./level."},{t:1071.61,x:"Bestow Weapon Proficiency -- Grant a creature proficiency in a single weapon for short period of"},{t:1071.72,x:"time. Blood Blaze -- Aura that makes injured creatures spray burning blood."},{t:1071.8,x:"Book Ward -- As protection from energy, except lasting 1 day/level instead of 10 minutes per"},{t:1071.89,x:"level and that the spell only protects against acid and fire damage (and while energy"},{t:1071.98,x:"protection remains, the item is also completely waterproof)."},{t:1072.02,x:"Bull’s Strength -- Subject gains +4 to Str for 1 min./level."},{t:1072.09,x:"Calm Emotions -- Calms creatures, negating emotion effects."},{t:1072.13,x:"Conditional Favor -- Provide another spell whose effects reverse if the target breaks a restriction."},{t:1072.22,x:"Consecrate -- Fills area with positive energy, weakening undead."},{t:1072.27,x:"Cure Moderate Wounds -- Cures 2d8 damage + 1/level (max +10)."},{t:1072.33,x:"Curse Terrain, Lesser -- Curse an area with three mild hazards."},{t:1072.39,x:"Darkness -- 20-ft. radius of supernatural shadow. Death Knell -- Kills dying creature;"},{t:1072.47,x:"you gain 1d8 temporary hp, +2 to Str, and +1 caster level."},{t:1072.53,x:"Delay Disease -- Gain immunity to disease for 24h."},{t:1072.59,x:"Delay Pain -- Ignore pain for 1 hour/level."},{t:1072.63,x:"Delay Poison -- Stops poison from harming target for 1 hour/level."},{t:1072.69,x:"Desecrate -- Fills area with negative energy, making undead stronger."},{t:1072.75,x:"Detect Magic, Greater -- As detect magic, but learn more information."},{t:1072.79,x:"Dread Bolt -- Harm and possibly sicken good creatures."},{t:1072.82,x:"Dress Corpse -- Doctor the evidence on a corpse."},{t:1072.84,x:"Eagle’s Splendor -- Subject gains +4 to Cha for 1 min./level."},{t:1072.87,x:"Early Judgement -- Show creatures a glimpse of their judgement in the afterlife."},{t:1072.91,x:"This fascinates good, confuses neutral, and shakes evil creatures."},{t:1072.93,x:"Effortless Armor -- Armor you wear no longer slows your speed."},{t:1072.96,x:"Enthrall -- Captivates all within 100 ft. + 10 ft./level."},{t:1072.99,x:"Find Traps -- Notice traps as a rogue does."},{t:1073.02,x:"Flotsam Vessel -- Creates a sturdy raft and oars from driftwood,"},{t:1073.05,x:"reeds, and other river detritus. Gentle Repose -- Preserves one corpse."},{t:1073.08,x:"Grace -- Movement doesn’t provoke attacks of opportunity."},{t:1073.1,x:"Hold Person -- Paralyzes one humanoid for 1 round/level."},{t:1073.12,x:"Inflict Moderate Wounds -- Touch attack, 2d8 damage + 1/level (max +10)."},{t:1073.16,x:"Ironskin -- Your skin hardens and takes on the color and texture of rough iron."},{t:1073.2,x:"Lay of the Land -- In a flash of recognition, you learn about the geography of"},{t:1073.24,x:"your surroundings within a radius of 1 mile per 2 caster levels (minimum 1 mile)."},{t:1073.28,x:"This instant familiarity grants you an insight bonus equal to your caster level (maximum +5)"},{t:1073.33,x:"on Knowledge (geography) checks and Survival checks to avoid getting lost so long as you"},{t:1073.37,x:"remain in the affected area. Make Whole -- Repairs an object."},{t:1073.4,x:"Marching Chant -- Allies can hustle without penalty while you sing or chant."},{t:1073.42,x:"Masterwork Transformation -- Make a normal item into a masterwork one."},{t:1073.44,x:"Muffle Sound -- Allies gain a bonus on Stealth checks but risk verbal spell failure."},{t:1073.45,x:"Owl’s Wisdom -- Subject gains +4 to Wis for 1 min./level."},{t:1073.47,x:"Pilfering Hand -- You may seize an object or manipulate it from afar."},{t:1073.49,x:"Remove Paralysis -- Frees creatures from paralysis or slow effect."},{t:1073.5,x:"Resist Energy -- Ignores 10 (or more) points of damage/attack from specified energy type."},{t:1073.52,x:"Restoration, Lesser -- Dispels magical ability penalty or repairs 1d4 ability damage."},{t:1073.53,x:"Sense Fear -- Perceive nearby creatures that are experiencing fear."},{t:1073.55,x:"Sense Madness -- Determine mental disturbances in nearby creatures."},{t:1073.56,x:"Share Language -- Subject understands chosen language. Shatter -- Sonic vibration damages objects or crystalline creatures."},{t:1073.58,x:"Silence -- Negates sound in 20-ft. radius. Silent Table -- Give yourself privacy by muffling sound."},{t:1073.6,x:"Spell Gauge -- Reveal a number of spells – lowest first – that the target creature knows,"},{t:1073.62,x:"up to your caster level. Status -- Monitors condition, position of allies."},{t:1073.64,x:"Summon Monster II -- Summons extraplanar creature to fight for you."},{t:1073.65,x:"Suppress Charms and Compulsions -- You can grant a bonus to saving throws against charms and"},{t:1073.67,x:"compulsions or suppress an existing, in-effect charm or compulsion."},{t:1073.68,x:"Track Ship -- Track a ship's location and movement with the aid of a nautical chart"},{t:1073.71,x:"and a piece of the ship to be tracked."},{t:1073.72,x:"Undetectable Alignment -- Conceals alignment for 24 hours."},{t:1073.73,x:"She writes down spells like Augury and Conditional Favor on a separate piece of scrap,"},{t:1078.52,x:"since her guess is that those spells won't get passed,"},{t:1081.72,x:"and if she guesses right she can maybe save herself rewriting the whole list."},{t:1086.16,x:"3rd circle: Agonize -- Pain encourages an outsider to obey you."},{t:1086.32,x:"(Would that spell work on Keltham himself?)"},{t:1086.42,x:"Animate Dead -- Creates undead skeletons and zombies."},{t:1086.5,x:"Aura Sight -- Alignment auras become visible to you."},{t:1086.51,x:"Bestow Curse -- –6 to an ability score; –4 on attack rolls,"},{t:1086.56,x:"saves, and checks; or 50% chance of losing each action."},{t:1086.61,x:"It's at this point that Ione gets interrupted to ask for her current draft,"},{t:1086.66,x:"Ione realizes she lost track of time, and Ione frantically tries to write down at"},{t:1086.71,x:"least some 3s and 4s while her 0s, 1s, and 2s get reviewed."},{t:1086.76,x:"Continual Flame -- Makes a permanent, heatless light."},{t:1086.81,x:"Create Food and Water -- Feeds three humans (or one horse)/level."},{t:1086.86,x:"Cure Serious Wounds -- Cures 3d8 damage + 1/level (max +15)."},{t:1086.91,x:"Dispel Magic -- Cancels one magical spell or effect."},{t:1086.96,x:"Inflict Serious Wounds -- Touch attack, 3d8 damage + 1/level (max +15)."},{t:1087.01,x:"Invisibility Purge -- Dispels invisibility within 5 ft./level."},{t:1087.06,x:"Locate Object -- Senses direction toward object (specific or type)."},{t:1087.11,x:"Planar Inquiry -- This spell calls a creature from another plane to your precise location,"},{t:1087.16,x:"functioning like lesser planar ally except as noted."},{t:1087.21,x:"Why is she thinking of so many spells they shouldn't tell him about!"},{t:1087.26,x:"Remove Blindness/Deafness -- Cures normal or magical blindness or deafness."},{t:1087.31,x:"Remove Curse -- Frees object or person from curse."},{t:1087.36,x:"Remove Disease -- Cures all diseases affecting subject."},{t:1087.41,x:"Stone Shape -- Sculpts stone into any shape."},{t:1087.46,x:"Summon Monster III -- Summons extraplanar creature to fight for you."},{t:1087.51,x:"Vision of Hell -- Illusory hellscape makes creatures shaken."},{t:1087.56,x:"Water Walk -- Subject treads on water as if solid."},{t:1087.61,x:"Wind Wall -- Deflects arrows, smaller creatures, and gases 4th circle:"},{t:1087.66,x:"Aura of Doom -- Creatures in your aura become shaken."},{t:1087.71,x:"Conditional Curse -- Bestow a curse that is difficult to remove without fulfilling a condition."},{t:1087.76,x:"Control Summoned Creature -- Direct a summoned monster as if you had summoned it."},{t:1087.81,x:"Control Water -- Raises or lowers bodies of water."},{t:1087.86,x:"Cure Critical Wounds -- Cures 4d8 damage + 1/level (max +20)."},{t:1087.91,x:"Death Ward -- Grants bonuses against death spells and negative energy."},{t:1087.96,x:"Dimensional Anchor -- Bars extradimensional movement. Discern Lies -- Reveals deliberate falsehoods."},{t:1088.01,x:"Dismissal -- Forces a creature (like Keltham??) to return to native plane."},{t:1088.06,x:"Enchantment Foil -- Trick opponents who try to cast enchantments on you."},{t:1088.11,x:"False Future -- Cause divinations of the future to reveal the result you choose."},{t:1088.16,x:"Glimpse of Beyond -- Reveal hidden things and shapechanged creatures, peer into Ethereal Infernal Healing,"},{t:1088.21,x:"Greater -- Touch a creature with devils blood, giving it fast healing 4."},{t:1088.26,x:"Inflict Critical Wounds -- Touch attack, 4d8 damage + 1/level (max +20)."},{t:1088.31,x:"Make Whole, Greater -- Repairs 1d6 +1 points per caster level on a construct (maximum 10d6+10)"},{t:1088.36,x:"and can fix destroyed magic items or technological items (items at 0 hit points or"},{t:1088.41,x:"fewer), and restores the magic properties of the item if your caster level at least"},{t:1088.46,x:"equal to that of the item. This spell otherwise functions as make whole."},{t:1088.51,x:"Malediction -- Fuck with the entire afterlife system and send a paladin to the Abyss,"},{t:1088.56,x:"it's not like Pharasma really gives a shit."},{t:1088.61,x:"Neutralize Poison -- Immunizes subject against poison, detoxifies venom in or on subject."},{t:1088.66,x:"Planar Ally, Lesser -- Exchange services with a 6 HD extraplanar creature."},{t:1088.71,x:"Or is that safe to tell him about, now that they're under Forbiddance anyways?"},{t:1088.76,x:"No, because Keltham might ask to walk outside under guard for a few minutes."},{t:1088.81,x:"Sending -- Delivers short message anywhere, instantly, to someone the caster is familiar with."},{t:1088.86,x:"Summon Monster IV -- Summons extraplanar creature to fight for you."},{t:1088.91,x:"Tongues -- Speak and understand any language. Aaaaaand she's out of time,"},{t:1088.96,x:"Security wants her later drafts too."},{t:1090.47,x:"Ione, on reflection, is feeling concerned about Cheliax's chances of fooling Keltham if Abadar grants"},{t:1097.53,x:"more carefully-chosen spells like Abadar's Truthtelling. The Asmodeans may be out of their depth here;"},{t:1104.4,x:"possibly she, as a smarter Nethysian, should actually grab that library book and start working"},{t:1109.38,x:"out strategies for Cheliax to follow if Abadar grants Keltham a spell like Lesser Planar"},{t:1114.34,x:"Ally, or a Conditional Favor that Keltham uses with a condition of 'don't lie to"},{t:1120.55,x:"me'. Well, Asmodeus isn't actually stupid like some of His worshippers,"},{t:1125.05,x:"Ione doesn't think. Maybe He'll grant the clerics here appropriate spells like False Future in"},{t:1130.35,x:"case Keltham gets Augury, and Undetectable Alignment in case Keltham uses Aura Sight on Ione,"},{t:1137.1,x:"and obviously Spell Gauge so they're not caught off-guard by what Keltham receives..."},{t:1142.36,x:"though Spell Gauge only goes up to 3rd circle, and you'd need a 7th-circle caster"},{t:1148.25,x:"to get all of Keltham's spells up to there..."},{t:1151.14,x:"Does Cheliax have a plan B? Is Ione part of it?"},{t:1155,x:"She's an obvious person that Keltham might try to whisper to,"},{t:1158.85,x:"if Keltham notices something wrong. She should ask about that later."},{t:1162.67,x:"Security comes and takes a look and adds back in Aura Sight,"},{t:1166.67,x:"since he already knows that it exists (but not Invisibility Purge,"},{t:1170.56,x:"since ideally it wouldn't look like they added everything he knows exists.)"},{t:1175.22,x:"Other than that they're satisfied."},{t:1176.91,x:"\"Is there a plan if Keltham gets suspicious of something and wants to talk to"},{t:1181.48,x:"me about it?\" Ione says, as she starts to recopy that particular page."},{t:1186.5,x:"\"Voice of reassurance, worried ally who'll help him investigate?\""},{t:1190.33,x:"\"Help him investigate; if he wants to flee, flee with him,"},{t:1194,x:"but convince him that no other church or government is worth going to either."},{t:1198.67,x:"There'll be a more detailed briefing on the plan and various contingencies in the morning.\""},{t:1203.67,x:"Oh. Ohhhh. Lord Nethys does have some secret plan that encompasses His intricate understanding of"},{t:1210.22,x:"every move that lesser beings make, thinking their choices their own."},{t:1214.67,x:"Going to fantastic lengths to make sure Keltham can get five books a day faster"},{t:1220.38,x:"than Security could order them from Chelish libraries..."},{t:1223.43,x:"doesn't make that much sense as the sole object of an expensive divine intervention,"},{t:1228.73,x:"so Ione had supposed that she was going to be there to influence Keltham in"},{t:1234.18,x:"a subtle way, or maybe see something that Asmodeans wouldn't see because they're too busy"},{t:1239.68,x:"gouging each other's eyes out. \"If you get Keltham to flee to a remote wilderness"},{t:1245,x:"hideout, or some old dungeon that's blocked from scrying, he's not going to get much"},{t:1250,x:"research done unless he has a library oracle with him,\""},{t:1254.29,x:"Ione observes. \"Keltham knows that. He'll come to me early on."},{t:1259,x:"Maybe first. I'll need enough books to turn some room wherever I go,"},{t:1263.33,x:"into a library... I think one full bookshelf should do it,"},{t:1267.26,x:"but two would be better.\" She wants to ask, rather acerbically,"},{t:1271.89,x:"if any Asmodean even noticed that their plan wouldn't work without Lord Nethys propping it"},{t:1278.29,x:"up, but she is not quite that courageous yet."},{t:1282.14,x:"\"Yes. We're creating modified books as fast as we can;"},{t:1284.94,x:"I'll try to get you a list."},{t:1286.64,x:"If you have thoughts on a plausible use of your powers to help Keltham escape,"},{t:1290.27,x:"we want that to look organic and not strikingly lucky.\""},{t:1293.52,x:"\"I can't directly travel through Polyfractal Library Space until I'm more powerful,\""},{t:1298.38,x:"Ione replies before she quite realizes what she's been asked."},{t:1302.1,x:"Keltham is still trying not to access any audiovisual memories of his vision of -"},{t:1307,x:"wherever, whatever, that was. Probably not literally a video, because,"},{t:1310.6,x:"because you probably shouldn't be able to scry like that across a Forbiddance okay blatant"},{t:1316,x:"rationalization but it creates a self-consistent branch of reality he can tell his emotions to"},{t:1320.8,x:"shelter inside while he absorbs the blow."},{t:1323.04,x:"By way of distraction, he first wrote down memory-anchors for all his pending sex questions"},{t:1328,x:"to submit to Carissa later while they're not in the middle of sex -"},{t:1332,x:"this being, in dath ilan, a completely reasonable and well-known tactic to overcoming the distracting"},{t:1337.87,x:"conversations that are the fundamental obstacle to sex."},{t:1341,x:"Plus, he needed to do that before they slipped his mind."},{t:1343.93,x:"Currently, he's trying to invent a signaling code that his god can use to send"},{t:1347.93,x:"him information via that god choosing Keltham's spells."},{t:1350.04,x:"Since he doesn't have his spell list yet, what Keltham can do right now is"},{t:1353.93,x:"note down which conditions he would like to distinguish, which is in any case a"},{t:1358.17,x:"good first step for designing a code."},{t:1360.34,x:"The first thing he should do is reserve a condition for \"my god can't communicate"},{t:1365,x:"with me in this way\". Arguendo: This could obviously be done by expending one spell"},{t:1370,x:"slot to signal just 'this communication channel works at all',"},{t:1373.78,x:"which spell's absence then means that nothing else worked."},{t:1378,x:"Counter-arguendo: that might be redundant if the other consistent states of the code seem sufficiently"},{t:1384.12,x:"unlikely to arise by chance or optimization around other criteria,"},{t:1387.88,x:"since the absence of a consistent code state would automatically imply channel failure;"},{t:1392.75,x:"Keltham isn't going to pick some intricate code that makes full use of every possible"},{t:1398.41,x:"bit of information in every spell choice, since that might not make it across the"},{t:1404.55,x:"'prayer' communication medium going the other direction."},{t:1407.93,x:"Counter-counter-arguendo: During initial establishment of this communications channel, probably a lot of bits should be"},{t:1415.05,x:"expended on error codes. Suppose for now that some very exotic spell gets picked to"},{t:1420.3,x:"signal the condition 'this works as a communication channel at all',"},{t:1424.86,x:"and its absence indicates failure of the whole scheme."},{t:1428.71,x:"Or maybe, if he gets a long enough spell list,"},{t:1432.86,x:"he can have a choice of four otherwise unused spells,"},{t:1436.95,x:"signaling: Question 1: Does this communications channel work?"},{t:1440.6,x:"Spell 1.1: This communications channel should work fine."},{t:1444.87,x:"Spell 1.2: This communications channel works at all, but may have errors."},{t:1450.6,x:"Spell 1.3: This communications channel is very expensive."},{t:1454.2,x:"Use it very sparingly. Spell 1.4: This communications channel is both expensive and error-prone."},{t:1462.1,x:"1.(none of the above): Basic channel failure."},{t:1466,x:"Plus actually: Spell 1.5: Some element of the code you used is problematic."},{t:1472.29,x:"Try again with a different code. Other spells received should not be interpreted."},{t:1476,x:"And Keltham should not ask too many questions, on the rest of this first try,"},{t:1480.45,x:"before he finds out whether cases 1.3/1.4 hold."},{t:1485.45,x:"What does he really really need to know?"},{t:1489.09,x:"Question 2: What overall strategy is appropriate to his current situation?"},{t:1494.76,x:"Spell 2.1: Take your current situation at face value and cooperate with the surrounding project."},{t:1502.15,x:"Spell 2.2: Your current situation is not what it seems,"},{t:1506.65,x:"use tomorrow's code for more info; but it's still good to go on doing research."},{t:1512.42,x:"Spell 2.3: Exercise your supposed right to leave, as soon as you can use tomorrow's"},{t:1517.86,x:"code to figure out where to go."},{t:1520.36,x:"Stall them on more valuable info in the meanwhile."},{t:1523.57,x:"Spell 2.4: They wouldn't actually let you leave."},{t:1526.75,x:"Ask about escape or other options using tomorrow's code."},{t:1530.69,x:"Stall info. Spell 2.5: You are in imminent danger."},{t:1534.21,x:"IMMEDIATELY ask to leave your current location and go somewhere else in Cheliax or a"},{t:1539.7,x:"Lawful Neutral country if accessible, taking with only Carissa as a guide and not telling"},{t:1544.95,x:"anyone else where you're going. Spell 2.none: None of those are good ways of looking"},{t:1551.47,x:"at it. Keltham has of course realized that there's variants of 2.5 which imply he"},{t:1557.46,x:"shouldn't take Carissa with him either; but if the situation is that bad,"},{t:1561.96,x:"they won't just let him leave; and if they won't just let him leave,"},{t:1565.93,x:"he's going to need more communication to figure out what he should do instead."},{t:1569.67,x:"It's not like he can see any obvious escape plan as things stand."},{t:1573.57,x:"Actually, now that Keltham thinks about it..."},{t:1575.82,x:"he was planning to use a more elaborate code, and ask more questions besides those"},{t:1580.52,x:"two; but maybe he shouldn't even be asking any more than this,"},{t:1583.61,x:"on a first try at a channel."},{t:1585.42,x:"It might not support that much weight."},{t:1587.23,x:"Well, that does leave some room to potentially factor things,"},{t:1590.04,x:"and maybe Keltham's own communications will be a bit clearer if he considers more branch"},{t:1594.42,x:"points and fewer total leaves. Version two: Question 1: Does this communications channel work?"},{t:1600.33,x:"Spell 1.1: This channel works. Spell 1.none: Total channel failure."},{t:1605.78,x:"Question 2: Is this channel significantly expensive to Keltham's god?"},{t:1611.33,x:"Spell 2.1: Yes. Spell 2.2: A little expensive, use it only as needed."},{t:1617.17,x:"Spell 2.3: Not at all, use it lots."},{t:1620.92,x:"Spell 2.none: Wrong question / channel failure / this question wasn't worth answering."},{t:1626.11,x:"Question 3: Is this channel error-prone or noisy?"},{t:1630.11,x:"Spell 3.1: No. Spell 3.2: Yes, be careful."},{t:1633.09,x:"Spell 3.3: It fails only negatively; you may miss a spell you should have got,"},{t:1638.3,x:"but not receive one you shouldn't have received."},{t:1641.47,x:"Spell 3.none: Wrong question / channel failure / not enough priority."},{t:1645.59,x:"Question 4: Could this channel handle more complex codes tomorrow?"},{t:1650.26,x:"Spell 4.1: Yes. Spell 4.none: No or not priority."},{t:1655,x:"Question 5: Should you be cooperating with your apparent coworkers,"},{t:1659.35,x:"or stalling them on things that are really valuable/dangerous?"},{t:1663.7,x:"Spell 5.1: Cooperate at least for tomorrow, inquire in more detail later."},{t:1668.79,x:"Spell 5.2: Begin stalling, inquire in more detail later."},{t:1672.58,x:"This question is sufficiently important that 5.none is a good candidate for just signaling total"},{t:1678.62,x:"comms failure, but redundancy. The other variations on v1's Question 2 don't actually imply any"},{t:1684.35,x:"immediate change of policy besides stalling, except of course for:"},{t:1688.26,x:"Question 6: Imminent danger at current location?"},{t:1691,x:"Spell 6.1: Yes. Flee with Carissa and tell nobody else where you're going."},{t:1696.09,x:"Spell 6.none: Carrying out 6.1 wouldn't be a net improvement."},{t:1700.33,x:"...that's actually 11 total spells to take on signaling meaning,"},{t:1703.67,x:"compared to version 1... okay, the fine detail in spell 3.3 is not something he"},{t:1709,x:"needs to know literally during initial handshake, which cuts v.2 down to ten spells total,"},{t:1714.09,x:"and makes it superior to v.1 because of the lower local branching,"},{t:1719.06,x:"clearer meanings, and more critical meta-info being conveyed earlier."},{t:1723.44,x:"Besides eliminating Spell 3.3, are there other improvements to be made here?"},{t:1728.78,x:"Actually, eliminating 2/8ths of the total code seems like the sort of thing that could"},{t:1734.1,x:"easily cross some key threshold for feasibility on the first try,"},{t:1737.52,x:"so if he cuts down on Q2..."},{t:1739.69,x:"Version three, probably final: Question 1: Does this communications channel work?"},{t:1744.74,x:"Spell 1.1: This channel works. Spell 1.none: Total channel failure."},{t:1750.2,x:"Question 2: Is this channel significantly expensive to Keltham's god?"},{t:1754.2,x:"Spell 2.1: Not at all, use it lots."},{t:1757.47,x:"Spell 2.none: Yes / somewhat / wrong question / channel failure."},{t:1761.74,x:"Question 3: Is this channel error-prone or noisy?"},{t:1766,x:"Spell 3.1: No. Spell 3.2: Yes, be careful."},{t:1770,x:"Spell 3.none: Yes / wrong question / channel failure / not enough priority."},{t:1774.96,x:"Actually on further reflection, he doesn't really need 3.2 here either,"},{t:1779.26,x:"since 3.none can safely convey that information mixed into a wider bucket."},{t:1784.67,x:"Question 4: Could this channel handle more complex codes tomorrow?"},{t:1789.11,x:"Spell 4.1: Yes. Spell 4.none: No or not priority."},{t:1792.78,x:"On yet further reflection, Keltham can just ask this question tomorrow,"},{t:1796.61,x:"if he gets a 'no' on things being noisy."},{t:1799.73,x:"If 'yes' on things being noisy, but not expensive, he should construct a redundant code"},{t:1804.92,x:"tomorrow instead of a complicated one. Question 4: Should you be cooperating with your apparent"},{t:1810.52,x:"coworkers, or stalling them on things that are really valuable/dangerous?"},{t:1814.83,x:"Spell 4.1: Cooperate at least for tomorrow, inquire in more detail later."},{t:1820.05,x:"Spell 4.2: Begin stalling, inquire in more detail later."},{t:1824.1,x:"Spell 4.none: Redundant signal of total channel failure."},{t:1828.15,x:"Question 5: Imminent danger at current location?"},{t:1831.3,x:"Spell 5.1: Yes. Flee with Carissa and tell nobody else where you're going."},{t:1836.45,x:"Spell 5.none: Carrying out 5.1 wouldn't be a net improvement and/or this channel element failed."},{t:1842.04,x:"Okay, this is a code Keltham can believe in, relative to his own level of"},{t:1847.23,x:"design ability. It frontloads the most important meta-questions first, delays as many complications as possible"},{t:1852.78,x:"beyond the fragile first attempt, and only requires him to keep five questions and six"},{t:1858.13,x:"spell-meanings in mind to communicate across his own side of the 'prayer' channel."},{t:1865.09,x:"Keltham goes to seek the spell list from Ione."},{t:1870.41,x:""}];
+const BEATS=[{t:0,s:'zon_kuthon',v:'narrator'},{t:24,s:'zon_kuthon',v:'narrator'},{t:54,s:'zon_kuthon',v:'narrator'},{t:102,s:'zon_kuthon',v:'narrator'},{t:148,s:'zon_kuthon',v:'narrator'},{t:197,s:'zon_kuthon',v:'narrator'},{t:225,s:'nethys_mischief',v:'nethys'},{t:244,s:'debrief',v:'carissa'},{t:292,s:'the_abadar_muff',v:'ferrer'},{t:337,s:'practice_with_elias',v:'ferrer'},{t:382,s:'obscure_god',v:'carissa'},{t:431,s:'obscure_god',v:'carissa'},{t:478,s:'excuses',v:'carissa'},{t:525,s:'excuses',v:'carissa'},{t:572,s:'excuses',v:'ferrer'},{t:623,s:'excuses',v:'ferrer'},{t:671,s:'practice_with_elias',v:'carissa'},{t:721,s:'three_hits',v:'ferrer'},{t:766,s:'alignment_spells',v:'carissa'},{t:814,s:'pay_the_girls',v:'narrator'},{t:864,s:'pay_the_girls',v:'carissa'},{t:912,s:'pay_the_girls',v:'narrator'},{t:956,s:'pay_the_girls',v:'narrator'},{t:1003,s:'pay_the_girls',v:'narrator'},{t:1054,s:'modified_books',v:'narrator'},{t:1098,s:'ione_spell_list',v:'ione'},{t:1146,s:'ione_spell_list',v:'ione'},{t:1190,s:'flee_with_him',v:'narrator'},{t:1236,s:'ione_realization',v:'ione'},{t:1283,s:'modified_books',v:'narrator'},{t:1332,s:'prayer_code',v:'keltham'},{t:1380,s:'prayer_code',v:'keltham'},{t:1430,s:'prayer_code',v:'keltham'},{t:1480,s:'prayer_code',v:'keltham'},{t:1525,s:'prayer_code',v:'keltham'},{t:1571,s:'prayer_code',v:'keltham'},{t:1623,s:'channel_failure',v:'keltham'},{t:1673,s:'channel_failure',v:'keltham'},{t:1723,s:'channel_failure',v:'keltham'},{t:1773,s:'channel_failure',v:'keltham'},{t:1825,s:'channel_failure',v:'keltham'},{t:1865,s:'channel_failure',v:'keltham'}];
+
+/* ===================== ASH / EMBERS ===================== */
+const cv=document.getElementById('ash'), ctx=cv.getContext('2d');
+let parts=[], W=0,H=0, accent={r:216,g:162,b:74};
+function size(){ const r=cv.getBoundingClientRect(); W=cv.width=r.width; H=cv.height=r.height; }
+addEventListener('resize',size); size();
+function spawn(){ return {x:Math.random()*W, y:H+10, vy:-(0.2+Math.random()*0.55), vx:(Math.random()-0.5)*0.2, r:Math.random()*1.7+0.4, life:0, max:H*(0.5+Math.random()*0.6), tw:Math.random()*6}; }
+for(let i=0;i<60;i++){ const p=spawn(); p.y=Math.random()*H; parts.push(p); }
+let ashPaused=false;
+function ash(t){
+  if(!ashPaused){
+    ctx.clearRect(0,0,W,H);
+    for(const p of parts){
+      p.y+=p.vy; p.x+=p.vx+Math.sin(t/1000+p.tw)*0.14; p.life++;
+      const k=1-p.life/p.max;
+      if(p.life>p.max||p.y<-10){ Object.assign(p,spawn()); continue; }
+      const a=Math.max(0,k)*0.8*(0.6+0.4*Math.sin(t/300+p.tw));
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7);
+      ctx.fillStyle=`rgba(${accent.r},${accent.g},${accent.b},${a})`; ctx.shadowBlur=8; ctx.shadowColor=ctx.fillStyle; ctx.fill();
+    }
+    ctx.shadowBlur=0;
+  }
+  requestAnimationFrame(ash);
+}
+requestAnimationFrame(ash);
+function hexRgb(h){const m=h.replace('#','');return {r:parseInt(m.slice(0,2),16),g:parseInt(m.slice(2,4),16),b:parseInt(m.slice(4,6),16)};}
+
+/* ===================== DOM ===================== */
+const SPEEDS=[1,1.25,1.5,0.75];
+let speed=1, curScene=null, curCue=-1, curBeat=-1, capsOn=true;
+const frame=document.getElementById('frame');
+const introEl=document.getElementById('intro');
+const capEl=document.getElementById('cap');
+const labelEl=document.getElementById('label');
+const knameEl=document.getElementById('kname');
+const ttlEl=document.getElementById('ttl');
+const ksigUse=document.getElementById('ksig-use');
+const barEl=document.getElementById('bar');
+const beatEl=document.getElementById('beat');
+const playIcon=document.getElementById('playicon');
+const ccBtn=document.getElementById('cc');
+const audio=document.getElementById('player');
+const dropZone=document.getElementById('drop');
+const audioInput=document.getElementById('audiofile');
+const loadedBox=document.getElementById('loaded');
+const fnameEl=document.getElementById('fname');
+const durEl=document.getElementById('dur');
+const beginBtn=document.getElementById('begin');
+
+/* scene crossfade (Stardust-style) — beatEl shows the clock, so setScene only writes the title */
+function setScene(name){
+  if(name===curScene) return;
+  curScene=name;
+  document.querySelectorAll('.scene').forEach(el=>el.classList.remove('active','go'));
+  const el=document.querySelector(`.scene[data-scene="${name}"]`);
+  if(el){ el.classList.add('active'); requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add('go'))); }
+  ttlEl.textContent=SCENE_TITLES[name]||'';
+}
+function setSpeaker(v){
+  const c=CHARS[v]; if(!c) return;
+  knameEl.textContent=c.name; ksigUse.setAttribute('href','#'+c.sigil);
+  document.documentElement.style.setProperty('--accent', c.color); accent=hexRgb(c.color);
+}
+/* caption: blank text hides it; honours the CC toggle */
+function setCaption(text){
+  if(!capsOn || !text){ capEl.classList.remove('show'); return; }
+  capEl.classList.remove('show');
+  setTimeout(()=>{ if(!capsOn) return; capEl.textContent=text; capEl.classList.add('show'); },170);
+}
+function applyCaps(){ const c=CUES[curCue]; setCaption(c?c.x:''); }
+function setIcon(p){ playIcon.innerHTML = p?'<path d="M6 5h4v14H6zM14 5h4v14h-4z"></path>':'<path d="M8 5v14l11-7z"></path>'; }
+
+/* ===================== CLOCK + SYNC ===================== */
+function fmt(s){ if(!isFinite(s)||s<0) s=0; s=Math.floor(s); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+function findIdx(arr,time){ let lo=0,hi=arr.length-1,res=0; while(lo<=hi){ const m=(lo+hi)>>1; if(arr[m].t<=time){res=m;lo=m+1;} else hi=m-1; } return res; }
+function sync(){
+  const ct=audio.currentTime||0, d=audio.duration;
+  const bi=findIdx(BEATS,ct);
+  if(bi!==curBeat){ curBeat=bi; setScene(BEATS[bi].s); setSpeaker(BEATS[bi].v); }
+  const ci=findIdx(CUES,ct);
+  if(ci!==curCue){ curCue=ci; setCaption(CUES[ci].x); }
+  if(d){ barEl.style.width=Math.min(100,(ct/d*100))+'%'; }
+  beatEl.textContent=fmt(ct)+(d?(' / '+fmt(d)):'');
+}
+let rafId=0;
+function loop(){ if(audio.paused) return; sync(); rafId=requestAnimationFrame(loop); }
+
+/* ===================== AUDIO EVENTS ===================== */
+audio.addEventListener('timeupdate', sync);
+audio.addEventListener('seeked', ()=>{ curCue=-1; sync(); });
+audio.addEventListener('loadedmetadata', ()=>{ durEl.textContent='· '+fmt(audio.duration); beatEl.textContent='0:00 / '+fmt(audio.duration); });
+audio.addEventListener('play', ()=>{ frame.classList.add('playing'); document.body.classList.remove('paused'); ashPaused=false; setIcon(true); labelEl.classList.add('show'); sync(); loop(); });
+audio.addEventListener('pause', ()=>{ setIcon(false); document.body.classList.add('paused'); ashPaused=true; });
+audio.addEventListener('ended', finish);
+
+/* ===================== UPLOAD ===================== */
+const AUDIO_EXT=/\.(mp3|m4a|wav|ogg|oga|aac|flac|opus|weba|mp4)$/i;
+function loadAudioFile(file){
+  if(!file) return false;
+  if(file.type && !file.type.startsWith('audio/') && !AUDIO_EXT.test(file.name)) return false;
+  try{ if(audio.src) URL.revokeObjectURL(audio.src); }catch(_){}
+  audio.src=URL.createObjectURL(file); audio.playbackRate=speed; audio.load();
+  fnameEl.textContent=file.name; durEl.textContent='';
+  loadedBox.classList.add('show'); dropZone.classList.add('has');
+  beginBtn.disabled=false;
+  return true;
+}
+audioInput.addEventListener('change', e=>{ loadAudioFile(e.target.files[0]); });
+dropZone.addEventListener('click', ()=>audioInput.click());
+['dragenter','dragover'].forEach(ev=>dropZone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); dropZone.classList.add('drag'); }));
+['dragleave','dragend','drop'].forEach(ev=>dropZone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); if(ev!=='dragover') dropZone.classList.remove('drag'); }));
+dropZone.addEventListener('drop', e=>{
+  const files=[...(e.dataTransfer?e.dataTransfer.files:[])];
+  const aud=files.find(f=>f.type.startsWith('audio/')||AUDIO_EXT.test(f.name));
+  if(aud) loadAudioFile(aud);
+});
+
+/* ===================== PLAYBACK CONTROL ===================== */
+function startPlayback(){
+  if(!audio.src){ dropZone.classList.add('drag'); setTimeout(()=>dropZone.classList.remove('drag'),650); return; }
+  introEl.classList.remove('ended'); introEl.classList.add('gone');
+  if(audio.ended || (audio.duration && audio.currentTime>=audio.duration-0.05)){ audio.currentTime=0; curCue=-1; curBeat=-1; }
+  const p=audio.play(); if(p&&p.catch) p.catch(()=>{});
+}
+function finish(){
+  frame.classList.remove('playing'); setIcon(false);
+  introEl.classList.add('ended'); introEl.classList.remove('gone');
+}
+function seekToBeat(idx){ idx=Math.max(0,Math.min(BEATS.length-1,idx)); audio.currentTime=Math.max(0,BEATS[idx].t)+0.02; curCue=-1; sync(); }
+function nextBeat(){ seekToBeat(findIdx(BEATS,audio.currentTime)+1); }
+function prevBeat(){ const ci=findIdx(BEATS,audio.currentTime); seekToBeat((audio.currentTime-BEATS[ci].t>1.4)?ci:ci-1); }
+function togglePlay(){ if(audio.paused) audio.play().catch(()=>{}); else audio.pause(); }
+function toggleCaps(){ capsOn=!capsOn; ccBtn.classList.toggle('off',!capsOn); ccBtn.setAttribute('aria-pressed',String(capsOn)); applyCaps(); }
+
+beginBtn.addEventListener('click', startPlayback);
+document.getElementById('play').addEventListener('click', ()=>{ if(!introEl.classList.contains('gone')){ startPlayback(); return; } togglePlay(); });
+document.getElementById('next').addEventListener('click', nextBeat);
+document.getElementById('prev').addEventListener('click', prevBeat);
+document.getElementById('restart').addEventListener('click', ()=>{ audio.currentTime=0; curCue=-1; curBeat=-1; sync(); if(audio.paused) audio.play().catch(()=>{}); });
+document.getElementById('speed').addEventListener('click', e=>{ speed=SPEEDS[(SPEEDS.indexOf(speed)+1)%SPEEDS.length]; audio.playbackRate=speed; e.currentTarget.textContent=String(speed)+'×'; });
+ccBtn.addEventListener('click', toggleCaps);
+document.getElementById('prog').addEventListener('click', e=>{ if(!audio.duration) return; const r=e.currentTarget.getBoundingClientRect(); const frac=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)); audio.currentTime=frac*audio.duration; curCue=-1; sync(); });
+addEventListener('keydown', e=>{ if(!introEl.classList.contains('gone')) return;
+  if(e.code==='Space'){ e.preventDefault(); togglePlay(); }
+  else if(e.code==='ArrowRight'){ e.preventDefault(); nextBeat(); }
+  else if(e.code==='ArrowLeft'){ e.preventDefault(); prevBeat(); }
+  else if(e.key==='c'||e.key==='C'){ e.preventDefault(); toggleCaps(); } });
+addEventListener('beforeunload', ()=>{ try{ if(audio.src) URL.revokeObjectURL(audio.src); }catch(_){} });
+
+/* cast list */
+(function(){ const cast=document.getElementById('cast'); if(!cast) return;
+  for(const key of ['narrator','nethys','carissa','ferrer','ione','keltham']){
+    const c=CHARS[key], d=document.createElement('div'); d.className='c';
+    d.innerHTML=`<div class="ic" style="color:${c.color}"><svg><use href="#${c.sigil}"/></svg></div><div><div class="nm">${c.name.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div><div class="tg">${c.tag}</div></div>`;
+    cast.appendChild(d);
+  } })();
+
+/* initial backdrop + idle state */
+document.getElementById('speed').textContent='1×';
+setScene(BEATS[0].s); setSpeaker(BEATS[0].v); setIcon(false);
+beatEl.textContent='0:00';
+
+</script>
+</body>
+</html>
